@@ -569,9 +569,11 @@
     // DEBUG: логируем структуру для первой строки
     if (rows.length > 0) {
       console.log(`\n=== ${subject} ${level} ===`);
-      console.log('Заголовки:', table.cols.map(c => c.label));
-      if (rows[0]) {
-        console.log('Первая строка (cells):', rows[0].c.map((c, i) => `[${i}]: ${c?.v}`));
+      console.log('Полная структура cols[0]:', table.cols[0]);
+      console.log('Полная структура cols[2]:', table.cols[2]);
+      console.log('Полная структура cols[10]:', table.cols[10]);
+      if (rows[1]) {
+        console.log('Вторая строка (первый ученик) cells:', rows[1].c.map((c, i) => `[${i}]: ${c?.v}`).slice(0, 15));
       }
     }
 
