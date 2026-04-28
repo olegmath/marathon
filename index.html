@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Марафон Рейтинг</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #6DCFF0;
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      color: #1a1a1a;
+    }
+
+    :root {
+      --blue: #6DCFF0;
+      --blue-dark: #3BAED4;
+      --blue-text: #4AB8E0;
+      --white: #ffffff;
+      --gray-line: rgba(0,0,0,0.1);
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top nav */
+    .top-nav {
+      padding: 20px 32px 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .nav-left {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .subject-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .subject-btn {
+      font-family: 'Oswald', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      font-style: italic;
+      letter-spacing: 0.5px;
+      padding: 6px 16px;
+      border-radius: 30px;
+      border: none;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+      background: rgba(255,255,255,0.25);
+      color: white;
+    }
+
+    .subject-btn.active {
+      background: white;
+      color: #3595B8;
+      box-shadow: 0 2px 10px rgba(0,80,120,0.15);
+    }
+
+    .exam-toggle {
+      display: flex;
+      background: rgba(255,255,255,0.2);
+      border-radius: 30px;
+      padding: 3px;
+      gap: 3px;
+      width: fit-content;
+    }
+
+    .exam-btn {
+      font-family: 'Oswald', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      font-style: italic;
+      padding: 5px 28px;
+      border-radius: 26px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      background: transparent;
+      color: white;
+    }
+
+    .exam-btn.active {
+      background: white;
+      color: #3595B8;
+      box-shadow: 0 2px 8px rgba(0,80,120,0.15);
+    }
+
+    .title-section {
+      text-align: right;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .main-title {
+      font-family: 'Oswald', sans-serif;
+      font-weight: 700;
+      font-size: 40px;
+      font-style: italic;
+      color: white;
+      letter-spacing: 2px;
+      text-shadow: 0 2px 8px rgba(0,80,120,0.2);
+      line-height: 0.9;
+    }
+
+    .subtitle {
+      font-family: 'Oswald', sans-serif;
+      font-weight: 500;
+      font-size: 15px;
+      color: rgba(255,255,255,0.85);
+      letter-spacing: 3px;
+      margin-top: 6px;
+      text-transform: uppercase;
+    }
+
+    .update-section {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      justify-content: flex-end;
+    }
+
+    .refresh-btn {
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      font-weight: bold;
+    }
+
+    .refresh-btn:hover {
+      background: rgba(255,255,255,0.3);
+      border-color: rgba(255,255,255,0.5);
+    }
+
+    .refresh-btn:active {
+      transform: scale(0.95);
+    }
+
+    .refresh-btn.loading {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .last-update {
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      color: rgba(255,255,255,0.7);
+      white-space: nowrap;
+    }
+
+    /* Logo */
+    .logo {
+      position: fixed;
+      bottom: 24px;
+      left: 28px;
+      width: 90px;
+      opacity: 0.9;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    /* Columns container */
+    .columns-container {
+      display: flex;
+      gap: 16px;
+      padding: 16px 32px 48px;
+      flex: 1;
+      align-items: flex-start;
+    }
+
+    /* Rating column */
+    .rating-column {
+      background: white;
+      border-radius: 20px;
+      padding: 20px 18px 16px;
+      flex: 1;
+      min-width: 0;
+      box-shadow: 0 4px 20px rgba(0,80,120,0.12);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .column-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .column-title {
+      font-family: 'Oswald', sans-serif;
+      font-weight: 700;
+      font-size: 20px;
+      font-style: italic;
+      color: #4AB8E0;
+      letter-spacing: 0.5px;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .column-icon {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .column-icon svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .column-extra {
+      font-family: 'Oswald', sans-serif;
+      font-weight: 700;
+      font-size: 18px;
+      color: #4AB8E0;
+      margin-left: 4px;
+      letter-spacing: -1px;
+    }
+
+    .column-subheader {
+      display: grid;
+      grid-template-columns: 52px 1fr;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .subheader-place {
+      font-size: 9px;
+      font-family: 'Oswald', sans-serif;
+      font-weight: 500;
+      color: #4AB8E0;
+      letter-spacing: 0.3px;
+      line-height: 1.2;
+      text-transform: uppercase;
+    }
+
+    .subheader-name {
+      font-size: 9px;
+      font-family: 'Oswald', sans-serif;
+      font-weight: 500;
+      color: #4AB8E0;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      display: flex;
+      align-items: flex-end;
+    }
+
+    .column-divider {
+      height: 1px;
+      background: rgba(74,184,224,0.3);
+      margin-bottom: 8px;
+    }
+
+    .players-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0px;
+    }
+
+    .player-item {
+      display: grid;
+      grid-template-columns: 52px 1fr;
+      gap: 8px;
+      padding: 6px 0;
+      align-items: center;
+    }
+
+    .player-place {
+      font-family: 'Oswald', sans-serif;
+      font-weight: 700;
+      font-size: 22px;
+      color: #1a1a1a;
+      line-height: 1;
+    }
+
+    .player-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .player-name {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      color: #1a1a1a;
+      line-height: 1.2;
+      font-style: italic;
+    }
+
+    .player-score {
+      font-family: 'Inter', sans-serif;
+      font-weight: 400;
+      font-size: 12px;
+      color: #4AB8E0;
+      margin-top: 1px;
+    }
+
+    .player-divider {
+      height: 1px;
+      background: rgba(0,0,0,0.07);
+      margin: 0;
+    }
+
+    .empty-slot {
+      height: 36px;
+      display: flex;
+      align-items: center;
+    }
+
+    .empty-line {
+      height: 1px;
+      background: rgba(0,0,0,0.06);
+      width: 100%;
+      margin-top: 18px;
+    }
+
+    /* Background SVGs */
+    .bg-diamonds-right {
+      position: fixed;
+      right: -20px;
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: 0.12;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .bg-diamonds-left {
+      position: fixed;
+      left: -60px;
+      bottom: -40px;
+      opacity: 0.08;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Loading state */
+    .state-loading .column-content {
+      opacity: 0.5;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .columns-container {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .rating-column {
+        min-width: unset;
+      }
+
+      .top-nav {
+        flex-direction: column;
+      }
+
+      .title-section {
+        text-align: left;
+      }
+
+      .main-title {
+        font-size: 32px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .top-nav {
+        padding: 12px 16px 0;
+      }
+
+      .columns-container {
+        padding: 12px 16px 40px;
+        gap: 12px;
+      }
+
+      .rating-column {
+        padding: 16px 12px 12px;
+      }
+
+      .main-title {
+        font-size: 28px;
+      }
+
+      .subject-btn {
+        font-size: 12px;
+        padding: 5px 12px;
+      }
+
+      .logo {
+        width: 70px;
+        bottom: 16px;
+        left: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Background SVGs -->
+<svg class="bg-diamonds-right" width="400" height="500" viewBox="0 0 400 500">
+  <g fill="none" stroke="white" stroke-width="4">
+    <rect x="100" y="100" width="200" height="200" transform="rotate(45 200 250)" rx="10"/>
+    <rect x="70" y="70" width="260" height="260" transform="rotate(45 200 250)" rx="14"/>
+    <rect x="130" y="130" width="140" height="140" transform="rotate(45 200 250)" rx="6"/>
+    <rect x="160" y="160" width="80" height="80" transform="rotate(45 200 250)" rx="4"/>
+  </g>
+</svg>
+
+<svg class="bg-diamonds-left" width="300" height="300" viewBox="0 0 300 300">
+  <g fill="none" stroke="white" stroke-width="3">
+    <rect x="50" y="50" width="200" height="200" transform="rotate(45 150 150)" rx="8"/>
+    <rect x="80" y="80" width="140" height="140" transform="rotate(45 150 150)" rx="6"/>
+  </g>
+</svg>
+
+<!-- Main layout -->
+<div class="container">
+  <!-- Top nav -->
+  <div class="top-nav">
+    <div class="nav-left">
+      <div class="subject-tabs" id="subject-tabs"></div>
+      <div class="exam-toggle" id="exam-toggle"></div>
+    </div>
+    <div class="title-section">
+      <div class="main-title">РЕЙТИНГ</div>
+      <div class="subtitle"><span id="subject-label">Физика</span> | <span id="exam-label">ОГЭ</span></div>
+      <div class="update-section">
+        <button class="refresh-btn" id="refresh-btn" title="Обновить данные">⟳</button>
+        <div class="last-update">Обновлено: <span id="last-update-time">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logo -->
+  <img src="logoplanka.png" alt="Лого" class="logo" id="logo" style="display: none;">
+
+  <!-- Three columns -->
+  <div class="columns-container" id="columns-container"></div>
+</div>
+
+<script>
+  const SHEET_ID = '1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_PtntIU';
+
+  const SUBJECTS = [
+    { key: 'математика', label: 'Математика', levels: ['ЕГЭ', 'ОГЭ'] },
+    { key: 'информатика', label: 'Информатика', levels: ['ЕГЭ', 'ОГЭ'] },
+    { key: 'русский язык', label: 'Русский язык', levels: ['ЕГЭ', 'ОГЭ'] },
+    { key: 'обществознание', label: 'Обществознание', levels: ['ЕГЭ', 'ОГЭ'] },
+    { key: 'история', label: 'История', levels: ['ЕГЭ'] },
+    { key: 'физика', label: 'Физика', levels: ['ЕГЭ', 'ОГЭ'] },
+  ];
+
+  function getSheetName(subject, level) {
+    const shortMap = {
+      'математика': 'мат',
+      'информатика': 'инф',
+      'русский язык': 'ря',
+      'обществознание': 'общ',
+      'история': 'ист',
+      'физика': 'физ',
+    };
+    const shortName = shortMap[subject];
+    return `${shortName} ${level}`;
+  }
+
+  function buildApiUrl(subject, level) {
+    const sheetName = getSheetName(subject, level);
+    return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
+  }
+
+  const EXAMS = ['ЕГЭ', 'ОГЭ'];
+
+  let appData = null;
+  let currentSubject = 'физика';
+  let currentExam = 'ОГЭ';
+
+  // SVG Icons
+  const FlameIcon = () => `
+    <svg width="22" height="28" viewBox="0 0 22 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M11 2C11 2 7 7 7 12C7 12 5 10 5.5 7C3 9.5 2 13 2 16C2 21.523 6.477 26 12 26C17.523 26 22 21.523 22 16C22 11 18 7.5 16 5.5C16.5 8 15 10 15 10C15 6 13 3.5 11 2Z" fill="white" stroke="#111" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M12 13C12 13 14 15.5 13 18C12.3 19.8 11 20.5 11 22C9.5 20.5 9 18.5 10 16.5C10.8 14.8 12 13 12 13Z" fill="#4AB8E0" stroke="#111" stroke-width="1.5" stroke-linejoin="round"/>
+    </svg>
+  `;
+
+  const ThumbsIcon = () => `
+    <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M9 12L12 3C13.5 3 15 4.2 15 6V10H21C22.1 10 23 10.9 23 12L21 20C20.6 21.2 19.5 22 18.3 22H9V12Z" fill="white" stroke="#111" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M6 12H3V22H6C6.6 22 7 21.6 7 21V13C7 12.4 6.6 12 6 12Z" fill="white" stroke="#111" stroke-width="2" stroke-linejoin="round"/>
+    </svg>
+  `;
+
+  const TurtleIcon = () => `
+    <svg width="30" height="24" viewBox="0 0 30 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="15" cy="12" rx="8" ry="6" fill="white" stroke="#111" stroke-width="2"/>
+      <ellipse cx="15" cy="12" rx="4.5" ry="3.5" fill="none" stroke="#111" stroke-width="1.5"/>
+      <line x1="15" y1="8.5" x2="15" y2="15.5" stroke="#111" stroke-width="1.2"/>
+      <line x1="10.5" y1="12" x2="19.5" y2="12" stroke="#111" stroke-width="1.2"/>
+      <circle cx="24" cy="10" r="3" fill="white" stroke="#111" stroke-width="2"/>
+      <circle cx="25.2" cy="9" r="0.8" fill="#111"/>
+      <path d="M7 13 Q4 14 3 16" stroke="#111" stroke-width="2" stroke-linecap="round"/>
+      <path d="M10 7 Q8 4 6 4" stroke="#111" stroke-width="2" stroke-linecap="round"/>
+      <path d="M20 7 Q22 4 24 4" stroke="#111" stroke-width="2" stroke-linecap="round"/>
+      <path d="M10 17 Q8 20 6 20" stroke="#111" stroke-width="2" stroke-linecap="round"/>
+      <path d="M20 17 Q22 20 24 20" stroke="#111" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+  `;
+
+  function extractGvizJson(text) {
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}') + 1;
+    if (start === -1 || end <= start) {
+      throw new Error('Не удалось распарсить ответ API');
+    }
+    return JSON.parse(text.substring(start, end));
+  }
+
+  function parseGvizData(gvizJson, subject, level) {
+    const table = gvizJson.table;
+    if (!table || !table.cols || !table.rows) {
+      throw new Error('Неожиданный формат данных');
+    }
+
+    const rows = table.rows;
+    const students = [];
+
+    // Столбец C (индекс 2) = Ученик, столбец K (индекс 10) = Итоговый балл
+    for (let rowIdx = 1; rowIdx < rows.length; rowIdx++) { // Начинаем с 1 (2-я строка)
+      const row = rows[rowIdx];
+      const cells = row.c || [];
+
+      const name = cells[2]?.v; // Столбец C
+      const score = cells[10]?.v; // Столбец K
+
+      if (!name || name.toString().trim() === '') continue;
+
+      students.push({
+        name: name.toString().trim(),
+        score: Number(score) || 0,
+      });
+    }
+
+    // Определяем места и категории
+    students.sort((a, b) => b.score - a.score);
+
+    let place = 0;
+    let prevScore = null;
+
+    const result = students.map((s) => {
+      if (s.score !== prevScore) {
+        place++;
+        prevScore = s.score;
+      }
+
+      let category = 'starters';
+      if (s.score >= 95) category = 'legends';
+      else if (s.score >= 45) category = 'champs';
+
+      return {
+        subject,
+        level,
+        name: s.name,
+        score: s.score,
+        place,
+        status: category,
+      };
+    });
+
+    return result;
+  }
+
+  function groupAndSort(students) {
+    const grouped = {};
+
+    for (const subject of SUBJECTS) {
+      grouped[subject.key] = {};
+      for (const level of subject.levels) {
+        grouped[subject.key][level] = {
+          legends: [],
+          champs: [],
+          starters: [],
+        };
+      }
+    }
+
+    for (const student of students) {
+      const key = student.subject.toLowerCase();
+      if (!grouped[key]) continue;
+      if (!grouped[key][student.level]) continue;
+
+      const category = grouped[key][student.level][student.status];
+      if (category) {
+        category.push(student);
+      }
+    }
+
+    // Уже отсортировано в parseGvizData, но группируем по категориям
+    for (const subjectKey in grouped) {
+      for (const level in grouped[subjectKey]) {
+        for (const status in grouped[subjectKey][level]) {
+          grouped[subjectKey][level][status].sort((a, b) => b.score - a.score);
+        }
+      }
+    }
+
+    return grouped;
+  }
+
+  function renderRatingColumn(type, players) {
+    const configs = {
+      legends: {
+        title: 'ЛЕГЕНДЫ',
+        icon: FlameIcon(),
+        extra: '<span class="column-extra">100</span>',
+      },
+      champs: {
+        title: 'КРУТЫШИ',
+        icon: ThumbsIcon(),
+        extra: '',
+      },
+      starters: {
+        title: 'НА СТАРТЕ',
+        icon: TurtleIcon(),
+        extra: '',
+      }
+    };
+
+    const cfg = configs[type];
+
+    const playersHtml = players.map((p, i) => `
+      <div class="player-item">
+        <div class="player-place">${p.place}</div>
+        <div class="player-info">
+          <div class="player-name">${p.name}</div>
+          <div class="player-score">${p.score.toFixed(2)}</div>
+        </div>
+      </div>
+      ${i < players.length - 1 ? '<div class="player-divider"></div>' : ''}
+    `).join('');
+
+    const emptySlots = Math.max(0, 8 - players.length);
+    const emptyHtml = Array.from({length: emptySlots}).map(() => `
+      <div class="empty-slot">
+        <div class="empty-line"></div>
+      </div>
+    `).join('');
+
+    return `
+      <div class="rating-column">
+        <div class="column-header">
+          <div class="column-title">${cfg.title}</div>
+          <div class="column-icon">${cfg.icon}</div>
+          ${cfg.extra}
+        </div>
+        <div class="column-subheader">
+          <div class="subheader-place">МЕСТО<br><span style="font-size:8px;font-weight:400;">(В ШКОЛЕ)</span></div>
+          <div class="subheader-name">ИМЯ, БАЛЛЫ</div>
+        </div>
+        <div class="column-divider"></div>
+        <div class="players-container">
+          ${playersHtml}
+          ${emptyHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  function render() {
+    if (!appData) return;
+
+    // Render subject tabs
+    const subjectTabsHtml = SUBJECTS.map(s => `
+      <button class="subject-btn ${currentSubject === s.key ? 'active' : ''}" data-subject="${s.key}">
+        ${s.label}
+      </button>
+    `).join('');
+    document.getElementById('subject-tabs').innerHTML = subjectTabsHtml;
+
+    // Render exam toggle
+    const examToggleHtml = EXAMS.map(e => `
+      <button class="exam-btn ${currentExam === e ? 'active' : ''}" data-exam="${e}">
+        ${e}
+      </button>
+    `).join('');
+    document.getElementById('exam-toggle').innerHTML = examToggleHtml;
+
+    // Update title
+    const subjectLabel = SUBJECTS.find(s => s.key === currentSubject)?.label || '';
+    document.getElementById('subject-label').textContent = subjectLabel;
+    document.getElementById('exam-label').textContent = currentExam;
+
+    // Get data
+    const levelData = appData[currentSubject]?.[currentExam];
+    if (!levelData) {
+      document.getElementById('columns-container').innerHTML = '<p>Нет данных</p>';
+      return;
+    }
+
+    // Render columns
+    const columnsHtml = `
+      ${renderRatingColumn('legends', levelData.legends)}
+      ${renderRatingColumn('champs', levelData.champs)}
+      ${renderRatingColumn('starters', levelData.starters)}
+    `;
+    document.getElementById('columns-container').innerHTML = columnsHtml;
+
+    // Add event listeners
+    document.querySelectorAll('.subject-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        currentSubject = e.target.dataset.subject;
+        render();
+      });
+    });
+
+    document.querySelectorAll('.exam-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        currentExam = e.target.dataset.exam;
+        render();
+      });
+    });
+  }
+
+  async function loadData() {
+    try {
+      // Создаём параллельные fetch запросы вместо последовательных
+      const fetchPromises = [];
+
+      for (const subject of SUBJECTS) {
+        for (const level of subject.levels) {
+          const url = buildApiUrl(subject.key, level) + `&_t=${Date.now()}`;
+          fetchPromises.push(
+            fetch(url)
+              .then(response => {
+                if (!response.ok) {
+                  console.warn(`Ошибка загрузки ${subject.label} ${level}: ${response.status}`);
+                  return null;
+                }
+                return response.text().then(text => ({ text, subject, level }));
+              })
+              .catch(e => {
+                console.warn(`Ошибка запроса ${subject.label} ${level}:`, e.message);
+                return null;
+              })
+          );
+        }
+      }
+
+      // Ждём все запросы параллельно
+      const responses = await Promise.all(fetchPromises);
+      const allStudents = [];
+
+      // Парсим результаты
+      for (const response of responses) {
+        if (!response) continue;
+        try {
+          const gvizJson = extractGvizJson(response.text);
+          const students = parseGvizData(gvizJson, response.subject.key, response.level);
+          allStudents.push(...students);
+        } catch (e) {
+          console.warn(`Ошибка парсинга ${response.subject.label} ${response.level}:`, e.message);
+        }
+      }
+
+      if (allStudents.length === 0) {
+        throw new Error('Данные не найдены в таблицах');
+      }
+
+      appData = groupAndSort(allStudents);
+      console.log('Загружено студентов:', allStudents.length);
+      console.log('По предметам:', Object.keys(appData || {}).map(k => `${k}: ${Object.keys(appData[k]).length} уровней`));
+      render();
+      updateLastUpdateTime();
+      document.getElementById('refresh-btn').classList.remove('loading');
+    } catch (error) {
+      console.error('Ошибка загрузки:', error);
+      document.getElementById('columns-container').innerHTML = `
+        <div style="color: white; text-align: center; padding: 40px;">
+          <p>Ошибка загрузки: ${error.message}</p>
+        </div>
+      `;
+      document.getElementById('refresh-btn').classList.remove('loading');
+    }
+  }
+
+  function updateLastUpdateTime() {
+    const now = new Date();
+    const timeStr = now.toLocaleString('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+    localStorage.setItem('lastUpdateTime', timeStr);
+    document.getElementById('last-update-time').textContent = timeStr;
+  }
+
+  function displayLastUpdateTime() {
+    const savedTime = localStorage.getItem('lastUpdateTime');
+    if (savedTime) {
+      document.getElementById('last-update-time').textContent = savedTime;
+    }
+  }
+
+  function checkLogoBrowser() {
+    const img = new Image();
+    img.onload = () => {
+      document.getElementById('logo').style.display = 'block';
+    };
+    img.onerror = () => {
+      console.log('Логотип не найден (logoplanka.png)');
+    };
+    img.src = 'logoplanka.png';
+  }
+
+  // Init
+  displayLastUpdateTime();
+  checkLogoBrowser();
+  loadData();
+
+  // Обработчик кнопки обновить
+  document.getElementById('refresh-btn').addEventListener('click', () => {
+    document.getElementById('refresh-btn').classList.add('loading');
+    loadData();
+  });
+</script>
+
+</body>
+</html>
