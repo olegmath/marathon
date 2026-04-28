@@ -1,0 +1,35 @@
+[    7399ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8000/favicon.ico:0
+[    8748ms] [LOG] 
+=== математика ЕГЭ === @ http://localhost:8000/:570
+[    8749ms] [LOG] Перец Иван (строка 20) - полные объекты ячеек: @ http://localhost:8000/:577
+[    8749ms] [LOG] Ячейка [9]: null @ http://localhost:8000/:578
+[    8749ms] [LOG] Ячейка [10]: null @ http://localhost:8000/:579
+[    8749ms] [LOG] Ячейка [11]: null @ http://localhost:8000/:580
+[    8749ms] [LOG] Ячейка [12]: null @ http://localhost:8000/:581
+[    8749ms] [LOG] 
+=== математика ОГЭ === @ http://localhost:8000/:570
+[    8750ms] [LOG] 
+=== информатика ЕГЭ === @ http://localhost:8000/:570
+[    8750ms] [LOG] Перец Иван (строка 11) - полные объекты ячеек: @ http://localhost:8000/:577
+[    8750ms] [LOG] Ячейка [9]: {v: 0, f: 0} @ http://localhost:8000/:578
+[    8750ms] [LOG] Ячейка [10]: {v: 0, f: 0,00} @ http://localhost:8000/:579
+[    8750ms] [LOG] Ячейка [11]: {v: 8, f: 8} @ http://localhost:8000/:580
+[    8751ms] [LOG] Ячейка [12]: {v: 22, f: 22} @ http://localhost:8000/:581
+[    8751ms] [LOG] 
+=== информатика ОГЭ === @ http://localhost:8000/:570
+[    8751ms] [LOG] 
+=== русский язык ЕГЭ === @ http://localhost:8000/:570
+[    8752ms] [LOG] 
+=== русский язык ОГЭ === @ http://localhost:8000/:570
+[    8752ms] [LOG] 
+=== обществознание ЕГЭ === @ http://localhost:8000/:570
+[    8752ms] [LOG] 
+=== обществознание ОГЭ === @ http://localhost:8000/:570
+[    8752ms] [LOG] 
+=== история ЕГЭ === @ http://localhost:8000/:570
+[    8752ms] [LOG] 
+=== физика ЕГЭ === @ http://localhost:8000/:570
+[    8752ms] [LOG] 
+=== физика ОГЭ === @ http://localhost:8000/:570
+[    8753ms] [LOG] Загружено студентов: 364 @ http://localhost:8000/:842
+[    8753ms] [LOG] По предметам: [математика: 2 уровней, информатика: 2 уровней, русский язык: 2 уровней, обществознание: 2 уровней, история: 1 уровней, физика: 2 уровней] @ http://localhost:8000/:843
