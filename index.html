@@ -566,27 +566,20 @@
     const rows = table.rows;
     const students = [];
 
-    // DEBUG: логируем статистику парсинга
+    // DEBUG: логируем ячейку [10] для учеников без балла
     if (rows.length > 0) {
       console.log(`\n=== ${subject} ${level} ===`);
-      let withScore = 0, withoutScore = 0;
 
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         const cells = row.c || [];
         const nameCell = cells[2]?.v;
-        const scoreCell = cells[10]?.v;
+        const scoreCell = cells[10];
 
-        if (nameCell && nameCell.toString().trim() !== '') {
-          if (scoreCell === undefined || scoreCell === null) {
-            withoutScore++;
-            console.log(`❌ ${nameCell} (${i}): [10]=${scoreCell}`);
-          } else {
-            withScore++;
-          }
+        if (nameCell && nameCell.toString().trim() !== '' && (scoreCell?.v === undefined || scoreCell?.v === null)) {
+          console.log(`❌ ${nameCell} (строка ${i}): cells[10]=`, scoreCell);
         }
       }
-      console.log(`📊 Итого: ${withScore} с баллом, ${withoutScore} БЕЗ балла в [10]`);
     }
 
     // Столбец C (индекс 2) = Ученик, столбец K (индекс 10) = Итоговый балл
