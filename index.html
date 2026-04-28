@@ -563,55 +563,26 @@
       throw new Error('Неожиданный формат данных');
     }
 
-    // Динамически находим нужные столбцы по заголовкам
-    const headers = table.cols.map(col => col.label ? col.label.trim().toLowerCase() : '');
-    const subjLower = subject.toLowerCase();
-    const levelLower = level.toLowerCase();
-
-    // Ищем столбцы для этого предмета и уровня
-    let nameColIdx = -1, scoreColIdx = -1, statusColIdx = -1;
-    for (let i = 0; i < headers.length; i++) {
-      const h = headers[i];
-      if (h.includes(subjLower) && h.includes(levelLower)) {
-        if (h.includes('ученик') || h.includes('имя')) nameColIdx = i;
-        else if (h.includes('балл') || h.includes('итог')) scoreColIdx = i;
-        else if (h.includes('статус') || h.includes('категория')) statusColIdx = i;
-      }
-    }
-
-    if (nameColIdx === -1 || scoreColIdx === -1) {
-      throw new Error(`Столбцы для ${subject} ${level} не найдены`);
-    }
-
     const rows = table.rows;
     const students = [];
 
-    for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
+    // Столбец C (индекс 2) = Ученик, столбец K (индекс 10) = Итоговый балл
+    for (let rowIdx = 1; rowIdx < rows.length; rowIdx++) { // Начинаем с 1 (2-я строка)
       const row = rows[rowIdx];
       const cells = row.c || [];
 
-      const name = cells[nameColIdx]?.v;
-      const score = cells[scoreColIdx]?.v;
-      const statusRaw = statusColIdx >= 0 ? cells[statusColIdx]?.v : '';
+      const name = cells[2]?.v; // Столбец C
+      const score = cells[10]?.v; // Столбец K
 
       if (!name || name.toString().trim() === '') continue;
-
-      // Нормализуем статус из таблицы или используем дефолт
-      let status = 'starters';
-      if (statusRaw) {
-        const s = statusRaw.toString().toLowerCase();
-        if (s.includes('легенд')) status = 'legends';
-        else if (s.includes('крутыш')) status = 'champs';
-        else if (s.includes('старт')) status = 'starters';
-      }
 
       students.push({
         name: name.toString().trim(),
         score: Number(score) || 0,
-        status,
       });
     }
 
+    // Определяем места и категории
     students.sort((a, b) => b.score - a.score);
 
     let place = 0;
@@ -623,13 +594,17 @@
         prevScore = s.score;
       }
 
+      let category = 'starters';
+      if (s.score >= 95) category = 'legends';
+      else if (s.score >= 45) category = 'champs';
+
       return {
         subject,
         level,
         name: s.name,
         score: s.score,
         place,
-        status: s.status,
+        status: category,
       };
     });
 
