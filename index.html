@@ -718,8 +718,10 @@
     `).join('');
     document.getElementById('subject-tabs').innerHTML = subjectTabsHtml;
 
-    // Render exam toggle
-    const examToggleHtml = EXAMS.map(e => `
+    // Render exam toggle - only available levels for current subject
+    const currentSubjectConfig = SUBJECTS.find(s => s.key === currentSubject);
+    const availableLevels = currentSubjectConfig?.levels || [];
+    const examToggleHtml = availableLevels.map(e => `
       <button class="exam-btn ${currentExam === e ? 'active' : ''}" data-exam="${e}">
         ${e}
       </button>
@@ -745,20 +747,32 @@
       ${renderRatingColumn('starters', levelData.starters)}
     `;
     document.getElementById('columns-container').innerHTML = columnsHtml;
+  }
 
-    // Add event listeners
-    document.querySelectorAll('.subject-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        currentSubject = e.target.dataset.subject;
-        render();
-      });
+  function initEventListeners() {
+    document.getElementById('subject-tabs').addEventListener('click', (e) => {
+      if (e.target.classList.contains('subject-btn')) {
+        const newSubject = e.target.dataset.subject;
+        if (currentSubject !== newSubject) {
+          currentSubject = newSubject;
+          // When switching subjects, select first available level
+          const subjectConfig = SUBJECTS.find(s => s.key === currentSubject);
+          if (subjectConfig && !subjectConfig.levels.includes(currentExam)) {
+            currentExam = subjectConfig.levels[0];
+          }
+          render();
+        }
+      }
     });
 
-    document.querySelectorAll('.exam-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        currentExam = e.target.dataset.exam;
-        render();
-      });
+    document.getElementById('exam-toggle').addEventListener('click', (e) => {
+      if (e.target.classList.contains('exam-btn')) {
+        const newExam = e.target.dataset.exam;
+        if (currentExam !== newExam) {
+          currentExam = newExam;
+          render();
+        }
+      }
     });
   }
 
@@ -811,6 +825,10 @@
       console.log('Загружено студентов:', allStudents.length);
       console.log('По предметам:', Object.keys(appData || {}).map(k => `${k}: ${Object.keys(appData[k]).length} уровней`));
       render();
+      if (!window.listenersInitialized) {
+        initEventListeners();
+        window.listenersInitialized = true;
+      }
       updateLastUpdateTime();
       document.getElementById('refresh-btn').classList.remove('loading');
     } catch (error) {
