@@ -566,15 +566,17 @@
     const rows = table.rows;
     const students = [];
 
-    // DEBUG: логируем Перца Ивана
+    // DEBUG: логируем структуру столбцов и Перца Ивана
     if (rows.length > 0) {
       console.log(`\n=== ${subject} ${level} ===`);
+      console.log('Все столбцы (col info):', table.cols.map((c, i) => `[${i}]: id=${c.id}, type=${c.type}, label="${c.label}"`).join('; '));
+
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         const cells = row.c || [];
         const nameCell = cells[2]?.v;
         if (nameCell && nameCell.toString().includes('Перец')) {
-          console.log(`Найден Перец Иван в строке ${i}:`, cells.map((c, idx) => `[${idx}]: ${c?.v}`).filter((_, idx) => idx <= 15));
+          console.log(`Перец Иван (строка ${i}):`, cells.map((c, idx) => `[${idx}]=${c?.v} (p=${c?.p})`));
         }
       }
     }
