@@ -1,0 +1,65 @@
+[      54ms] [LOG] Загружаю: Математика ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[     922ms] [LOG] Загружаю: Математика ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[    1357ms] [LOG] Загружаю: Информатика ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[    1759ms] [LOG] Загружаю: Информатика ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[    2126ms] [LOG] Загружаю: Русский язык ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[    2602ms] [LOG] Загружаю: Русский язык ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[    3035ms] [LOG] Загружаю: Обществознание ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[    3397ms] [LOG] Загружаю: Обществознание ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[    3754ms] [LOG] Загружаю: История ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[    4163ms] [LOG] Загружаю: Физика ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[    4556ms] [LOG] Загружаю: Физика ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[    4900ms] [LOG] Загружено студентов: 364 @ http://localhost:8888/index.html:796
+[    4900ms] [LOG] По предметам: [математика: 2 уровней, информатика: 2 уровней, русский язык: 2 уровней, обществознание: 2 уровней, история: 1 уровней, физика: 2 уровней] @ http://localhost:8888/index.html:797
+[   21927ms] [LOG] Загружаю: Математика ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   22800ms] [LOG] Загружаю: Математика ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   23195ms] [LOG] Загружаю: Информатика ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   23582ms] [LOG] Загружаю: Информатика ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   23935ms] [LOG] Загружаю: Русский язык ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   24458ms] [LOG] Загружаю: Русский язык ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   25023ms] [LOG] Загружаю: Обществознание ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   25383ms] [LOG] Загружаю: Обществознание ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   25731ms] [LOG] Загружаю: История ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   26088ms] [LOG] Загружаю: Физика ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   26457ms] [LOG] Загружаю: Физика ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   26796ms] [LOG] Загружено студентов: 364 @ http://localhost:8888/index.html:796
+[   26796ms] [LOG] По предметам: [математика: 2 уровней, информатика: 2 уровней, русский язык: 2 уровней, обществознание: 2 уровней, история: 1 уровней, физика: 2 уровней] @ http://localhost:8888/index.html:797
+[   41739ms] [LOG] Загружаю: Математика ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   42394ms] [LOG] Загружаю: Математика ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   42889ms] [LOG] Загружаю: Информатика ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   43258ms] [LOG] Загружаю: Информатика ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   43581ms] [LOG] Загружаю: Русский язык ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   44099ms] [LOG] Загружаю: Русский язык ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   44515ms] [LOG] Загружаю: Обществознание ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   44856ms] [LOG] Загружаю: Обществознание ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   45181ms] [LOG] Загружаю: История ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   45513ms] [LOG] Загружаю: Физика ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   45877ms] [LOG] Загружаю: Физика ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   46212ms] [LOG] Загружено студентов: 364 @ http://localhost:8888/index.html:796
+[   46212ms] [LOG] По предметам: [математика: 2 уровней, информатика: 2 уровней, русский язык: 2 уровней, обществознание: 2 уровней, история: 1 уровней, физика: 2 уровней] @ http://localhost:8888/index.html:797
+[   48023ms] [LOG] Загружаю: Математика ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   48607ms] [LOG] Загружаю: Математика ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   48999ms] [LOG] Загружаю: Информатика ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   49370ms] [LOG] Загружаю: Информатика ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   49687ms] [LOG] Загружаю: Русский язык ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   50120ms] [LOG] Загружаю: Русский язык ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   50565ms] [LOG] Загружаю: Обществознание ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   50897ms] [LOG] Загружаю: Обществознание ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   51252ms] [LOG] Загружаю: История ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   51614ms] [LOG] Загружаю: Физика ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   51981ms] [LOG] Загружаю: Физика ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[   52304ms] [LOG] Загружено студентов: 364 @ http://localhost:8888/index.html:796
+[   52304ms] [LOG] По предметам: [математика: 2 уровней, информатика: 2 уровней, русский язык: 2 уровней, обществознание: 2 уровней, история: 1 уровней, физика: 2 уровней] @ http://localhost:8888/index.html:797
+[  379411ms] [LOG] Загружаю: Математика ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[  380071ms] [LOG] Загружаю: Математика ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[  380455ms] [LOG] Загружаю: Информатика ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[  380830ms] [LOG] Загружаю: Информатика ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[  381154ms] [LOG] Загружаю: Русский язык ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[  381672ms] [LOG] Загружаю: Русский язык ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[  382100ms] [LOG] Загружаю: Обществознание ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[  382476ms] [LOG] Загружаю: Обществознание ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[  382794ms] [LOG] Загружаю: История ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[  383155ms] [LOG] Загружаю: Физика ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[  383516ms] [LOG] Загружаю: Физика ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:772
+[  383856ms] [LOG] Загружено студентов: 364 @ http://localhost:8888/index.html:796
+[  383856ms] [LOG] По предметам: [математика: 2 уровней, информатика: 2 уровней, русский язык: 2 уровней, обществознание: 2 уровней, история: 1 уровней, физика: 2 уровней] @ http://localhost:8888/index.html:797

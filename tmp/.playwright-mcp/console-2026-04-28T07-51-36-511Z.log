@@ -1,0 +1,3 @@
+[    2055ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://marathon.planck.school/favicon.ico:0
+[    2365ms] [LOG] Загружено студентов: 364 @ http://marathon.planck.school/:810
+[    2365ms] [LOG] По предметам: [математика: 2 уровней, информатика: 2 уровней, русский язык: 2 уровней, обществознание: 2 уровней, история: 1 уровней, физика: 2 уровней] @ http://marathon.planck.school/:811

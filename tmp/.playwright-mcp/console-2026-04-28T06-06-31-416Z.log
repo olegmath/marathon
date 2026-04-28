@@ -1,0 +1,13 @@
+[      30ms] [LOG] Загружаю: Математика ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:719
+[     776ms] [LOG] Загружаю: Математика ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:719
+[    1233ms] [LOG] Загружаю: Информатика ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:719
+[    1730ms] [LOG] Загружаю: Информатика ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:719
+[    2071ms] [LOG] Загружаю: Русский язык ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:719
+[    2683ms] [LOG] Загружаю: Русский язык ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:719
+[    3117ms] [LOG] Загружаю: Обществознание ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:719
+[    3479ms] [LOG] Загружаю: Обществознание ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:719
+[    3819ms] [LOG] Загружаю: История ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:719
+[    4150ms] [LOG] Загружаю: Физика ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:719
+[    4516ms] [LOG] Загружаю: Физика ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8888/index.html:719
+[    4862ms] [LOG] Загружено студентов: 364 @ http://localhost:8888/index.html:743
+[    4862ms] [LOG] По предметам: [математика: 2 уровней, информатика: 2 уровней, русский язык: 2 уровней, обществознание: 2 уровней, история: 1 уровней, физика: 2 уровней] @ http://localhost:8888/index.html:744

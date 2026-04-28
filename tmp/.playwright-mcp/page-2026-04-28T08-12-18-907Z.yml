@@ -1,0 +1,11 @@
+- generic [active] [ref=e1]:
+  - img
+  - img
+  - generic [ref=e2]:
+    - generic [ref=e6]:
+      - generic [ref=e7]: РЕЙТИНГ
+      - generic [ref=e8]: Физика | ОГЭ
+      - generic [ref=e9]:
+        - button "⟳" [ref=e10] [cursor=pointer]
+        - generic [ref=e11]: "Обновлено: 14:51:38"
+    - img "Лого"

@@ -1,0 +1,1959 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e5]:
+      - img [ref=e9]
+      - button [ref=e11] [cursor=pointer]
+      - img [ref=e15]
+      - link "+7 (903) 914 24 43" [ref=e18] [cursor=pointer]:
+        - /url: tel:+79039142443
+      - link "Постоянная Планка Подготовка к ЕГЭ и ОГЭ" [ref=e21] [cursor=pointer]:
+        - /url: "#rec782176105"
+        - text: Постоянная Планка
+        - text: Подготовка к ЕГЭ и ОГЭ
+      - link "О школе" [ref=e24] [cursor=pointer]:
+        - /url: "#rec782176105"
+      - link "Курсы" [ref=e27] [cursor=pointer]:
+        - /url: "#rec782197582"
+      - link "Преподаватели" [ref=e30] [cursor=pointer]:
+        - /url: "#rec782514418"
+      - link "Вакансии" [ref=e33] [cursor=pointer]:
+        - /url: https://planck.school/vacancy
+      - link "Отзывы" [ref=e36] [cursor=pointer]:
+        - /url: "#rec782530068"
+    - generic [ref=e39]:
+      - generic [ref=e45]: АКТУАЛЬНЫЕ КУРСЫ
+      - button [ref=e47] [cursor=pointer]
+      - button [ref=e49] [cursor=pointer]:
+        - img [ref=e50]
+      - button "Алексей Кузнецов" [ref=e54] [cursor=pointer]
+      - button "Старт 14 апреля" [ref=e57] [cursor=pointer]
+      - button "Онлайн-вебинары по подготовке к сочинению" [ref=e60] [cursor=pointer]:
+        - text: Онлайн-вебинары
+        - text: по подготовке к сочинению
+      - button [ref=e62] [cursor=pointer]
+      - img [ref=e64]
+      - button [ref=e66] [cursor=pointer]
+      - button [ref=e68] [cursor=pointer]
+      - button "Сочинение" [ref=e71] [cursor=pointer]
+      - button "Русский язык" [ref=e74] [cursor=pointer]
+      - button [ref=e76] [cursor=pointer]
+      - button "ЕГЭ" [ref=e77] [cursor=pointer]:
+        - generic [ref=e82]: ЕГЭ
+      - button [ref=e84] [cursor=pointer]
+      - button [ref=e86] [cursor=pointer]:
+        - img [ref=e87]
+      - button "Алексей Вотинцев" [ref=e91] [cursor=pointer]
+      - button "Старт 6 мая" [ref=e94] [cursor=pointer]
+      - 'button "Лабораторные работы по физике ОГЭ: +3 первичных балла к результату!" [ref=e97] [cursor=pointer]'
+      - button [ref=e99] [cursor=pointer]
+      - button [ref=e101] [cursor=pointer]
+      - button "ОГЭ" [ref=e102] [cursor=pointer]:
+        - generic [ref=e107]: ОГЭ
+      - button [ref=e109] [cursor=pointer]
+      - button [ref=e111] [cursor=pointer]
+      - button "Группа 10 человек" [ref=e114] [cursor=pointer]
+      - button [ref=e116] [cursor=pointer]
+      - button "Физика" [ref=e119] [cursor=pointer]
+      - button "Лабораторные работы" [ref=e122] [cursor=pointer]
+    - generic [ref=e125]:
+      - img [ref=e132]
+      - img [ref=e136]
+      - generic [ref=e139]: ОНЛАЙН-МАРАФОНЫ
+      - generic [ref=e141]: СДАЙ ЭКЗАМЕНЫ НА МАКСИМУМ!
+      - generic [ref=e145]: Марафоны - ежедневные 30 минутные подборки заданий первой части (ЕГЭ/ОГЭ) с автоматической проверкой. Задачи взяты исключительно из банка фипи и необходимы, чтобы закрыть все пробелы первой части.
+      - generic [ref=e159]: История
+      - generic [ref=e161]: Физика
+      - generic [ref=e163]: Информатика
+      - generic [ref=e165]: Старт в апреле
+      - generic [ref=e167]: Русский язык
+      - generic [ref=e169]: Математика
+      - generic [ref=e171]: Обществознание
+      - button [ref=e173] [cursor=pointer]
+      - button "ЗАПИСАТЬСЯ НА КУРСЫ" [ref=e176] [cursor=pointer]
+    - generic [ref=e179]:
+      - img [ref=e185]
+      - img [ref=e187]
+      - img [ref=e189]
+      - img [ref=e191]
+      - generic [ref=e193]: Подготовим к егэ на 90+ и Огэ на 5 и поможем поступить в вуз мечты
+      - generic [ref=e195]: 80 - средний балл ЕГЭ наших выпускников
+      - button [ref=e197] [cursor=pointer]
+      - generic [ref=e199]: 11 лет успешно готовим к ОГЭ и ЕГЭ
+      - generic [ref=e201]: 95% выпускников поступают в ВУЗ на бюджет
+      - button [ref=e203] [cursor=pointer]
+      - img [ref=e205]
+      - button "Получить бесплатную консультацию" [ref=e208] [cursor=pointer]
+    - generic [ref=e211]:
+      - heading "ВИДЫ ОБУЧЕНИЯ" [level=1] [ref=e219]
+      - heading "ПОДГОТОВКА К ЕГЭ" [level=2] [ref=e221]:
+        - text: ПОДГОТОВКА
+        - text: К ЕГЭ
+      - heading "ПОДГОТОВКА К ОГЭ" [level=2] [ref=e225]:
+        - text: ПОДГОТОВКА
+        - text: К ОГЭ
+      - img [ref=e227]
+      - heading "Очные занятия в небольших группах" [level=3] [ref=e231]
+      - heading "10 КЛАСС" [level=2] [ref=e235]:
+        - text: "10"
+        - text: КЛАСС
+      - img [ref=e237]
+      - heading "Двухлетний курс подготовки к ЕГЭ" [level=3] [ref=e239]
+      - heading "ИНДИВИДУАЛЬНЫЕ ЗАНЯТИЯ" [level=2] [ref=e243]:
+        - text: ИНДИВИДУАЛЬНЫЕ
+        - text: ЗАНЯТИЯ
+      - img [ref=e245]
+      - heading "Персональные занятия с репетитором" [level=3] [ref=e249]:
+        - text: Персональные занятия
+        - text: с репетитором
+      - heading "ГРУППЫ ПОВЫШЕННОЙ СЛОЖНОСТИ" [level=2] [ref=e253]:
+        - text: ГРУППЫ
+        - text: ПОВЫШЕННОЙ
+        - text: СЛОЖНОСТИ
+      - img [ref=e255]
+      - heading "Разбор самых сложных заданий ЕГЭ" [level=3] [ref=e257]
+      - heading "ОНЛАЙН КУРСЫ" [level=2] [ref=e261]:
+        - text: ОНЛАЙН
+        - text: КУРСЫ
+      - img [ref=e263]
+      - heading "Дистанционные занятия в небольших группах" [level=3] [ref=e267]
+      - button "Подробнее" [ref=e269] [cursor=pointer]:
+        - generic [ref=e271]: Подробнее
+      - heading "Очные занятия в небольших группах" [level=3] [ref=e273]:
+        - generic [ref=e274]: Очные занятия в небольших группах
+      - img [ref=e276]
+      - button "Записаться" [ref=e278] [cursor=pointer]:
+        - generic [ref=e280]: Записаться
+      - button "Подробнее" [ref=e282] [cursor=pointer]:
+        - generic [ref=e284]: Подробнее
+      - button "Записаться" [ref=e286] [cursor=pointer]:
+        - generic [ref=e288]: Записаться
+      - button "Подробнее" [ref=e290] [cursor=pointer]:
+        - generic [ref=e292]: Подробнее
+      - button "Записаться" [ref=e294] [cursor=pointer]:
+        - generic [ref=e296]: Записаться
+      - button "Записаться" [ref=e298] [cursor=pointer]:
+        - generic [ref=e300]: Записаться
+      - button "Подробнее" [ref=e302] [cursor=pointer]:
+        - generic [ref=e304]: Подробнее
+      - button "Записаться" [ref=e306] [cursor=pointer]:
+        - generic [ref=e308]: Записаться
+      - button "Подробнее" [ref=e310] [cursor=pointer]:
+        - generic [ref=e312]: Подробнее
+      - button "Записаться" [ref=e314] [cursor=pointer]:
+        - generic [ref=e316]: Записаться
+      - button "Подробнее" [ref=e318] [cursor=pointer]:
+        - generic [ref=e320]: Подробнее
+    - generic [ref=e323]:
+      - generic [ref=e327]: КУДА ПОСТУПАЮТ НАШИ УЧЕНИКИ
+      - img [ref=e329]
+      - generic [ref=e332]: ТПУ
+      - img [ref=e334]
+      - generic [ref=e336]: вшэ
+      - generic [ref=e338]: ИТМо
+      - generic [ref=e340]: ТГУ
+      - generic [ref=e342]: РАНХиГС
+      - generic [ref=e344]:
+        - text: Горный
+        - text: университет
+      - generic [ref=e346]: МГУ
+      - generic [ref=e349]: СИБГМУ
+      - generic [ref=e352]: СПБПУ
+      - generic [ref=e354]: РТУ МИРЭА
+      - generic [ref=e356]: мгту имени Баумана
+      - img [ref=e358]
+      - img [ref=e360]
+      - img [ref=e362]
+      - generic [ref=e364]: спбгу
+      - img [ref=e366]
+      - img [ref=e368]
+      - img [ref=e370]
+      - img [ref=e372]
+      - img [ref=e374]
+      - img [ref=e376]
+      - img [ref=e378]
+      - img [ref=e380]
+      - generic [ref=e383]: ТГПУ
+      - generic [ref=e385]:
+        - text: Московский
+        - text: энергетический
+        - text: институт
+      - img [ref=e387]
+      - img [ref=e389]
+      - img [ref=e391]
+      - img [ref=e393]
+      - img [ref=e395]
+      - img [ref=e397]
+    - generic [ref=e400]:
+      - heading "ПОЧЕМУ МЫ?" [level=1] [ref=e404]:
+        - generic [ref=e405]: ПОЧЕМУ МЫ?
+      - img [ref=e409]
+      - heading "Проводим регулярные пробники из материалов ФИПИ и контрольные точки. Ученики привыкают к формату, учатся распределять время, а мы точечно усиливаем слабые места." [level=3] [ref=e413]:
+        - text: Проводим
+        - strong [ref=e414]: регулярные пробники
+        - text: из материалов ФИПИ и контрольные точки. Ученики привыкают к формату, учатся распределять время, а мы точечно усиливаем слабые места.
+      - heading "Проведение пробников" [level=2] [ref=e416]
+      - img [ref=e420]
+      - heading "Следим за прогрессом каждого ученика. Регулярно отправляем родителям понятные отчёты — видно, что уже получилось и над чем работаем дальше." [level=3] [ref=e422]:
+        - strong [ref=e423]: Сл
+        - text: едим за прогрессом каждого ученика. Регулярно отправляем родителям
+        - strong [ref=e424]: понятные отчёты
+        - text: — видно, что уже получилось и над чем работаем дальше.
+      - heading "Мы - лицензированная образовательная организация. Это гарантирует прозрачность, качество и безопасность обучения. А так же официальный договор, возможность оформить налоговый вычет и возможность приёма оплаты материнским капиталом" [level=3] [ref=e428]:
+        - text: Мы -
+        - strong [ref=e429]: лицензированная образовательная организация
+        - text: .
+        - text: Это гарантирует прозрачность, качество и безопасность обучения. А так же
+        - strong [ref=e430]: официальный договор,
+        - text: возможность оформить
+        - strong [ref=e431]: налоговый вычет
+        - text: и возможность
+        - strong [ref=e432]: приёма оплаты материнским капиталом
+      - heading "Образовательная лицензия" [level=2] [ref=e434]
+      - heading "Высокие баллы — это системный подход" [level=2] [ref=e438]
+      - heading "80 средний балл наших учеников; 90+ результат каждого четвертого нашего выпускника." [level=3] [ref=e442]:
+        - strong [ref=e443]: "80"
+        - text: средний балл наших учеников;
+        - strong [ref=e444]: 90+
+        - text: результат каждого четвертого
+        - text: нашего выпускника.
+      - heading "Это результат сильной программы, контроля и вовлечённости ребенка." [level=3] [ref=e446]: Это результат сильной программы, контроля и вовлечённости ребенка.
+      - img [ref=e449]
+      - img [ref=e452]
+      - heading "Опытные преподаватели" [level=2] [ref=e454]
+      - heading "Мы гордимся нашей командой молодых экспертов, которые не только отлично разбираются в своих предметах и каждый год сами сдают ЕГЭ, но и умеют находить общий язык с учениками. Они создают атмосферу доверия и открытости, благодаря чему дети не стесняются задавать вопросы и активно участвовать в занятиях. Это позволяет детям искренне полюбить предмет и успешно сдать экзамен." [level=3] [ref=e456]:
+        - text: Мы гордимся нашей командой молодых экспертов, которые не только отлично разбираются в своих предметах и каждый год сами сдают ЕГЭ,
+        - text: но и умеют находить общий язык с учениками. Они создают атмосферу доверия и открытости, благодаря чему дети не стесняются задавать вопросы и активно участвовать в занятиях. Это позволяет детям искренне полюбить предмет и успешно сдать экзамен.
+      - img [ref=e458]
+      - heading "Команда молодых экспертов, которые ежегодно сами сдают ЕГЭ и отлично понимают формат и нюансы проверок. Тот, кто сам сдаёт на 100, знает, как привести к высокому результату" [level=3] [ref=e460]:
+        - text: Команда молодых экспертов, которые
+        - strong [ref=e461]: ежегодно сами сдают ЕГЭ
+        - text: и отлично понимают формат и нюансы проверок.
+        - text: Тот, кто
+        - strong [ref=e462]: сам сдаёт на 100
+        - text: ", знает, как привести к высокому результату"
+      - img [ref=e464]
+      - img [ref=e466]
+      - 'heading "Курс построен под экзамен: актуальные требования ЕГЭ/ОГЭ + современные методики. Каждый модуль - это теория → тренировка → разбор ошибок → доработка навыков, чтобы уверенность росла вместе с результатом." [level=3] [ref=e468]':
+        - text: Курс построен
+        - strong [ref=e469]: под экзамен
+        - text: ": актуальные требования ЕГЭ/ОГЭ + современные методики."
+        - text: Каждый модуль - это
+        - strong [ref=e470]: теория → тренировка → разбор ошибок → доработка навыков
+        - text: ", чтобы уверенность росла вместе с результатом."
+      - heading "Программа, которая работает" [level=2] [ref=e472]
+      - heading "Системный контроль и отчёты родителям" [level=2] [ref=e474]
+    - generic [ref=e477]:
+      - img [ref=e482]
+      - img [ref=e487]
+      - generic [ref=e495]:
+        - tabpanel [ref=e496]:
+          - generic [ref=e499]:
+            - heading [level=2] [ref=e505]: Пивоваров Иван
+            - generic [ref=e509]: "Средний балл ЕГЭ: 78"
+            - img [ref=e511] [cursor=pointer]
+            - img [ref=e513]
+            - img [ref=e515]
+            - button [ref=e519] [cursor=pointer]:
+              - img [ref=e520]
+            - generic [ref=e526]: "Образование: ТУСУР"
+            - heading [level=3] [ref=e528]: Информатика
+            - generic [ref=e532]: "Стаж: 4 года"
+        - tabpanel [ref=e533]:
+          - generic [ref=e536]:
+            - heading [level=2] [ref=e542]: Егор Куюмджиев
+            - generic [ref=e546]: "Средний балл ЕГЭ: 80"
+            - img [ref=e548] [cursor=pointer]
+            - img [ref=e550]
+            - img [ref=e552]
+            - heading [level=3] [ref=e556]: Информатика
+            - generic [ref=e560]: "Образование: ТГУ"
+            - generic [ref=e564]: "Стаж: 4 года"
+        - tabpanel [ref=e565]:
+          - generic [ref=e568]:
+            - generic:
+              - heading [level=3]
+            - generic [ref=e576]: "Средний балл учеников: 87"
+            - heading "Артем Лаас" [level=2] [ref=e578]
+            - generic [ref=e582]: Эксперт ЕГЭ по математике
+            - img [ref=e584] [cursor=pointer]
+            - img [ref=e586] [cursor=pointer]
+            - img [ref=e588]
+            - img [ref=e590]
+            - button [ref=e592] [cursor=pointer]:
+              - img [ref=e593]
+            - generic [ref=e599]: "Образование: ТПУ"
+            - generic [ref=e603]: Директор
+            - generic [ref=e607]: "Стаж: 11 лет"
+        - tabpanel [ref=e608]:
+          - generic [ref=e611]:
+            - heading [level=2] [ref=e617]: Захар Смороков
+            - generic [ref=e621]: "Средний балл учеников: 76"
+            - img [ref=e623] [cursor=pointer]
+            - img [ref=e625]
+            - img [ref=e627]
+            - button [ref=e631] [cursor=pointer]:
+              - img [ref=e632]
+            - generic [ref=e638]: "Образование: ТГПУ"
+            - heading [level=3] [ref=e640]: Обществознание/история
+            - generic [ref=e644]: "Стаж: 13 лет"
+            - generic [ref=e648]: Эксперт ЕГЭ
+        - tabpanel [ref=e649]:
+          - generic [ref=e652]:
+            - heading [level=2] [ref=e658]: Владимир Елькин
+            - generic [ref=e662]: "Средний балл учеников: 81"
+            - img [ref=e664] [cursor=pointer]
+            - img [ref=e666] [cursor=pointer]
+            - img [ref=e668]
+            - img [ref=e670]
+            - button [ref=e674] [cursor=pointer]:
+              - img [ref=e675]
+            - generic [ref=e681]: "Образование: ТПУ"
+            - heading [level=3] [ref=e683]: Физика
+            - generic [ref=e687]: "Стаж: 7 лет"
+            - generic [ref=e691]: Эксперт ЕГЭ
+        - tabpanel [ref=e692]:
+          - generic [ref=e695]:
+            - heading [level=2] [ref=e701]: Олег Храбров
+            - generic [ref=e705]: "Средний балл учеников: 80"
+            - img [ref=e707]
+            - img [ref=e709]
+            - img [ref=e711]
+            - img [ref=e713]
+            - button [ref=e717] [cursor=pointer]:
+              - img [ref=e718]
+            - generic [ref=e724]: "Образование: ТГУ"
+            - heading [level=3] [ref=e726]: Математика
+            - link [ref=e728] [cursor=pointer]:
+              - /url: https://t.me/KhrabrovOleg
+            - link [ref=e730] [cursor=pointer]:
+              - /url: https://t.me/KhrabrovOleg
+            - link [ref=e732] [cursor=pointer]:
+              - /url: https://www.youtube.com/@dushnilamath
+            - generic [ref=e736]: "Стаж: 8 лет"
+            - link [ref=e738] [cursor=pointer]:
+              - /url: https://www.youtube.com/@dushnilamath
+            - generic [ref=e742]: Эксперт ЕГЭ
+        - tabpanel [ref=e743]:
+          - generic [ref=e746]:
+            - heading [level=2] [ref=e752]: Дарья Петрова
+            - img [ref=e754]
+            - img [ref=e756]
+            - generic [ref=e760]: "Образование: СПбГУ"
+            - heading [level=3] [ref=e766]: Русский язык
+            - generic [ref=e770]: "Средний балл учеников: 84"
+            - heading [level=3] [ref=e772]: Литература
+            - generic [ref=e774]: /
+            - generic [ref=e778]: "Стаж: 5 лет"
+        - tabpanel [ref=e779]:
+          - generic [ref=e782]:
+            - heading [level=2] [ref=e788]: Дмитрий Иванов
+            - generic [ref=e792]: "Средний балл учеников: 80"
+            - img [ref=e794] [cursor=pointer]
+            - img [ref=e796] [cursor=pointer]
+            - img [ref=e798]
+            - img [ref=e800]
+            - button [ref=e804] [cursor=pointer]:
+              - img [ref=e805]
+            - generic [ref=e811]: "Образование: ТПУ"
+            - heading [level=3] [ref=e813]: Математика
+            - generic [ref=e817]: "Стаж: 7 лет"
+            - generic [ref=e821]: Эксперт ЕГЭ
+        - tabpanel [ref=e822]:
+          - generic [ref=e825]:
+            - heading [level=2] [ref=e831]: Георгий Курбатов
+            - img [ref=e833] [cursor=pointer]
+            - img [ref=e835] [cursor=pointer]
+            - img [ref=e837]
+            - img [ref=e839]
+            - generic [ref=e843]: "Образование: ТГУ"
+            - button [ref=e847] [cursor=pointer]:
+              - img [ref=e848]
+            - heading [level=3] [ref=e852]: Обществознание
+            - generic [ref=e856]: "Стаж: 8 лет"
+            - generic [ref=e860]: 4 года работы юристом
+            - generic [ref=e864]: "Средний балл учеников: 76"
+        - tabpanel [ref=e865]:
+          - generic [ref=e868]:
+            - heading [level=2] [ref=e874]: Анна Филиппова
+            - img [ref=e876] [cursor=pointer]
+            - img [ref=e878]
+            - img [ref=e880]
+            - generic [ref=e884]: "Образование: ТГУ"
+            - heading [level=3] [ref=e888]: Русский язык
+            - generic [ref=e892]: "Стаж: 2 года"
+            - generic [ref=e896]: Аспирант, ассистент кафедры русского языка в НИ ТГУ
+            - generic [ref=e900]: "Средняя оценка на ОГЭ: 4,3"
+        - tabpanel [ref=e901]:
+          - generic [ref=e904]:
+            - heading [level=2] [ref=e910]: Екатерина Потапова
+            - generic [ref=e914]: "Средний балл учеников: 76"
+            - img [ref=e916] [cursor=pointer]
+            - img [ref=e918]
+            - img [ref=e920]
+            - button [ref=e924] [cursor=pointer]:
+              - img [ref=e925]
+            - generic [ref=e931]: Эксперт ОГЭ
+            - generic [ref=e935]: "Образование: ТГУ"
+            - heading [level=3] [ref=e937]: Математика
+            - generic [ref=e941]: "Стаж: 5 лет"
+        - tabpanel [ref=e942]
+        - tabpanel [ref=e943]:
+          - generic [ref=e946]:
+            - heading [level=2] [ref=e952]: Бартенева Ольга
+            - img [ref=e954]
+            - img [ref=e956]
+            - generic [ref=e960]: "Образование: ТГУ"
+            - heading [level=3] [ref=e964]: Русский язык
+            - generic [ref=e968]: "Средний балл учеников: 75"
+            - generic [ref=e972]: "Стаж: 6 лет"
+        - tabpanel [ref=e973]:
+          - generic [ref=e976]:
+            - heading [level=2] [ref=e982]: Вотинцев Алексей
+            - img [ref=e984] [cursor=pointer]
+            - img [ref=e986]
+            - img [ref=e988]
+            - generic [ref=e992]: "Образование: ТГУ"
+            - button [ref=e996] [cursor=pointer]:
+              - img [ref=e997]
+            - heading [level=3] [ref=e1001]: Физика
+            - generic [ref=e1005]: "Стаж: 5 лет"
+            - link [ref=e1007] [cursor=pointer]:
+              - /url: https://www.youtube.com/@dushnilamath
+            - generic [ref=e1011]: "Средняя оценка на ОГЭ: 4,5"
+            - link [ref=e1013] [cursor=pointer]:
+              - /url: https://www.youtube.com/channel/UCxmWiFB2ytxwYLHPuoFSGkQ
+            - generic [ref=e1017]: Преподаватель в ТГУ
+        - tabpanel [ref=e1018]:
+          - generic [ref=e1021]:
+            - heading [level=2] [ref=e1027]: Смирнов Дмитрий
+            - generic [ref=e1031]: "Средний балл ОГЭ: 4,8"
+            - img [ref=e1033] [cursor=pointer]
+            - img [ref=e1035]
+            - img [ref=e1037]
+            - button [ref=e1041] [cursor=pointer]:
+              - img [ref=e1042]
+            - generic [ref=e1048]: "Образование: ТПУ"
+            - heading [level=3] [ref=e1050]: Математика
+            - generic [ref=e1054]: "Стаж: 4 года"
+        - tabpanel [ref=e1055]:
+          - generic [ref=e1058]:
+            - heading [level=2] [ref=e1064]: Алина Нагайцева
+            - generic [ref=e1068]: "Средний балл ЕГЭ: 75"
+            - img [ref=e1070] [cursor=pointer]
+            - img [ref=e1072]
+            - img [ref=e1074]
+            - generic [ref=e1080]: "Образование: ТУСУР"
+            - heading [level=3] [ref=e1082]: Информатика
+            - generic [ref=e1086]: "Стаж: 5 лет"
+        - tabpanel [ref=e1087]:
+          - generic [ref=e1090]:
+            - heading [level=2] [ref=e1096]: Пивоваров Иван
+            - generic [ref=e1100]: "Средний балл ЕГЭ: 78"
+            - img [ref=e1102] [cursor=pointer]
+            - img [ref=e1104]
+            - img [ref=e1106]
+            - button [ref=e1110] [cursor=pointer]:
+              - img [ref=e1111]
+            - generic [ref=e1117]: "Образование: ТУСУР"
+            - heading [level=3] [ref=e1119]: Информатика
+            - generic [ref=e1123]: "Стаж: 4 года"
+        - tabpanel [ref=e1124]:
+          - generic [ref=e1127]:
+            - heading [level=2] [ref=e1133]: Егор Куюмджиев
+            - generic [ref=e1137]: "Средний балл ЕГЭ: 80"
+            - img [ref=e1139] [cursor=pointer]
+            - img [ref=e1141]
+            - img [ref=e1143]
+            - heading [level=3] [ref=e1147]: Информатика
+            - generic [ref=e1151]: "Образование: ТГУ"
+            - generic [ref=e1155]: "Стаж: 4 года"
+        - tabpanel [ref=e1156]:
+          - generic [ref=e1159]:
+            - generic [ref=e1167]: "Средний балл учеников: 87"
+            - heading [level=2] [ref=e1169]: Артем Лаас
+            - generic [ref=e1173]: Эксперт ЕГЭ по математике
+            - img [ref=e1175] [cursor=pointer]
+            - img [ref=e1177] [cursor=pointer]
+            - img [ref=e1179]
+            - img [ref=e1181]
+            - button [ref=e1183] [cursor=pointer]:
+              - img [ref=e1184]
+            - generic [ref=e1190]: "Образование: ТПУ"
+            - generic [ref=e1194]: Директор
+            - generic [ref=e1198]: "Стаж: 11 лет"
+        - tabpanel [ref=e1199]:
+          - generic [ref=e1202]:
+            - heading [level=2] [ref=e1208]: Захар Смороков
+            - generic [ref=e1212]: "Средний балл учеников: 76"
+            - img [ref=e1214] [cursor=pointer]
+            - img [ref=e1216]
+            - img [ref=e1218]
+            - button [ref=e1222] [cursor=pointer]:
+              - img [ref=e1223]
+            - generic [ref=e1229]: "Образование: ТГПУ"
+            - heading [level=3] [ref=e1231]: Обществознание/история
+            - generic [ref=e1235]: "Стаж: 13 лет"
+            - generic [ref=e1239]: Эксперт ЕГЭ
+        - tabpanel [ref=e1240]:
+          - generic [ref=e1243]:
+            - heading [level=2] [ref=e1249]: Владимир Елькин
+            - generic [ref=e1253]: "Средний балл учеников: 81"
+            - img [ref=e1255] [cursor=pointer]
+            - img [ref=e1257] [cursor=pointer]
+            - img [ref=e1259]
+            - img [ref=e1261]
+            - button [ref=e1265] [cursor=pointer]:
+              - img [ref=e1266]
+            - generic [ref=e1272]: "Образование: ТПУ"
+            - heading [level=3] [ref=e1274]: Физика
+            - generic [ref=e1278]: "Стаж: 7 лет"
+            - generic [ref=e1282]: Эксперт ЕГЭ
+        - tabpanel [ref=e1283]:
+          - generic [ref=e1286]:
+            - heading [level=2] [ref=e1292]: Олег Храбров
+            - generic [ref=e1296]: "Средний балл учеников: 80"
+            - img [ref=e1298]
+            - img [ref=e1300]
+            - img [ref=e1302]
+            - img [ref=e1304]
+            - button [ref=e1308] [cursor=pointer]:
+              - img [ref=e1309]
+            - generic [ref=e1315]: "Образование: ТГУ"
+            - heading [level=3] [ref=e1317]: Математика
+            - link [ref=e1319] [cursor=pointer]:
+              - /url: https://t.me/KhrabrovOleg
+            - link [ref=e1321] [cursor=pointer]:
+              - /url: https://t.me/KhrabrovOleg
+            - link [ref=e1323] [cursor=pointer]:
+              - /url: https://www.youtube.com/@dushnilamath
+            - generic [ref=e1327]: "Стаж: 8 лет"
+            - link [ref=e1329] [cursor=pointer]:
+              - /url: https://www.youtube.com/@dushnilamath
+            - generic [ref=e1333]: Эксперт ЕГЭ
+        - tabpanel [ref=e1334]:
+          - generic [ref=e1337]:
+            - heading [level=2] [ref=e1343]: Дарья Петрова
+            - img [ref=e1345]
+            - img [ref=e1347]
+            - generic [ref=e1351]: "Образование: СПбГУ"
+            - heading [level=3] [ref=e1357]: Русский язык
+            - generic [ref=e1361]: "Средний балл учеников: 84"
+            - heading [level=3] [ref=e1363]: Литература
+            - generic [ref=e1365]: /
+            - generic [ref=e1369]: "Стаж: 5 лет"
+        - tabpanel [ref=e1370]:
+          - generic [ref=e1373]:
+            - heading [level=2] [ref=e1379]: Дмитрий Иванов
+            - generic [ref=e1383]: "Средний балл учеников: 80"
+            - img [ref=e1385] [cursor=pointer]
+            - img [ref=e1387] [cursor=pointer]
+            - img [ref=e1389]
+            - img [ref=e1391]
+            - button [ref=e1395] [cursor=pointer]:
+              - img [ref=e1396]
+            - generic [ref=e1402]: "Образование: ТПУ"
+            - heading [level=3] [ref=e1404]: Математика
+            - generic [ref=e1408]: "Стаж: 7 лет"
+            - generic [ref=e1412]: Эксперт ЕГЭ
+        - tabpanel [ref=e1413]:
+          - generic [ref=e1416]:
+            - heading [level=2] [ref=e1422]: Георгий Курбатов
+            - img [ref=e1424] [cursor=pointer]
+            - img [ref=e1426] [cursor=pointer]
+            - img [ref=e1428]
+            - img [ref=e1430]
+            - generic [ref=e1434]: "Образование: ТГУ"
+            - button [ref=e1438] [cursor=pointer]:
+              - img [ref=e1439]
+            - heading [level=3] [ref=e1443]: Обществознание
+            - generic [ref=e1447]: "Стаж: 8 лет"
+            - generic [ref=e1451]: 4 года работы юристом
+            - generic [ref=e1455]: "Средний балл учеников: 76"
+        - tabpanel [ref=e1456]:
+          - generic [ref=e1459]:
+            - heading [level=2] [ref=e1465]: Анна Филиппова
+            - img [ref=e1467] [cursor=pointer]
+            - img [ref=e1469]
+            - img [ref=e1471]
+            - generic [ref=e1475]: "Образование: ТГУ"
+            - heading [level=3] [ref=e1479]: Русский язык
+            - generic [ref=e1483]: "Стаж: 2 года"
+            - generic [ref=e1487]: Аспирант, ассистент кафедры русского языка в НИ ТГУ
+            - generic [ref=e1491]: "Средняя оценка на ОГЭ: 4,3"
+        - tabpanel [ref=e1492]:
+          - generic [ref=e1495]:
+            - heading [level=2] [ref=e1501]: Екатерина Потапова
+            - generic [ref=e1505]: "Средний балл учеников: 76"
+            - img [ref=e1507] [cursor=pointer]
+            - img [ref=e1509]
+            - img [ref=e1511]
+            - button [ref=e1515] [cursor=pointer]:
+              - img [ref=e1516]
+            - generic [ref=e1522]: Эксперт ОГЭ
+            - generic [ref=e1526]: "Образование: ТГУ"
+            - heading [level=3] [ref=e1528]: Математика
+            - generic [ref=e1532]: "Стаж: 5 лет"
+        - tabpanel [ref=e1533]
+        - tabpanel [ref=e1534]:
+          - generic [ref=e1537]:
+            - heading [level=2] [ref=e1543]: Бартенева Ольга
+            - img [ref=e1545]
+            - img [ref=e1547]
+            - generic [ref=e1551]: "Образование: ТГУ"
+            - heading [level=3] [ref=e1555]: Русский язык
+            - generic [ref=e1559]: "Средний балл учеников: 75"
+            - generic [ref=e1563]: "Стаж: 6 лет"
+        - tabpanel [ref=e1564]:
+          - generic [ref=e1567]:
+            - heading [level=2] [ref=e1573]: Вотинцев Алексей
+            - img [ref=e1575] [cursor=pointer]
+            - img [ref=e1577]
+            - img [ref=e1579]
+            - generic [ref=e1583]: "Образование: ТГУ"
+            - button [ref=e1587] [cursor=pointer]:
+              - img [ref=e1588]
+            - heading [level=3] [ref=e1592]: Физика
+            - generic [ref=e1596]: "Стаж: 5 лет"
+            - link [ref=e1598] [cursor=pointer]:
+              - /url: https://www.youtube.com/@dushnilamath
+            - generic [ref=e1602]: "Средняя оценка на ОГЭ: 4,5"
+            - link [ref=e1604] [cursor=pointer]:
+              - /url: https://www.youtube.com/channel/UCxmWiFB2ytxwYLHPuoFSGkQ
+            - generic [ref=e1608]: Преподаватель в ТГУ
+        - tabpanel [ref=e1609]:
+          - generic [ref=e1612]:
+            - heading [level=2] [ref=e1618]: Смирнов Дмитрий
+            - generic [ref=e1622]: "Средний балл ОГЭ: 4,8"
+            - img [ref=e1624] [cursor=pointer]
+            - img [ref=e1626]
+            - img [ref=e1628]
+            - button [ref=e1632] [cursor=pointer]:
+              - img [ref=e1633]
+            - generic [ref=e1639]: "Образование: ТПУ"
+            - heading [level=3] [ref=e1641]: Математика
+            - generic [ref=e1645]: "Стаж: 4 года"
+        - tabpanel [ref=e1646]:
+          - generic [ref=e1649]:
+            - heading [level=2] [ref=e1655]: Алина Нагайцева
+            - generic [ref=e1659]: "Средний балл ЕГЭ: 75"
+            - img [ref=e1661] [cursor=pointer]
+            - img [ref=e1663]
+            - img [ref=e1665]
+            - generic [ref=e1671]: "Образование: ТУСУР"
+            - heading [level=3] [ref=e1673]: Информатика
+            - generic [ref=e1677]: "Стаж: 5 лет"
+        - tabpanel [ref=e1678]:
+          - generic [ref=e1681]:
+            - heading [level=2] [ref=e1687]: Пивоваров Иван
+            - generic [ref=e1691]: "Средний балл ЕГЭ: 78"
+            - img [ref=e1693] [cursor=pointer]
+            - img [ref=e1695]
+            - img [ref=e1697]
+            - button [ref=e1701] [cursor=pointer]:
+              - img [ref=e1702]
+            - generic [ref=e1708]: "Образование: ТУСУР"
+            - heading [level=3] [ref=e1710]: Информатика
+            - generic [ref=e1714]: "Стаж: 4 года"
+        - tabpanel [ref=e1715]:
+          - generic [ref=e1718]:
+            - heading [level=2] [ref=e1724]: Егор Куюмджиев
+            - generic [ref=e1728]: "Средний балл ЕГЭ: 80"
+            - img [ref=e1730] [cursor=pointer]
+            - img [ref=e1732]
+            - img [ref=e1734]
+            - heading [level=3] [ref=e1738]: Информатика
+            - generic [ref=e1742]: "Образование: ТГУ"
+            - generic [ref=e1746]: "Стаж: 4 года"
+      - heading "КТО ПРЕПОДАЕТ В ПОСТОЯННОЙ ПЛАНКА?" [level=1] [ref=e1750]:
+        - text: КТО ПРЕПОДАЕТ
+        - text: В ПОСТОЯННОЙ ПЛАНКА?
+      - heading "1" [level=3] [ref=e1752]
+      - heading "*" [level=3] [ref=e1754]
+      - heading "Данные преподавателей опубликованы с их письменного согласия" [level=3] [ref=e1756]
+      - 'heading "Мы внимательно следим за квалификацией преподавателей: каждый год они сами сдают ЕГЭ и проходят обучение на экспертов. Вы можете быть уверены, что ваш ребенок учится у профессионала" [level=3] [ref=e1758]':
+        - text: Мы внимательно следим
+        - text: "за квалификацией преподавателей: каждый год они сами сдают ЕГЭ"
+        - text: и проходят обучение на экспертов.
+        - text: Вы можете быть уверены, что ваш ребенок учится у профессионала
+      - img [ref=e1761]
+      - img [ref=e1765]
+      - heading "/16" [level=3] [ref=e1772]
+    - generic [ref=e1775]:
+      - img [ref=e1783]
+      - heading "Начать заниматься регулярно" [level=3] [ref=e1785]
+      - heading "4" [level=3] [ref=e1787]
+      - heading "Как начать заниматься?" [level=1] [ref=e1789]
+      - button [ref=e1791] [cursor=pointer]
+      - heading "Оставить заявку на сайте или связаться с нашим администратором по телефону" [level=3] [ref=e1793]:
+        - text: Оставить заявку на сайте или связаться
+        - text: с нашим администратором
+        - text: по телефону
+      - heading "1" [level=3] [ref=e1797]
+      - heading "Написать входное тестирование и получить бесплатную консультацию" [level=3] [ref=e1799]
+      - heading "2" [level=3] [ref=e1801]
+      - heading "Подобрать удобное расписание" [level=3] [ref=e1803]
+      - img [ref=e1805]
+      - heading "3" [level=3] [ref=e1807]
+      - img [ref=e1809]
+    - generic [ref=e1812]:
+      - img [ref=e1820]
+      - generic [ref=e1822]: Кулешова Катя
+      - generic [ref=e1824]: Инофрматика 100
+      - img [ref=e1826]
+      - img [ref=e1829]
+      - img [ref=e1833]
+      - img [ref=e1837]
+      - img [ref=e1841]
+      - heading "1" [level=3] [ref=e1844]
+      - heading "ЧТО ГОВОРЯТ О НАС НАШИ УЧЕНИКИ?" [level=1] [ref=e1846]
+      - generic [ref=e1848]: "Лучшее место для подготовки к ЕГЭ! Преподаватели очень понятно объясняют материал, готовы отвечать на все дополнительные вопросы. Именно эти люди помогут вам разобраться в предмете и полюбить его. Из моего личного опыта: преподаватель информатики Дмитрий Швецов подготовил меня к егэ по информатике на 100 баллов!"
+      - img [ref=e1852]
+      - generic [ref=e1854]: Иршенко Кирилл
+      - generic [ref=e1856]: В планке все по-домашнему, отличные, живые, дружелюбные учителя, с которыми можно спокойно разговаривать на равных. В перерыве можно покушать) С репетиторами у меня такого не было. Очень приятно было приходить даже на 3х часовые занятия. Оборудование отличное, красивая, приятная и уютная обстановка.
+      - generic [ref=e1858]:
+        - text: Математика 92
+        - text: Иноформатика 88
+      - img [ref=e1861]
+      - img [ref=e1865]
+      - img [ref=e1868]
+      - img [ref=e1873]
+      - img [ref=e1878]
+      - img [ref=e1882]
+      - img [ref=e1888]
+      - img [ref=e1892]
+      - img [ref=e1894]
+      - generic [ref=e1900]:
+        - tabpanel [ref=e1901]:
+          - generic [ref=e1904]:
+            - generic [ref=e1910]:
+              - text: Ходил летом после 8-го класса и весь следующий учебный год.
+              - strong [ref=e1911]: Учителя очень классные, добрые и лояльные.
+              - text: "Благодаря Артему, Марии, Дмитрию, Екатерине, Алексею и Владимиру я сдал экзамены на отлично. В Планке крутые и замечательные администраторы: Олеся и Карина. Я считаю, все, даже будучи не самыми сильными в плане школьных знаний,"
+              - strong [ref=e1912]: смогут подтянуть свои знания и сдать экзамены только на 5!
+            - img [ref=e1916]
+            - generic [ref=e1918]: Осташкин Илья
+            - img [ref=e1921]
+            - generic [ref=e1924]: 9 класс
+            - img [ref=e1927]
+            - img [ref=e1930]
+            - img [ref=e1933]
+            - img [ref=e1937]
+            - img [ref=e1940]
+            - img [ref=e1942]
+            - img [ref=e1945]
+            - img [ref=e1949]
+            - img [ref=e1953]
+            - img [ref=e1957]
+            - generic [ref=e1964]: Математика 97
+            - generic [ref=e1966]: Информатика 90
+            - generic [ref=e1968]: 11 класс
+            - generic [ref=e1970]: Сахаров Миша
+            - generic [ref=e1972]: Мне все очень понравилось, всем рекомендую!
+        - tabpanel [ref=e1973]:
+          - generic [ref=e1976]:
+            - generic [ref=e1982]:
+              - text: Самое крутое место для подготовки к экзаменам! Я с удовольствием ходила сюда на занятия, отдельное
+              - strong [ref=e1983]: спасибо Диме за любовь к математике
+              - text: ", за отличное настроение и хороший результат ЕГЭ. Однозначно всем рекомендую! P.S.: В «Постоянной Планка» очень вкусный чай и сладости 😋"
+            - img [ref=e1987]
+            - generic [ref=e1989]: Фраш Настя
+            - img [ref=e1992]
+            - generic [ref=e1995]: 11 класс
+            - img [ref=e1998]
+            - img [ref=e2001]
+            - img [ref=e2004]
+            - img [ref=e2008]
+            - img [ref=e2011]
+            - img [ref=e2013]
+            - img [ref=e2016]
+            - img [ref=e2020]
+            - img [ref=e2024]
+            - img [ref=e2028]
+            - generic [ref=e2031]: 11 класс
+            - generic [ref=e2033]: Зепсен Арина
+            - generic [ref=e2035]:
+              - text: Если вы хотите
+              - strong [ref=e2036]: поддержку в течение всего учебного года
+              - text: и после, трепетных и заботливых преподавателей, которые помогут во всем, обилие вкусняшек и хорошего настроения в этот непростой период, а также высокие баллы на экзаменах, то вам в любимую школу «Постоянная планка» 🤍❤️
+        - tabpanel [ref=e2037]:
+          - generic [ref=e2040]:
+            - generic [ref=e2046]:
+              - strong [ref=e2047]: Большое спасибо
+              - text: преподавателям и всему коллективу за подготовку и приятную атмосферу в течение двух лет, что я ходил в Планку. Без Планки я, может быть, и
+              - strong [ref=e2048]: поступил бы в Питер,
+              - text: но на направленине попроще, а не куда хотел. В общем, могу сказать, что Планка помогла мне проложить дорогу
+              - strong [ref=e2049]: в светлое будущее.
+            - img [ref=e2053]
+            - generic [ref=e2055]: Шаманаев Иван
+            - img [ref=e2058]
+            - generic [ref=e2061]: 11 класс
+            - img [ref=e2064]
+            - img [ref=e2067]
+            - img [ref=e2070]
+            - img [ref=e2074]
+            - img [ref=e2077]
+            - img [ref=e2079]
+            - img [ref=e2082]
+            - img [ref=e2086]
+            - img [ref=e2090]
+            - img [ref=e2094]
+            - generic [ref=e2103]: Информатика 100
+            - generic [ref=e2107]: Математика 94
+            - generic [ref=e2110]: Математика 98
+            - generic [ref=e2113]: Физика 96
+            - generic [ref=e2115]: 11 класс
+            - generic [ref=e2117]: Полевечко Данила
+            - generic [ref=e2119]:
+              - text: Весь 11 класс я ходил в Постоянную Планка. Мой результат ЕГЭ по профильной математике
+              - strong [ref=e2120]: 98 баллов
+              - text: (2025 год, первый поток). Чтобы развеять сомнения, что невозможно подготовиться на
+              - strong [ref=e2121]: высокий балл
+              - text: за год с Планкой, скажу, что в самом начале года после первого пробника был результат 72 балла (октябрь). Занятия идут
+              - strong [ref=e2122]: по четкому плану
+              - text: ", изучение материала постепенное и совершенно не нудное, мне понравилось буквально каждое занятие и я считаю их неимоверно полезными. Еще до января я совсем не умел решать задание 18 и уже думал поставить крест на нём, но благодаря усердной работе, а также занятиям в Планке, мне удалось стабильно решать это задание на максимум баллов."
+              - strong [ref=e2123]: Преподаватели самые крутые
+              - text: и открытые ну и, конечно же, талантливые, знающие своё дело, так называемые
+              - strong [ref=e2124]: профи
+              - text: ))) занятия с ними это что-то невероятное, каждый раз мне не хотелось уходить, лишь бы остаться подольше в этом месте (хочется из-за этого заново пережить весь 11 класс ахахаха)
+              - text: Не скажу, что сдавать ЕГЭ это просто, но уверяю точно - если есть желание, то сотку осилить сможет каждый, а Постоянная Планка в этом поможет
+        - tabpanel [ref=e2125]:
+          - generic [ref=e2128]:
+            - generic [ref=e2134]:
+              - text: С
+              - strong [ref=e2135]: поступлением все отлично
+              - text: ", благодаря подготовке Димы"
+              - strong [ref=e2136]: баллы по математике получились высокими
+              - text: . Было
+              - strong [ref=e2137]: приятно
+              - text: находиться с людьми, которые тоже хотели высокие баллы.
+            - img [ref=e2141]
+            - generic [ref=e2143]: Баев Дмитрий
+            - img [ref=e2146]
+            - generic [ref=e2149]: 11 класс
+            - img [ref=e2152]
+            - img [ref=e2155]
+            - img [ref=e2158]
+            - img [ref=e2162]
+            - img [ref=e2165]
+            - img [ref=e2167]
+            - img [ref=e2170]
+            - img [ref=e2174]
+            - img [ref=e2178]
+            - img [ref=e2182]
+            - generic [ref=e2193]: Физика 96
+            - generic [ref=e2195]: Математика 99
+            - generic [ref=e2197]: Математика 93
+            - generic [ref=e2199]: Физика 86
+            - generic [ref=e2201]: 11 класс
+            - generic [ref=e2203]: Садовский Артем
+            - generic [ref=e2205]:
+              - text: Каждое занятие было
+              - strong [ref=e2206]: интересным
+              - text: и полезным,
+              - strong [ref=e2207]: скучно не было никогда
+        - tabpanel [ref=e2208]:
+          - generic [ref=e2211]:
+            - generic [ref=e2217]:
+              - text: В течение года было
+              - strong [ref=e2218]: кайфово
+              - text: заниматься, особенно пробники очень помогали
+              - strong [ref=e2219]: отслеживать прогресс
+              - text: ". мне нравится атмосфера школы: открытые аудитории, отзывчивые преподаватели и администрация. лично для меня это был"
+              - strong [ref=e2220]: идеальный формат
+              - text: работы, так как я люблю сама разбирать темы, но мне необходима помощь на сложных моментах. в общем,
+              - strong [ref=e2221]: я рада
+              - text: ", что попала сюда. всем привет, и Диме спасибо за год)"
+            - img [ref=e2225]
+            - generic [ref=e2227]: Евсейчева Дарья
+            - img [ref=e2230]
+            - generic [ref=e2233]: 11 класс
+            - img [ref=e2236]
+            - img [ref=e2239]
+            - img [ref=e2242]
+            - img [ref=e2246]
+            - img [ref=e2249]
+            - img [ref=e2251]
+            - img [ref=e2254]
+            - img [ref=e2258]
+            - img [ref=e2262]
+            - img [ref=e2266]
+            - generic [ref=e2275]: Математика 86
+            - generic [ref=e2277]: Математика 93
+            - generic [ref=e2279]: Информатика 90
+            - generic [ref=e2281]: 11 класс
+            - generic [ref=e2283]: Булычева Маша
+            - generic [ref=e2285]:
+              - text: Постоянная Планка стала для меня больше, чем просто местом, для подготовки к ЕГЭ. Я ходила на занятия
+              - strong [ref=e2286]: с удовольствием
+              - text: . Все преподаватели и администраторы в Планке очень
+              - strong [ref=e2287]: добрые и отзывчивые люди.
+              - text: Я хочу выделить препода по информатике - Егора Куюмджиева. Он подготовил меня с нуля на
+              - strong [ref=e2288]: максимальные
+              - text: баллы. Он дал не только хорошие знания, но и поддержку, уверенность, его занятия были самые интересные и веселые. К концу года наша группа
+              - strong [ref=e2289]: очень сдружилась
+              - text: ", мы были на одной волне не только с ребятами, но и с Егором, это было очень круто!! Мне жаль расставаться с этим местом и людьми, которые были со мной это время, но я очень рада, что мне довелось провести год подготовки здесь❤️"
+        - tabpanel [ref=e2290]:
+          - generic [ref=e2293]:
+            - generic [ref=e2299]:
+              - text: В планке все
+              - strong [ref=e2300]: по-домашнему
+              - text: ", отличные, живые, дружелюбные учителя, с которыми можно спокойно разговаривать на равных. В перерыве можно покушать) С репетиторами у меня такого не было. Очень приятно было приходить даже на 3х часовые занятия. Оборудование отличное, красивая, приятная и"
+              - strong [ref=e2301]: уютная обстановка.
+            - img [ref=e2305]
+            - generic [ref=e2307]: Иршенко Кирилл
+            - img [ref=e2310]
+            - generic [ref=e2313]: 11 класс
+            - img [ref=e2316]
+            - img [ref=e2319]
+            - img [ref=e2322]
+            - img [ref=e2326]
+            - img [ref=e2329]
+            - img [ref=e2331]
+            - img [ref=e2334]
+            - img [ref=e2338]
+            - img [ref=e2342]
+            - img [ref=e2346]
+            - generic [ref=e2354]: Информатика 88
+            - generic [ref=e2356]: Математика 92
+            - generic [ref=e2360]: Информатика 100
+            - generic [ref=e2362]: 11 класс
+            - generic [ref=e2364]: Кулешова Катя
+            - generic [ref=e2366]:
+              - strong [ref=e2367]: Лучшее место для подготовки к ЕГЭ!
+              - text: Преподаватели очень понятно объясняют материал, готовы отвечать на все дополнительные вопросы. Именно эти люди
+              - strong [ref=e2368]: помогут вам разобраться в предмете
+              - text: "и полюбить его. Из моего личного опыта: преподаватель информатики Дмитрий Швецов подготовил меня к ЕГЭ по информатике на"
+              - strong [ref=e2369]: 100 баллов
+              - text: "!"
+        - tabpanel [ref=e2370]:
+          - generic [ref=e2373]:
+            - img [ref=e2381]
+            - generic [ref=e2383]: Новосельцев Кирилл
+            - strong [ref=e2387]: 95 набрал йоу
+            - img [ref=e2390]
+            - generic [ref=e2393]: 11 класс
+            - img [ref=e2396]
+            - img [ref=e2399]
+            - img [ref=e2402]
+            - img [ref=e2406]
+            - img [ref=e2409]
+            - img [ref=e2411]
+            - img [ref=e2414]
+            - img [ref=e2418]
+            - img [ref=e2422]
+            - img [ref=e2426]
+            - generic [ref=e2434]: Математика 80
+            - generic [ref=e2437]: Физика 96
+            - generic [ref=e2442]: Математика 95
+            - generic [ref=e2444]:
+              - text: Уровень подготовки к экзаменам
+              - strong [ref=e2445]: очень высокий!
+              - text: Результатами ЕГЭ полностью доволен.
+              - strong [ref=e2446]: Важную
+              - text: роль сыграли
+              - strong [ref=e2447]: интенсивны
+              - text: перед экзаменами. Благодаря ним удалось вспомнить все, что было забыто.
+              - strong [ref=e2448]: Огромное спасибо преподавателям
+              - text: Постоянной Планка за подготовку и поддержку!
+            - generic [ref=e2450]: 11 класс
+            - generic [ref=e2452]: Кочетков Данил
+        - tabpanel [ref=e2453]:
+          - generic [ref=e2456]:
+            - generic [ref=e2462]:
+              - strong [ref=e2463]: Очень хорошо
+              - text: провел время во время подготовки к экзаменам. Но по факту кроме отличной подготовки, получил много положительных
+              - strong [ref=e2464]: эмоций и воспоминаний
+            - img [ref=e2468]
+            - generic [ref=e2470]: Земляной Феодор
+            - img [ref=e2473]
+            - generic [ref=e2476]: 11 класс
+            - img [ref=e2479]
+            - img [ref=e2482]
+            - img [ref=e2485]
+            - img [ref=e2489]
+            - img [ref=e2492]
+            - img [ref=e2494]
+            - img [ref=e2497]
+            - img [ref=e2501]
+            - img [ref=e2505]
+            - img [ref=e2509]
+            - generic [ref=e2521]: Физика 71
+            - generic [ref=e2523]: Информатика 90
+            - generic [ref=e2525]: Математика 74
+            - generic [ref=e2527]: Русский язык 81
+            - generic [ref=e2531]: Русский язык 73
+            - generic [ref=e2533]: 11 класс
+            - generic [ref=e2535]: Михайлин Егор
+            - generic [ref=e2537]:
+              - strong [ref=e2538]: Я очень рад
+              - text: ", что выбрал эту школу для подготовки к ЕГЭ! Дружная атмосфера, много"
+              - strong [ref=e2539]: единомышленников
+              - text: и много классных преподавателей-это оставляет только приятные
+              - strong [ref=e2540]: воспоминания
+              - text: "! Спасибо!"
+        - tabpanel [ref=e2541]:
+          - generic [ref=e2544]:
+            - generic [ref=e2550]:
+              - strong [ref=e2551]: Замечательное
+              - text: учреждение! Учителя и администраторы
+              - strong [ref=e2552]: очень приятные
+              - text: . Готовят к экзаменам хорошо, подача материала классная, всегда можно задавать вопросы по темам, практически сразу замечаешь свой
+              - strong [ref=e2553]: прогресс
+              - text: . Обстановка свободная, располагающая к обучению
+            - img [ref=e2557]
+            - generic [ref=e2559]: Смирнова Настя
+            - img [ref=e2562]
+            - generic [ref=e2565]: 11 класс
+            - img [ref=e2568]
+            - img [ref=e2571]
+            - img [ref=e2574]
+            - img [ref=e2578]
+            - img [ref=e2581]
+            - img [ref=e2583]
+            - img [ref=e2586]
+            - img [ref=e2590]
+            - img [ref=e2594]
+            - img [ref=e2598]
+            - generic [ref=e2605]: Русский язык 91
+            - generic [ref=e2607]: Математика 78
+            - generic [ref=e2609]: 11 класс/полугодовой курс
+            - generic [ref=e2611]: Долманова Дарья
+            - generic [ref=e2613]:
+              - text: Мне очень
+              - strong [ref=e2614]: понравилась
+              - text: системность подготовки. Всё объясняли очень понятно и просто. Обучение в Планке очень помогло повторить базу и
+              - strong [ref=e2615]: подготовиться
+              - text: к заданиям посложнее, что положительно сказалось на моем результате)))
+        - tabpanel [ref=e2616]:
+          - generic [ref=e2619]:
+            - img [ref=e2627]
+            - generic [ref=e2629]: Ильин Матвей
+            - generic [ref=e2631]:
+              - text: Планка стала для меня чем-то настолько
+              - strong [ref=e2632]: родным
+              - text: ", что мне не хватит слов чтобы перечислить насколько"
+              - strong [ref=e2633]: там здорово
+              - text: . Преподаватели прекрасно умеют прививать любовь к учёбе, и ты идешь туда
+              - strong [ref=e2634]: с радостью
+              - text: . Там вайб, там всё. Иногда даже уходить оттуда не хочется. А качество образования здесь отменное. Обожаю Постоянную Планку<3
+            - img [ref=e2637]
+            - generic [ref=e2640]: 11 класс
+            - img [ref=e2643]
+            - img [ref=e2646]
+            - img [ref=e2649]
+            - img [ref=e2653]
+            - img [ref=e2656]
+            - img [ref=e2658]
+            - img [ref=e2661]
+            - img [ref=e2665]
+            - img [ref=e2669]
+            - img [ref=e2673]
+            - generic [ref=e2684]: Информатика 70
+            - generic [ref=e2687]: Математика 82
+            - generic [ref=e2690]: Математика 70
+            - generic [ref=e2693]: Русский язык 69
+            - generic [ref=e2695]:
+              - text: Это
+              - strong [ref=e2696]: самое лучшее место
+              - text: в котором я когда-либо занималась. Преподаватели просто прекрасны. На уроках всегда было комфортно, смешно и интересно. Каждый день я ездила сюда с огромным удовольствием. Спасибо большое за такую прекрасную школу, я буду сильно скучать
+            - generic [ref=e2698]: 11 класс
+            - generic [ref=e2700]: Лесная Лера
+        - tabpanel [ref=e2701]:
+          - generic [ref=e2704]:
+            - generic [ref=e2710]:
+              - text: Сейчас редко можно встретить, когда
+              - strong [ref=e2711]: преподаватель видит в тебе потенциал раньше, чем ты можешь это понять
+              - text: ", и дает возможность развивать его. Я поняла, что буду готовится к ЕГЭ тут после летней школы, когда я отрешала весь базовый курс за июль/август. Для меня оказалось важным фактором, когда учитель дает такую возможность) Мне хочется сказать спасибо каждому преподавателю за прекрасный год."
+            - img [ref=e2715]
+            - generic [ref=e2717]: Мартышева Маша
+            - img [ref=e2720]
+            - generic [ref=e2723]: 11 класс
+            - img [ref=e2726]
+            - img [ref=e2729]
+            - img [ref=e2732]
+            - img [ref=e2736]
+            - img [ref=e2739]
+            - img [ref=e2741]
+            - img [ref=e2744]
+            - img [ref=e2748]
+            - img [ref=e2752]
+            - img [ref=e2756]
+            - generic [ref=e2765]: Математика 88
+            - generic [ref=e2767]: Математика 96
+            - generic [ref=e2769]: Русский язык 94
+            - generic [ref=e2773]: Физика 88
+            - generic [ref=e2775]: 11 класс
+            - generic [ref=e2777]: Иванов Саша
+            - generic [ref=e2779]:
+              - text: Мне очень понравилось в Постоянной Планка, я однозначно порекомендую её всем знакомым и друзьям. Все
+              - strong [ref=e2780]: учителя были заинтересованы в образовательном процессе
+              - text: ", помогали ученикам (в том числе и один на один), всегда были готовы к диалогу, отвечали даже на самые глупые вопросы. Я очень доволен выбором этой школы"
+        - tabpanel [ref=e2781]:
+          - generic [ref=e2784]:
+            - generic [ref=e2790]: Мне всё понравилось, большое спасибо за вашу работу!
+            - img [ref=e2794]
+            - generic [ref=e2796]: Матвеева Геля
+            - img [ref=e2799]
+            - generic [ref=e2802]: 11 класс
+            - img [ref=e2805]
+            - img [ref=e2808]
+            - img [ref=e2811]
+            - img [ref=e2815]
+            - img [ref=e2818]
+            - img [ref=e2820]
+            - img [ref=e2823]
+            - img [ref=e2827]
+            - img [ref=e2831]
+            - img [ref=e2835]
+            - generic [ref=e2844]: Математика 99
+            - generic [ref=e2846]: Математика 95
+            - generic [ref=e2848]: Физика 86
+            - generic [ref=e2852]: Физика 98
+            - generic [ref=e2854]: 11 класс
+            - generic [ref=e2856]: Петров Рома
+            - generic [ref=e2858]:
+              - text: В планку я отходил три года, написал ЕГЭ по математике на 95 баллов, по физике 86. Очень интересный преподавательский состав, здесь учителя к
+              - strong [ref=e2859]: каждому ученику найдут свой подход
+              - text: ", как это и произошло со мной. Также на планке я обрел новых друзей, позвал сюда старых. В общем, скучно не было. 1000000/10"
+        - tabpanel [ref=e2860]:
+          - generic [ref=e2863]:
+            - generic [ref=e2869]:
+              - text: Постоянная Планка - отличная школа для подготовки к ЕГЭ. Я ни дня не жалела, что начала заниматься здесь. Маша- лучший преподаватель по русскому, который всегда
+              - strong [ref=e2870]: готов объяснить тему ещё раз
+              - text: ", дать дополнительные задания, задержаться порешать вместе тесты и просто поддержать)"
+            - img [ref=e2874]
+            - generic [ref=e2876]: Благий Лена
+            - img [ref=e2879]
+            - generic [ref=e2882]: 11 класс
+            - img [ref=e2885]
+            - img [ref=e2888]
+            - img [ref=e2891]
+            - img [ref=e2895]
+            - img [ref=e2898]
+            - img [ref=e2900]
+            - img [ref=e2903]
+            - img [ref=e2907]
+            - img [ref=e2911]
+            - img [ref=e2915]
+            - generic [ref=e2922]: Русский язык 89
+            - generic [ref=e2924]: Математика 82
+            - generic [ref=e2926]: 11 класс
+            - generic [ref=e2928]: Косточко Дима
+            - generic [ref=e2930]:
+              - text: Планка - замечательная школа, лучше места для подготовки к ЕГЭ и чтобы заполнить пробелы в школьных знаниях не найти. В Планке
+              - strong [ref=e2931]: учителя всегда готовы тебе помочь
+              - text: ", если ты не понимаешь тему или хочешь её отработать, они готовы провести консультацию. Также в Планке проходит хорошее количество пробников."
+              - strong [ref=e2932]: Можно отслеживать свой прогресс
+              - text: ", а также посмотреть, какие задания плохо получаются. Занятия всегда проходят в отличной атмосфере, никакого давления со стороны преподавателя."
+              - strong [ref=e2933]: Каждый из учителей уделяет значительное внимание всем ученикам.
+              - text: Я могу порекомендовать данную школу
+        - tabpanel [ref=e2934]:
+          - generic [ref=e2937]:
+            - generic [ref=e2943]:
+              - text: Олеся - чудо, спасибо ей большое за
+              - strong [ref=e2944]: лёгкую подачу материала и глубокие знания
+            - img [ref=e2948]
+            - generic [ref=e2950]: Вишневская Маша
+            - img [ref=e2953]
+            - generic [ref=e2956]: 11 класс
+            - img [ref=e2959]
+            - img [ref=e2962]
+            - img [ref=e2965]
+            - img [ref=e2969]
+            - img [ref=e2972]
+            - img [ref=e2974]
+            - img [ref=e2977]
+            - img [ref=e2981]
+            - img [ref=e2985]
+            - img [ref=e2989]
+            - generic [ref=e2998]: Русский язык 91
+            - generic [ref=e3000]: Математика 82
+            - generic [ref=e3002]: История 84
+            - generic [ref=e3004]: 11 класс
+            - generic [ref=e3006]: Вахновская Арина
+            - generic [ref=e3008]:
+              - text: Лучшее место для подготовки к ЕГЭ и ОГЭ. Доброжелательные преподаватели,
+              - strong [ref=e3009]: комфортная подача материала
+        - tabpanel [ref=e3010]:
+          - generic [ref=e3013]:
+            - generic [ref=e3019]:
+              - text: Научился решать параметры и
+              - strong [ref=e3020]: получил баллы, о которых и думать раньше не мог.
+              - text: Спасибо большое!
+            - img [ref=e3024]
+            - generic [ref=e3026]: Альтергот Артур
+            - img [ref=e3029]
+            - generic [ref=e3032]: 11 класс
+            - img [ref=e3035]
+            - img [ref=e3038]
+            - img [ref=e3041]
+            - img [ref=e3045]
+            - img [ref=e3048]
+            - img [ref=e3050]
+            - img [ref=e3053]
+            - img [ref=e3057]
+            - img [ref=e3061]
+            - img [ref=e3065]
+            - generic [ref=e3076]: Физика 88
+            - generic [ref=e3078]: Математика 92
+            - generic [ref=e3080]: Математика 96
+            - generic [ref=e3082]: Русский язык 83
+            - generic [ref=e3086]: Русский язык 73
+            - generic [ref=e3088]: 11 класс
+            - generic [ref=e3090]: Коновалов Святослав
+            - generic [ref=e3092]: Мне понравилось. Год с вами пролетел очень быстро
+        - tabpanel [ref=e3093]:
+          - generic [ref=e3096]:
+            - generic [ref=e3102]: Самая лучшая школа для подготовки к ЕГЭ/ОГЭ!
+            - img [ref=e3106]
+            - generic [ref=e3108]: Сафин Дамир
+            - img [ref=e3111]
+            - generic [ref=e3114]: 11 класс
+            - img [ref=e3117]
+            - img [ref=e3120]
+            - img [ref=e3123]
+            - img [ref=e3127]
+            - img [ref=e3130]
+            - img [ref=e3132]
+            - img [ref=e3135]
+            - img [ref=e3139]
+            - img [ref=e3143]
+            - img [ref=e3147]
+            - generic [ref=e3156]: Математика 82
+            - generic [ref=e3158]: Математика 95
+            - generic [ref=e3160]: Информатика 93
+            - generic [ref=e3164]: Физика 94
+            - generic [ref=e3166]: 11 класс
+            - generic [ref=e3168]: Осипов Слава
+            - generic [ref=e3170]:
+              - strong [ref=e3171]: Очень клёвая школа.
+              - text: Хорошие преподаватели, достойный уровень. Квест на новый год был хороший. Особенно клёво, что есть всякие шоколадки, кружки и всё остальное, что позволяет чувствовать себя
+              - strong [ref=e3172]: как дома.
+        - tabpanel [ref=e3173]:
+          - generic [ref=e3176]:
+            - generic [ref=e3182]:
+              - strong [ref=e3183]: У вас очень классная школа)
+              - text: принимаете на курсы с любым уровнем знаний, есть возможность перекусить и запить горячим, к
+              - strong [ref=e3184]: онцентрированно подаётся информация
+              - text: ", шутите шутки на уроках, чувствуется принятие человека в коллектив. Есть маленькие комнаты для индивидуальной работы - это огромный плюс. Книги на полках тоже дают вашей школе огромное преимущество). Артёму и Вове, Алине и Карине, а также всем тем, с кем не была знакома лично, но кто тоже оставлял вклад, спасибо за помощь в подготовке к экзаменам!"
+              - strong [ref=e3185]: Рада, что вовремя попала к вам на курс
+            - img [ref=e3189]
+            - generic [ref=e3191]: Золотарева Вера
+            - img [ref=e3194]
+            - generic [ref=e3197]: 11 класс
+            - img [ref=e3200]
+            - img [ref=e3203]
+            - img [ref=e3206]
+            - img [ref=e3210]
+            - img [ref=e3213]
+            - img [ref=e3215]
+            - img [ref=e3218]
+            - img [ref=e3222]
+            - img [ref=e3226]
+            - img [ref=e3230]
+            - generic [ref=e3237]: Математика 96
+            - generic [ref=e3239]: Информатика 85
+            - generic [ref=e3243]: Физика 90
+            - generic [ref=e3245]: 11 класс
+            - generic [ref=e3247]: Бердникова Рита
+            - generic [ref=e3249]:
+              - text: Спасибо вам, в Планке меня очень хорошо подготовили к экзамену! Преподаватель отзывчивый, старается
+              - strong [ref=e3250]: донести материал до всех
+        - tabpanel [ref=e3251]:
+          - generic [ref=e3254]:
+            - generic [ref=e3260]:
+              - text: Ходил летом после 8-го класса и весь следующий учебный год.
+              - strong [ref=e3261]: Учителя очень классные, добрые и лояльные.
+              - text: "Благодаря Артему, Марии, Дмитрию, Екатерине, Алексею и Владимиру я сдал экзамены на отлично. В Планке крутые и замечательные администраторы: Олеся и Карина. Я считаю, все, даже будучи не самыми сильными в плане школьных знаний,"
+              - strong [ref=e3262]: смогут подтянуть свои знания и сдать экзамены только на 5!
+            - img [ref=e3266]
+            - generic [ref=e3268]: Осташкин Илья
+            - img [ref=e3271]
+            - generic [ref=e3274]: 9 класс
+            - img [ref=e3277]
+            - img [ref=e3280]
+            - img [ref=e3283]
+            - img [ref=e3287]
+            - img [ref=e3290]
+            - img [ref=e3292]
+            - img [ref=e3295]
+            - img [ref=e3299]
+            - img [ref=e3303]
+            - img [ref=e3307]
+            - generic [ref=e3314]: Математика 97
+            - generic [ref=e3316]: Информатика 90
+            - generic [ref=e3318]: 11 класс
+            - generic [ref=e3320]: Сахаров Миша
+            - generic [ref=e3322]: Мне все очень понравилось, всем рекомендую!
+        - tabpanel [ref=e3323]:
+          - generic [ref=e3326]:
+            - generic [ref=e3332]:
+              - text: Самое крутое место для подготовки к экзаменам! Я с удовольствием ходила сюда на занятия, отдельное
+              - strong [ref=e3333]: спасибо Диме за любовь к математике
+              - text: ", за отличное настроение и хороший результат ЕГЭ. Однозначно всем рекомендую! P.S.: В «Постоянной Планка» очень вкусный чай и сладости 😋"
+            - img [ref=e3337]
+            - generic [ref=e3339]: Фраш Настя
+            - img [ref=e3342]
+            - generic [ref=e3345]: 11 класс
+            - img [ref=e3348]
+            - img [ref=e3351]
+            - img [ref=e3354]
+            - img [ref=e3358]
+            - img [ref=e3361]
+            - img [ref=e3363]
+            - img [ref=e3366]
+            - img [ref=e3370]
+            - img [ref=e3374]
+            - img [ref=e3378]
+            - generic [ref=e3381]: 11 класс
+            - generic [ref=e3383]: Зепсен Арина
+            - generic [ref=e3385]:
+              - text: Если вы хотите
+              - strong [ref=e3386]: поддержку в течение всего учебного года
+              - text: и после, трепетных и заботливых преподавателей, которые помогут во всем, обилие вкусняшек и хорошего настроения в этот непростой период, а также высокие баллы на экзаменах, то вам в любимую школу «Постоянная планка» 🤍❤️
+        - tabpanel [ref=e3387]:
+          - generic [ref=e3390]:
+            - generic [ref=e3396]:
+              - strong [ref=e3397]: Большое спасибо
+              - text: преподавателям и всему коллективу за подготовку и приятную атмосферу в течение двух лет, что я ходил в Планку. Без Планки я, может быть, и
+              - strong [ref=e3398]: поступил бы в Питер,
+              - text: но на направленине попроще, а не куда хотел. В общем, могу сказать, что Планка помогла мне проложить дорогу
+              - strong [ref=e3399]: в светлое будущее.
+            - img [ref=e3403]
+            - generic [ref=e3405]: Шаманаев Иван
+            - img [ref=e3408]
+            - generic [ref=e3411]: 11 класс
+            - img [ref=e3414]
+            - img [ref=e3417]
+            - img [ref=e3420]
+            - img [ref=e3424]
+            - img [ref=e3427]
+            - img [ref=e3429]
+            - img [ref=e3432]
+            - img [ref=e3436]
+            - img [ref=e3440]
+            - img [ref=e3444]
+            - generic [ref=e3453]: Информатика 100
+            - generic [ref=e3457]: Математика 94
+            - generic [ref=e3460]: Математика 98
+            - generic [ref=e3463]: Физика 96
+            - generic [ref=e3465]: 11 класс
+            - generic [ref=e3467]: Полевечко Данила
+            - generic [ref=e3469]:
+              - text: Весь 11 класс я ходил в Постоянную Планка. Мой результат ЕГЭ по профильной математике
+              - strong [ref=e3470]: 98 баллов
+              - text: (2025 год, первый поток). Чтобы развеять сомнения, что невозможно подготовиться на
+              - strong [ref=e3471]: высокий балл
+              - text: за год с Планкой, скажу, что в самом начале года после первого пробника был результат 72 балла (октябрь). Занятия идут
+              - strong [ref=e3472]: по четкому плану
+              - text: ", изучение материала постепенное и совершенно не нудное, мне понравилось буквально каждое занятие и я считаю их неимоверно полезными. Еще до января я совсем не умел решать задание 18 и уже думал поставить крест на нём, но благодаря усердной работе, а также занятиям в Планке, мне удалось стабильно решать это задание на максимум баллов."
+              - strong [ref=e3473]: Преподаватели самые крутые
+              - text: и открытые ну и, конечно же, талантливые, знающие своё дело, так называемые
+              - strong [ref=e3474]: профи
+              - text: ))) занятия с ними это что-то невероятное, каждый раз мне не хотелось уходить, лишь бы остаться подольше в этом месте (хочется из-за этого заново пережить весь 11 класс ахахаха) Не скажу, что сдавать ЕГЭ это просто, но уверяю точно - если есть желание, то сотку осилить сможет каждый, а Постоянная Планка в этом поможет
+        - tabpanel [ref=e3475]:
+          - generic [ref=e3478]:
+            - generic [ref=e3484]:
+              - text: С
+              - strong [ref=e3485]: поступлением все отлично
+              - text: ", благодаря подготовке Димы"
+              - strong [ref=e3486]: баллы по математике получились высокими
+              - text: . Было
+              - strong [ref=e3487]: приятно
+              - text: находиться с людьми, которые тоже хотели высокие баллы.
+            - img [ref=e3491]
+            - generic [ref=e3493]: Баев Дмитрий
+            - img [ref=e3496]
+            - generic [ref=e3499]: 11 класс
+            - img [ref=e3502]
+            - img [ref=e3505]
+            - img [ref=e3508]
+            - img [ref=e3512]
+            - img [ref=e3515]
+            - img [ref=e3517]
+            - img [ref=e3520]
+            - img [ref=e3524]
+            - img [ref=e3528]
+            - img [ref=e3532]
+            - generic [ref=e3543]: Физика 96
+            - generic [ref=e3545]: Математика 99
+            - generic [ref=e3547]: Математика 93
+            - generic [ref=e3549]: Физика 86
+            - generic [ref=e3551]: 11 класс
+            - generic [ref=e3553]: Садовский Артем
+            - generic [ref=e3555]:
+              - text: Каждое занятие было
+              - strong [ref=e3556]: интересным
+              - text: и полезным,
+              - strong [ref=e3557]: скучно не было никогда
+        - tabpanel [ref=e3558]:
+          - generic [ref=e3561]:
+            - generic [ref=e3567]:
+              - text: В течение года было
+              - strong [ref=e3568]: кайфово
+              - text: заниматься, особенно пробники очень помогали
+              - strong [ref=e3569]: отслеживать прогресс
+              - text: ". мне нравится атмосфера школы: открытые аудитории, отзывчивые преподаватели и администрация. лично для меня это был"
+              - strong [ref=e3570]: идеальный формат
+              - text: работы, так как я люблю сама разбирать темы, но мне необходима помощь на сложных моментах. в общем,
+              - strong [ref=e3571]: я рада
+              - text: ", что попала сюда. всем привет, и Диме спасибо за год)"
+            - img [ref=e3575]
+            - generic [ref=e3577]: Евсейчева Дарья
+            - img [ref=e3580]
+            - generic [ref=e3583]: 11 класс
+            - img [ref=e3586]
+            - img [ref=e3589]
+            - img [ref=e3592]
+            - img [ref=e3596]
+            - img [ref=e3599]
+            - img [ref=e3601]
+            - img [ref=e3604]
+            - img [ref=e3608]
+            - img [ref=e3612]
+            - img [ref=e3616]
+            - generic [ref=e3625]: Математика 86
+            - generic [ref=e3627]: Математика 93
+            - generic [ref=e3629]: Информатика 90
+            - generic [ref=e3631]: 11 класс
+            - generic [ref=e3633]: Булычева Маша
+            - generic [ref=e3635]:
+              - text: Постоянная Планка стала для меня больше, чем просто местом, для подготовки к ЕГЭ. Я ходила на занятия
+              - strong [ref=e3636]: с удовольствием
+              - text: . Все преподаватели и администраторы в Планке очень
+              - strong [ref=e3637]: добрые и отзывчивые люди.
+              - text: Я хочу выделить препода по информатике - Егора Куюмджиева. Он подготовил меня с нуля на
+              - strong [ref=e3638]: максимальные
+              - text: баллы. Он дал не только хорошие знания, но и поддержку, уверенность, его занятия были самые интересные и веселые. К концу года наша группа
+              - strong [ref=e3639]: очень сдружилась
+              - text: ", мы были на одной волне не только с ребятами, но и с Егором, это было очень круто!! Мне жаль расставаться с этим местом и людьми, которые были со мной это время, но я очень рада, что мне довелось провести год подготовки здесь❤️"
+        - tabpanel [ref=e3640]:
+          - generic [ref=e3643]:
+            - generic [ref=e3649]:
+              - text: В планке все
+              - strong [ref=e3650]: по-домашнему
+              - text: ", отличные, живые, дружелюбные учителя, с которыми можно спокойно разговаривать на равных. В перерыве можно покушать) С репетиторами у меня такого не было. Очень приятно было приходить даже на 3х часовые занятия. Оборудование отличное, красивая, приятная и"
+              - strong [ref=e3651]: уютная обстановка.
+            - img [ref=e3655]
+            - generic [ref=e3657]: Иршенко Кирилл
+            - img [ref=e3660]
+            - generic [ref=e3663]: 11 класс
+            - img [ref=e3666]
+            - img [ref=e3669]
+            - img [ref=e3672]
+            - img [ref=e3676]
+            - img [ref=e3679]
+            - img [ref=e3681]
+            - img [ref=e3684]
+            - img [ref=e3688]
+            - img [ref=e3692]
+            - img [ref=e3696]
+            - generic [ref=e3704]: Информатика 88
+            - generic [ref=e3706]: Математика 92
+            - generic [ref=e3710]: Информатика 100
+            - generic [ref=e3712]: 11 класс
+            - generic [ref=e3714]: Кулешова Катя
+            - generic [ref=e3716]:
+              - strong [ref=e3717]: Лучшее место для подготовки к ЕГЭ!
+              - text: Преподаватели очень понятно объясняют материал, готовы отвечать на все дополнительные вопросы. Именно эти люди
+              - strong [ref=e3718]: помогут вам разобраться в предмете
+              - text: "и полюбить его. Из моего личного опыта: преподаватель информатики Дмитрий Швецов подготовил меня к ЕГЭ по информатике на"
+              - strong [ref=e3719]: 100 баллов
+              - text: "!"
+        - tabpanel [ref=e3720]:
+          - generic [ref=e3723]:
+            - img [ref=e3731]
+            - generic [ref=e3733]: Новосельцев Кирилл
+            - strong [ref=e3737]: 95 набрал йоу
+            - img [ref=e3740]
+            - generic [ref=e3743]: 11 класс
+            - img [ref=e3746]
+            - img [ref=e3749]
+            - img [ref=e3752]
+            - img [ref=e3756]
+            - img [ref=e3759]
+            - img [ref=e3761]
+            - img [ref=e3764]
+            - img [ref=e3768]
+            - img [ref=e3772]
+            - img [ref=e3776]
+            - generic [ref=e3784]: Математика 80
+            - generic [ref=e3787]: Физика 96
+            - generic [ref=e3792]: Математика 95
+            - generic [ref=e3794]:
+              - text: Уровень подготовки к экзаменам
+              - strong [ref=e3795]: очень высокий!
+              - text: Результатами ЕГЭ полностью доволен.
+              - strong [ref=e3796]: Важную
+              - text: роль сыграли
+              - strong [ref=e3797]: интенсивны
+              - text: перед экзаменами. Благодаря ним удалось вспомнить все, что было забыто.
+              - strong [ref=e3798]: Огромное спасибо преподавателям
+              - text: Постоянной Планка за подготовку и поддержку!
+            - generic [ref=e3800]: 11 класс
+            - generic [ref=e3802]: Кочетков Данил
+        - tabpanel [ref=e3803]:
+          - generic [ref=e3806]:
+            - generic [ref=e3812]:
+              - strong [ref=e3813]: Очень хорошо
+              - text: провел время во время подготовки к экзаменам. Но по факту кроме отличной подготовки, получил много положительных
+              - strong [ref=e3814]: эмоций и воспоминаний
+            - img [ref=e3818]
+            - generic [ref=e3820]: Земляной Феодор
+            - img [ref=e3823]
+            - generic [ref=e3826]: 11 класс
+            - img [ref=e3829]
+            - img [ref=e3832]
+            - img [ref=e3835]
+            - img [ref=e3839]
+            - img [ref=e3842]
+            - img [ref=e3844]
+            - img [ref=e3847]
+            - img [ref=e3851]
+            - img [ref=e3855]
+            - img [ref=e3859]
+            - generic [ref=e3871]: Физика 71
+            - generic [ref=e3873]: Информатика 90
+            - generic [ref=e3875]: Математика 74
+            - generic [ref=e3877]: Русский язык 81
+            - generic [ref=e3881]: Русский язык 73
+            - generic [ref=e3883]: 11 класс
+            - generic [ref=e3885]: Михайлин Егор
+            - generic [ref=e3887]:
+              - strong [ref=e3888]: Я очень рад
+              - text: ", что выбрал эту школу для подготовки к ЕГЭ! Дружная атмосфера, много"
+              - strong [ref=e3889]: единомышленников
+              - text: и много классных преподавателей-это оставляет только приятные
+              - strong [ref=e3890]: воспоминания
+              - text: "! Спасибо!"
+        - tabpanel [ref=e3891]:
+          - generic [ref=e3894]:
+            - generic [ref=e3900]:
+              - strong [ref=e3901]: Замечательное
+              - text: учреждение! Учителя и администраторы
+              - strong [ref=e3902]: очень приятные
+              - text: . Готовят к экзаменам хорошо, подача материала классная, всегда можно задавать вопросы по темам, практически сразу замечаешь свой
+              - strong [ref=e3903]: прогресс
+              - text: . Обстановка свободная, располагающая к обучению
+            - img [ref=e3907]
+            - generic [ref=e3909]: Смирнова Настя
+            - img [ref=e3912]
+            - generic [ref=e3915]: 11 класс
+            - img [ref=e3918]
+            - img [ref=e3921]
+            - img [ref=e3924]
+            - img [ref=e3928]
+            - img [ref=e3931]
+            - img [ref=e3933]
+            - img [ref=e3936]
+            - img [ref=e3940]
+            - img [ref=e3944]
+            - img [ref=e3948]
+            - generic [ref=e3955]: Русский язык 91
+            - generic [ref=e3957]: Математика 78
+            - generic [ref=e3959]: 11 класс/полугодовой курс
+            - generic [ref=e3961]: Долманова Дарья
+            - generic [ref=e3963]:
+              - text: Мне очень
+              - strong [ref=e3964]: понравилась
+              - text: системность подготовки. Всё объясняли очень понятно и просто. Обучение в Планке очень помогло повторить базу и
+              - strong [ref=e3965]: подготовиться
+              - text: к заданиям посложнее, что положительно сказалось на моем результате)))
+        - tabpanel [ref=e3966]:
+          - generic [ref=e3969]:
+            - img [ref=e3977]
+            - generic [ref=e3979]: Ильин Матвей
+            - generic [ref=e3981]:
+              - text: Планка стала для меня чем-то настолько
+              - strong [ref=e3982]: родным
+              - text: ", что мне не хватит слов чтобы перечислить насколько"
+              - strong [ref=e3983]: там здорово
+              - text: . Преподаватели прекрасно умеют прививать любовь к учёбе, и ты идешь туда
+              - strong [ref=e3984]: с радостью
+              - text: . Там вайб, там всё. Иногда даже уходить оттуда не хочется. А качество образования здесь отменное. Обожаю Постоянную Планку<3
+            - img [ref=e3987]
+            - generic [ref=e3990]: 11 класс
+            - img [ref=e3993]
+            - img [ref=e3996]
+            - img [ref=e3999]
+            - img [ref=e4003]
+            - img [ref=e4006]
+            - img [ref=e4008]
+            - img [ref=e4011]
+            - img [ref=e4015]
+            - img [ref=e4019]
+            - img [ref=e4023]
+            - generic [ref=e4034]: Информатика 70
+            - generic [ref=e4037]: Математика 82
+            - generic [ref=e4040]: Математика 70
+            - generic [ref=e4043]: Русский язык 69
+            - generic [ref=e4045]:
+              - text: Это
+              - strong [ref=e4046]: самое лучшее место
+              - text: в котором я когда-либо занималась. Преподаватели просто прекрасны. На уроках всегда было комфортно, смешно и интересно. Каждый день я ездила сюда с огромным удовольствием. Спасибо большое за такую прекрасную школу, я буду сильно скучать
+            - generic [ref=e4048]: 11 класс
+            - generic [ref=e4050]: Лесная Лера
+        - tabpanel [ref=e4051]:
+          - generic [ref=e4054]:
+            - generic [ref=e4060]:
+              - text: Сейчас редко можно встретить, когда
+              - strong [ref=e4061]: преподаватель видит в тебе потенциал раньше, чем ты можешь это понять
+              - text: ", и дает возможность развивать его. Я поняла, что буду готовится к ЕГЭ тут после летней школы, когда я отрешала весь базовый курс за июль/август. Для меня оказалось важным фактором, когда учитель дает такую возможность) Мне хочется сказать спасибо каждому преподавателю за прекрасный год."
+            - img [ref=e4065]
+            - generic [ref=e4067]: Мартышева Маша
+            - img [ref=e4070]
+            - generic [ref=e4073]: 11 класс
+            - img [ref=e4076]
+            - img [ref=e4079]
+            - img [ref=e4082]
+            - img [ref=e4086]
+            - img [ref=e4089]
+            - img [ref=e4091]
+            - img [ref=e4094]
+            - img [ref=e4098]
+            - img [ref=e4102]
+            - img [ref=e4106]
+            - generic [ref=e4115]: Математика 88
+            - generic [ref=e4117]: Математика 96
+            - generic [ref=e4119]: Русский язык 94
+            - generic [ref=e4123]: Физика 88
+            - generic [ref=e4125]: 11 класс
+            - generic [ref=e4127]: Иванов Саша
+            - generic [ref=e4129]:
+              - text: Мне очень понравилось в Постоянной Планка, я однозначно порекомендую её всем знакомым и друзьям. Все
+              - strong [ref=e4130]: учителя были заинтересованы в образовательном процессе
+              - text: ", помогали ученикам (в том числе и один на один), всегда были готовы к диалогу, отвечали даже на самые глупые вопросы. Я очень доволен выбором этой школы"
+        - tabpanel [ref=e4131]:
+          - generic [ref=e4134]:
+            - generic [ref=e4140]: Мне всё понравилось, большое спасибо за вашу работу!
+            - img [ref=e4144]
+            - generic [ref=e4146]: Матвеева Геля
+            - img [ref=e4149]
+            - generic [ref=e4152]: 11 класс
+            - img [ref=e4155]
+            - img [ref=e4158]
+            - img [ref=e4161]
+            - img [ref=e4165]
+            - img [ref=e4168]
+            - img [ref=e4170]
+            - img [ref=e4173]
+            - img [ref=e4177]
+            - img [ref=e4181]
+            - img [ref=e4185]
+            - generic [ref=e4194]: Математика 99
+            - generic [ref=e4196]: Математика 95
+            - generic [ref=e4198]: Физика 86
+            - generic [ref=e4202]: Физика 98
+            - generic [ref=e4204]: 11 класс
+            - generic [ref=e4206]: Петров Рома
+            - generic [ref=e4208]:
+              - text: В планку я отходил три года, написал ЕГЭ по математике на 95 баллов, по физике 86. Очень интересный преподавательский состав, здесь учителя к
+              - strong [ref=e4209]: каждому ученику найдут свой подход
+              - text: ", как это и произошло со мной. Также на планке я обрел новых друзей, позвал сюда старых. В общем, скучно не было. 1000000/10"
+        - tabpanel [ref=e4210]:
+          - generic [ref=e4213]:
+            - generic [ref=e4219]:
+              - text: Постоянная Планка - отличная школа для подготовки к ЕГЭ. Я ни дня не жалела, что начала заниматься здесь. Маша- лучший преподаватель по русскому, который всегда
+              - strong [ref=e4220]: готов объяснить тему ещё раз
+              - text: ", дать дополнительные задания, задержаться порешать вместе тесты и просто поддержать)"
+            - img [ref=e4224]
+            - generic [ref=e4226]: Благий Лена
+            - img [ref=e4229]
+            - generic [ref=e4232]: 11 класс
+            - img [ref=e4235]
+            - img [ref=e4238]
+            - img [ref=e4241]
+            - img [ref=e4245]
+            - img [ref=e4248]
+            - img [ref=e4250]
+            - img [ref=e4253]
+            - img [ref=e4257]
+            - img [ref=e4261]
+            - img [ref=e4265]
+            - generic [ref=e4272]: Русский язык 89
+            - generic [ref=e4274]: Математика 82
+            - generic [ref=e4276]: 11 класс
+            - generic [ref=e4278]: Косточко Дима
+            - generic [ref=e4280]:
+              - text: Планка - замечательная школа, лучше места для подготовки к ЕГЭ и чтобы заполнить пробелы в школьных знаниях не найти. В Планке
+              - strong [ref=e4281]: учителя всегда готовы тебе помочь
+              - text: ", если ты не понимаешь тему или хочешь её отработать, они готовы провести консультацию. Также в Планке проходит хорошее количество пробников."
+              - strong [ref=e4282]: Можно отслеживать свой прогресс
+              - text: ", а также посмотреть, какие задания плохо получаются. Занятия всегда проходят в отличной атмосфере, никакого давления со стороны преподавателя."
+              - strong [ref=e4283]: Каждый из учителей уделяет значительное внимание всем ученикам.
+              - text: Я могу порекомендовать данную школу
+        - tabpanel [ref=e4284]:
+          - generic [ref=e4287]:
+            - generic [ref=e4293]:
+              - text: Олеся - чудо, спасибо ей большое за
+              - strong [ref=e4294]: лёгкую подачу материала и глубокие знания
+            - img [ref=e4298]
+            - generic [ref=e4300]: Вишневская Маша
+            - img [ref=e4303]
+            - generic [ref=e4306]: 11 класс
+            - img [ref=e4309]
+            - img [ref=e4312]
+            - img [ref=e4315]
+            - img [ref=e4319]
+            - img [ref=e4322]
+            - img [ref=e4324]
+            - img [ref=e4327]
+            - img [ref=e4331]
+            - img [ref=e4335]
+            - img [ref=e4339]
+            - generic [ref=e4348]: Русский язык 91
+            - generic [ref=e4350]: Математика 82
+            - generic [ref=e4352]: История 84
+            - generic [ref=e4354]: 11 класс
+            - generic [ref=e4356]: Вахновская Арина
+            - generic [ref=e4358]:
+              - text: Лучшее место для подготовки к ЕГЭ и ОГЭ. Доброжелательные преподаватели,
+              - strong [ref=e4359]: комфортная подача материала
+        - tabpanel [ref=e4360]:
+          - generic [ref=e4363]:
+            - generic [ref=e4369]:
+              - text: Научился решать параметры и
+              - strong [ref=e4370]: получил баллы, о которых и думать раньше не мог.
+              - text: Спасибо большое!
+            - img [ref=e4374]
+            - generic [ref=e4376]: Альтергот Артур
+            - img [ref=e4379]
+            - generic [ref=e4382]: 11 класс
+            - img [ref=e4385]
+            - img [ref=e4388]
+            - img [ref=e4391]
+            - img [ref=e4395]
+            - img [ref=e4398]
+            - img [ref=e4400]
+            - img [ref=e4403]
+            - img [ref=e4407]
+            - img [ref=e4411]
+            - img [ref=e4415]
+            - generic [ref=e4426]: Физика 88
+            - generic [ref=e4428]: Математика 92
+            - generic [ref=e4430]: Математика 96
+            - generic [ref=e4432]: Русский язык 83
+            - generic [ref=e4436]: Русский язык 73
+            - generic [ref=e4438]: 11 класс
+            - generic [ref=e4440]: Коновалов Святослав
+            - generic [ref=e4442]: Мне понравилось. Год с вами пролетел очень быстро
+        - tabpanel [ref=e4443]:
+          - generic [ref=e4446]:
+            - generic [ref=e4452]: Самая лучшая школа для подготовки к ЕГЭ/ОГЭ!
+            - img [ref=e4456]
+            - generic [ref=e4458]: Сафин Дамир
+            - img [ref=e4461]
+            - generic [ref=e4464]: 11 класс
+            - img [ref=e4467]
+            - img [ref=e4470]
+            - img [ref=e4473]
+            - img [ref=e4477]
+            - img [ref=e4480]
+            - img [ref=e4482]
+            - img [ref=e4485]
+            - img [ref=e4489]
+            - img [ref=e4493]
+            - img [ref=e4497]
+            - generic [ref=e4506]: Математика 82
+            - generic [ref=e4508]: Математика 95
+            - generic [ref=e4510]: Информатика 93
+            - generic [ref=e4514]: Физика 94
+            - generic [ref=e4516]: 11 класс
+            - generic [ref=e4518]: Осипов Слава
+            - generic [ref=e4520]:
+              - strong [ref=e4521]: Очень клёвая школа.
+              - text: Хорошие преподаватели, достойный уровень. Квест на новый год был хороший. Особенно клёво, что есть всякие шоколадки, кружки и всё остальное, что позволяет чувствовать себя
+              - strong [ref=e4522]: как дома.
+        - tabpanel [ref=e4523]:
+          - generic [ref=e4526]:
+            - generic [ref=e4532]:
+              - strong [ref=e4533]: У вас очень классная школа)
+              - text: принимаете на курсы с любым уровнем знаний, есть возможность перекусить и запить горячим, к
+              - strong [ref=e4534]: онцентрированно подаётся информация
+              - text: ", шутите шутки на уроках, чувствуется принятие человека в коллектив. Есть маленькие комнаты для индивидуальной работы - это огромный плюс. Книги на полках тоже дают вашей школе огромное преимущество). Артёму и Вове, Алине и Карине, а также всем тем, с кем не была знакома лично, но кто тоже оставлял вклад, спасибо за помощь в подготовке к экзаменам!"
+              - strong [ref=e4535]: Рада, что вовремя попала к вам на курс
+            - img [ref=e4539]
+            - generic [ref=e4541]: Золотарева Вера
+            - img [ref=e4544]
+            - generic [ref=e4547]: 11 класс
+            - img [ref=e4550]
+            - img [ref=e4553]
+            - img [ref=e4556]
+            - img [ref=e4560]
+            - img [ref=e4563]
+            - img [ref=e4565]
+            - img [ref=e4568]
+            - img [ref=e4572]
+            - img [ref=e4576]
+            - img [ref=e4580]
+            - generic [ref=e4587]: Математика 96
+            - generic [ref=e4589]: Информатика 85
+            - generic [ref=e4593]: Физика 90
+            - generic [ref=e4595]: 11 класс
+            - generic [ref=e4597]: Бердникова Рита
+            - generic [ref=e4599]:
+              - text: Спасибо вам, в Планке меня очень хорошо подготовили к экзамену! Преподаватель отзывчивый, старается
+              - strong [ref=e4600]: донести материал до всех
+        - tabpanel [ref=e4601]:
+          - generic [ref=e4604]:
+            - generic [ref=e4610]:
+              - text: Ходил летом после 8-го класса и весь следующий учебный год.
+              - strong [ref=e4611]: Учителя очень классные, добрые и лояльные.
+              - text: "Благодаря Артему, Марии, Дмитрию, Екатерине, Алексею и Владимиру я сдал экзамены на отлично. В Планке крутые и замечательные администраторы: Олеся и Карина. Я считаю, все, даже будучи не самыми сильными в плане школьных знаний,"
+              - strong [ref=e4612]: смогут подтянуть свои знания и сдать экзамены только на 5!
+            - img [ref=e4616]
+            - generic [ref=e4618]: Осташкин Илья
+            - img [ref=e4621]
+            - generic [ref=e4624]: 9 класс
+            - img [ref=e4627]
+            - img [ref=e4630]
+            - img [ref=e4633]
+            - img [ref=e4637]
+            - img [ref=e4640]
+            - img [ref=e4642]
+            - img [ref=e4645]
+            - img [ref=e4649]
+            - img [ref=e4653]
+            - img [ref=e4657]
+            - generic [ref=e4664]: Математика 97
+            - generic [ref=e4666]: Информатика 90
+            - generic [ref=e4668]: 11 класс
+            - generic [ref=e4670]: Сахаров Миша
+            - generic [ref=e4672]: Мне все очень понравилось, всем рекомендую!
+        - tabpanel [ref=e4673]:
+          - generic [ref=e4676]:
+            - generic [ref=e4682]:
+              - text: Самое крутое место для подготовки к экзаменам! Я с удовольствием ходила сюда на занятия, отдельное
+              - strong [ref=e4683]: спасибо Диме за любовь к математике
+              - text: ", за отличное настроение и хороший результат ЕГЭ. Однозначно всем рекомендую! P.S.: В «Постоянной Планка» очень вкусный чай и сладости 😋"
+            - img [ref=e4687]
+            - generic [ref=e4689]: Фраш Настя
+            - img [ref=e4692]
+            - generic [ref=e4695]: 11 класс
+            - img [ref=e4698]
+            - img [ref=e4701]
+            - img [ref=e4704]
+            - img [ref=e4708]
+            - img [ref=e4711]
+            - img [ref=e4713]
+            - img [ref=e4716]
+            - img [ref=e4720]
+            - img [ref=e4724]
+            - img [ref=e4728]
+            - generic [ref=e4731]: 11 класс
+            - generic [ref=e4733]: Зепсен Арина
+            - generic [ref=e4735]:
+              - text: Если вы хотите
+              - strong [ref=e4736]: поддержку в течение всего учебного года
+              - text: и после, трепетных и заботливых преподавателей, которые помогут во всем, обилие вкусняшек и хорошего настроения в этот непростой период, а также высокие баллы на экзаменах, то вам в любимую школу «Постоянная планка» 🤍❤️
+      - heading "/17" [level=3] [ref=e4738]
+    - generic [ref=e4740]:
+      - generic [ref=e4741]:
+        - strong [ref=e4747]: В Постоянной Планка мы стараемся сохранять атмосферу дружелюбия и комфорта!
+        - generic [ref=e4749]:
+          - generic:
+            - button "Previous slide" [ref=e4750] [cursor=pointer]
+            - button "Next slide" [ref=e4752] [cursor=pointer]
+      - generic [ref=e4755]:
+        - group "1 of 41" [ref=e4756]
+        - group "2 of 41" [ref=e4758]
+        - group "3 of 41" [ref=e4760]
+        - group "4 of 41" [ref=e4762]
+        - group "5 of 41" [ref=e4764]
+        - group "6 of 41" [ref=e4766]
+        - group "7 of 41" [ref=e4768]
+        - group "8 of 41" [ref=e4770]
+        - group "9 of 41" [ref=e4772]
+        - group "10 of 41" [ref=e4774]
+        - group "11 of 41" [ref=e4776]
+        - group "12 of 41" [ref=e4778]
+        - group "13 of 41" [ref=e4780]
+        - group "14 of 41" [ref=e4782]
+        - group "15 of 41" [ref=e4784]
+        - group "16 of 41" [ref=e4786]
+        - group "17 of 41" [ref=e4788]
+        - group "18 of 41" [ref=e4790]
+        - group "19 of 41" [ref=e4792]
+        - group "20 of 41" [ref=e4794]
+        - group "21 of 41" [ref=e4796]
+        - group "22 of 41" [ref=e4798]
+        - group "23 of 41" [ref=e4800]
+        - group "24 of 41" [ref=e4802]
+        - group "25 of 41" [ref=e4804]
+        - group "26 of 41" [ref=e4806]
+        - group "27 of 41" [ref=e4808]
+        - group "28 of 41" [ref=e4810]
+        - group "29 of 41" [ref=e4812]
+        - group "30 of 41" [ref=e4814]
+        - group "31 of 41" [ref=e4816]
+        - group "32 of 41" [ref=e4818]
+        - group "33 of 41" [ref=e4820]
+        - group "34 of 41" [ref=e4822]
+        - group "35 of 41" [ref=e4824]
+        - group "36 of 41" [ref=e4826]
+        - group "37 of 41" [ref=e4828]
+        - group "38 of 41" [ref=e4830]
+        - group "39 of 41" [ref=e4832]
+        - group "40 of 41" [ref=e4834]
+        - group "41 of 41" [ref=e4836]
+    - generic [ref=e4841]:
+      - generic [ref=e4842]: Запишитесь на бесплатную консультацию
+      - generic [ref=e4843]: Оставьте свой номер и мы подберем для вас подходящую образовательную траекторию
+      - button "Записаться" [ref=e4847] [cursor=pointer]:
+        - generic [ref=e4848]: Записаться
+    - generic [ref=e4851]:
+      - iframe [ref=e4856]:
+        - link [ref=f3e2] [cursor=pointer]:
+          - /url: //yandex.ru/maps/org/121721367463/reviews?utm_source=badge&utm_medium=rating&utm_campaign=v1
+      - iframe [ref=e4859]:
+        - iframe [ref=f4e3]:
+          - link [ref=f5e2] [cursor=pointer]:
+            - /url: http://widget.2gis.ru/api/reviews/?org_id=70000001037491155&branch_id=70000001045445705&rating=5&reviews_count=110&size=medium&theme=light&referrer=aHR0cHMlM0ElMkYlMkZwbGFuY2suc2Nob29sJTJG
+            - img [ref=f5e3]
+    - generic [ref=e4867]:
+      - generic [ref=e4868]:
+        - text: ПОСТОЯННАЯ ПЛАНКА
+        - link "+7 (" [ref=e4869] [cursor=pointer]:
+          - /url: tel:+79994956500
+        - text: 903) 914 2443
+        - text: planckschool@yandex.ru
+        - text: г. Томск, ул. Большая Подгорная 56
+        - text: г. Томск, пр. Ленина 1
+      - list "Соц. сети" [ref=e4871]:
+        - listitem [ref=e4872]:
+          - link "vk" [ref=e4873] [cursor=pointer]:
+            - /url: https://vk.com/planckschool
+        - listitem [ref=e4875]:
+          - link "whatsapp" [ref=e4876] [cursor=pointer]:
+            - /url: https://wa.me/79009228256
+        - listitem [ref=e4878]:
+          - link "telegram" [ref=e4879] [cursor=pointer]:
+            - /url: https://t.me/planckschool
+        - listitem [ref=e4881]:
+          - link "youtube" [ref=e4882] [cursor=pointer]:
+            - /url: https://www.youtube.com/@user-lk4yz3nd7v
+      - generic [ref=e4884]:
+        - paragraph [ref=e4885]: ИП Лаас Артём Александрович
+        - paragraph [ref=e4886]: ИНН 701718986782
+        - paragraph [ref=e4887]: ОРНИП 319703100083762 .
+        - text: "Лицензия: № Л035-01598-70/02847926 от 04.08.2025"
+        - text: ©2024 Все права защищены.
+        - link "Политика конфиденциальности" [ref=e4889] [cursor=pointer]:
+          - /url: https://planck.school/policy
+        - link "Программа дистанционной подготовки к ЕГЭ по математике" [ref=e4891] [cursor=pointer]:
+          - /url: https://planck.school/program
+        - link "Программа очной подготовки к ЕГЭ по математике" [ref=e4893] [cursor=pointer]:
+          - /url: https://planck.school/prog2
+    - generic [ref=e4895]:
+      - generic [ref=e4896]:
+        - text: Мы используем
+        - link "cookie" [ref=e4897] [cursor=pointer]:
+          - /url: https://planck.school/cookies
+        - text: и метрические системы, чтобы сделать сайт максимально удобным для вас
+      - button "Закрыть уведомление" [ref=e4898] [cursor=pointer]
+  - generic [ref=e4902]:
+    - iframe
+    - generic [ref=e4903] [cursor=pointer]:
+      - img [ref=e4906]
+      - iframe [ref=e4908]:
+        

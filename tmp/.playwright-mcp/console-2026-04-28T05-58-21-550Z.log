@@ -1,0 +1,13 @@
+[      30ms] [LOG] Загружаю: Математика ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8000/?nocache:719
+[     978ms] [LOG] Загружаю: Математика ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8000/?nocache:719
+[    1491ms] [LOG] Загружаю: Информатика ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8000/?nocache:719
+[    1863ms] [LOG] Загружаю: Информатика ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8000/?nocache:719
+[    2200ms] [LOG] Загружаю: Русский язык ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8000/?nocache:719
+[    2639ms] [LOG] Загружаю: Русский язык ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8000/?nocache:719
+[    3184ms] [LOG] Загружаю: Обществознание ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8000/?nocache:719
+[    3531ms] [LOG] Загружаю: Обществознание ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8000/?nocache:719
+[    3874ms] [LOG] Загружаю: История ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8000/?nocache:719
+[    4206ms] [LOG] Загружаю: Физика ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8000/?nocache:719
+[    4600ms] [LOG] Загружаю: Физика ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8000/?nocache:719
+[    4947ms] [LOG] Загружено студентов: 364 @ http://localhost:8000/?nocache:743
+[    4947ms] [LOG] По предметам: [математика: 2 уровней, информатика: 2 уровней, русский язык: 2 уровней, обществознание: 2 уровней, история: 1 уровней, физика: 2 уровней] @ http://localhost:8000/?nocache:744

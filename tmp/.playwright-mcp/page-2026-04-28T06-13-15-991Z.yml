@@ -1,0 +1,139 @@
+- generic [ref=e1]:
+  - img
+  - img
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e13]:
+          - button "Математика" [ref=e14] [cursor=pointer]
+          - button "Информатика" [ref=e15] [cursor=pointer]
+          - button "Русский язык" [ref=e16] [cursor=pointer]
+          - button "Обществознание" [ref=e17] [cursor=pointer]
+          - button "История" [ref=e18] [cursor=pointer]
+          - button "Физика" [ref=e19] [cursor=pointer]
+        - generic [ref=e5]:
+          - button "ЕГЭ" [ref=e20] [cursor=pointer]
+          - button "ОГЭ" [ref=e21] [cursor=pointer]
+      - generic [ref=e6]:
+        - generic [ref=e7]: РЕЙТИНГ
+        - generic [ref=e8]: Физика | ОГЭ
+        - generic [ref=e9]:
+          - button "⟳" [active] [ref=e10] [cursor=pointer]
+          - generic [ref=e11]: "Обновлено: 13:12:56"
+    - img "Лого"
+    - generic [ref=e12]:
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - generic [ref=e24]: ЛЕГЕНДЫ
+          - img [ref=e26]
+          - generic [ref=e29]: "100"
+        - generic [ref=e30]:
+          - generic [ref=e31]:
+            - text: МЕСТО
+            - text: (В ШКОЛЕ)
+          - generic [ref=e32]: ИМЯ, БАЛЛЫ
+        - generic [ref=e35]:
+          - generic [ref=e36]: "1"
+          - generic [ref=e37]:
+            - generic [ref=e38]: Худобец Александра
+            - generic [ref=e39]: "100.00"
+      - generic [ref=e54]:
+        - generic [ref=e55]:
+          - generic [ref=e56]: КРУТЫШИ
+          - img [ref=e58]
+        - generic [ref=e61]:
+          - generic [ref=e62]:
+            - text: МЕСТО
+            - text: (В ШКОЛЕ)
+          - generic [ref=e63]: ИМЯ, БАЛЛЫ
+        - generic [ref=e65]:
+          - generic [ref=e66]:
+            - generic [ref=e67]: "2"
+            - generic [ref=e68]:
+              - generic [ref=e69]: Иваненко Андрей
+              - generic [ref=e70]: "75.00"
+          - generic [ref=e72]:
+            - generic [ref=e73]: "2"
+            - generic [ref=e74]:
+              - generic [ref=e75]: Соколов Кирилл
+              - generic [ref=e76]: "75.00"
+          - generic [ref=e78]:
+            - generic [ref=e79]: "2"
+            - generic [ref=e80]:
+              - generic [ref=e81]: Юрьева Елизавета
+              - generic [ref=e82]: "75.00"
+          - generic [ref=e84]:
+            - generic [ref=e85]: "3"
+            - generic [ref=e86]:
+              - generic [ref=e87]: Тухтарова Валерия
+              - generic [ref=e88]: "73.00"
+          - generic [ref=e90]:
+            - generic [ref=e91]: "4"
+            - generic [ref=e92]:
+              - generic [ref=e93]: Мельникова Марина
+              - generic [ref=e94]: "69.75"
+          - generic [ref=e96]:
+            - generic [ref=e97]: "5"
+            - generic [ref=e98]:
+              - generic [ref=e99]: Волков Борис
+              - generic [ref=e100]: "67.25"
+          - generic [ref=e102]:
+            - generic [ref=e103]: "6"
+            - generic [ref=e104]:
+              - generic [ref=e105]: Зубрилина Полина
+              - generic [ref=e106]: "66.75"
+          - generic [ref=e108]:
+            - generic [ref=e109]: "7"
+            - generic [ref=e110]:
+              - generic [ref=e111]: Фомина Вика
+              - generic [ref=e112]: "63.00"
+          - generic [ref=e114]:
+            - generic [ref=e115]: "8"
+            - generic [ref=e116]:
+              - generic [ref=e117]: Подкорытова Алина
+              - generic [ref=e118]: "59.00"
+      - generic [ref=e119]:
+        - generic [ref=e120]:
+          - generic [ref=e121]: НА СТАРТЕ
+          - img [ref=e123]
+        - generic [ref=e133]:
+          - generic [ref=e134]:
+            - text: МЕСТО
+            - text: (В ШКОЛЕ)
+          - generic [ref=e135]: ИМЯ, БАЛЛЫ
+        - generic [ref=e137]:
+          - generic [ref=e138]:
+            - generic [ref=e139]: "9"
+            - generic [ref=e140]:
+              - generic [ref=e141]: Рабунец Юлиана
+              - generic [ref=e142]: "43.25"
+          - generic [ref=e144]:
+            - generic [ref=e145]: "10"
+            - generic [ref=e146]:
+              - generic [ref=e147]: Дерусов Николай
+              - generic [ref=e148]: "0.00"
+          - generic [ref=e150]:
+            - generic [ref=e151]: "10"
+            - generic [ref=e152]:
+              - generic [ref=e153]: Доценко Дмитрий
+              - generic [ref=e154]: "0.00"
+          - generic [ref=e156]:
+            - generic [ref=e157]: "10"
+            - generic [ref=e158]:
+              - generic [ref=e159]: Закиров Аркадий
+              - generic [ref=e160]: "0.00"
+          - generic [ref=e162]:
+            - generic [ref=e163]: "10"
+            - generic [ref=e164]:
+              - generic [ref=e165]: Климова Елизавета
+              - generic [ref=e166]: "0.00"
+          - generic [ref=e168]:
+            - generic [ref=e169]: "10"
+            - generic [ref=e170]:
+              - generic [ref=e171]: Гильманова Арина
+              - generic [ref=e172]: "0.00"
+          - generic [ref=e174]:
+            - generic [ref=e175]: "10"
+            - generic [ref=e176]:
+              - generic [ref=e177]: Долгополов Артём
+              - generic [ref=e178]: "0.00"

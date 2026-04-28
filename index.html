@@ -566,6 +566,15 @@
     const rows = table.rows;
     const students = [];
 
+    // DEBUG: логируем структуру для первой строки
+    if (rows.length > 0) {
+      console.log(`\n=== ${subject} ${level} ===`);
+      console.log('Заголовки:', table.cols.map(c => c.label));
+      if (rows[0]) {
+        console.log('Первая строка (cells):', rows[0].c.map((c, i) => `[${i}]: ${c?.v}`));
+      }
+    }
+
     // Столбец C (индекс 2) = Ученик, столбец K (индекс 10) = Итоговый балл
     for (let rowIdx = 1; rowIdx < rows.length; rowIdx++) { // Начинаем с 1 (2-я строка)
       const row = rows[rowIdx];

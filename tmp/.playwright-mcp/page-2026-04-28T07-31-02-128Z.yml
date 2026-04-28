@@ -1,0 +1,82 @@
+- generic [active] [ref=e1]:
+  - img
+  - img
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e13]:
+          - button "Математика" [ref=e181] [cursor=pointer]
+          - button "Информатика" [ref=e182] [cursor=pointer]
+          - button "Русский язык" [ref=e183] [cursor=pointer]
+          - button "Обществознание" [ref=e184] [cursor=pointer]
+          - button "История" [ref=e185] [cursor=pointer]
+          - button "Физика" [ref=e186] [cursor=pointer]
+        - button "ЕГЭ" [ref=e187] [cursor=pointer]
+      - generic [ref=e6]:
+        - generic [ref=e7]: РЕЙТИНГ
+        - generic [ref=e8]: История | ЕГЭ
+        - generic [ref=e9]:
+          - button "⟳" [ref=e10] [cursor=pointer]
+          - generic [ref=e11]: "Обновлено: 14:30:42"
+    - img "Лого"
+    - generic [ref=e12]:
+      - generic [ref=e188]:
+        - generic [ref=e189]:
+          - generic [ref=e190]: ЛЕГЕНДЫ
+          - img [ref=e192]
+          - generic [ref=e195]: "100"
+        - generic [ref=e196]:
+          - generic [ref=e197]:
+            - text: МЕСТО
+            - text: (В ШКОЛЕ)
+          - generic [ref=e198]: ИМЯ, БАЛЛЫ
+        - generic [ref=e201]:
+          - generic [ref=e202]: "1"
+          - generic [ref=e203]:
+            - generic [ref=e204]: Осипов Сережа
+            - generic [ref=e205]: "150.00"
+      - generic [ref=e220]:
+        - generic [ref=e221]:
+          - generic [ref=e222]: КРУТЫШИ
+          - img [ref=e224]
+        - generic [ref=e227]:
+          - generic [ref=e228]:
+            - text: МЕСТО
+            - text: (В ШКОЛЕ)
+          - generic [ref=e229]: ИМЯ, БАЛЛЫ
+        - generic [ref=e231]:
+          - generic [ref=e232]:
+            - generic [ref=e233]: "2"
+            - generic [ref=e234]:
+              - generic [ref=e235]: Беккерман Мария
+              - generic [ref=e236]: "50.00"
+          - generic [ref=e238]:
+            - generic [ref=e239]: "2"
+            - generic [ref=e240]:
+              - generic [ref=e241]: Богданова Соня
+              - generic [ref=e242]: "50.00"
+          - generic [ref=e244]:
+            - generic [ref=e245]: "2"
+            - generic [ref=e246]:
+              - generic [ref=e247]: Федорова Наталия
+              - generic [ref=e248]: "50.00"
+      - generic [ref=e259]:
+        - generic [ref=e260]:
+          - generic [ref=e261]: НА СТАРТЕ
+          - img [ref=e263]
+        - generic [ref=e273]:
+          - generic [ref=e274]:
+            - text: МЕСТО
+            - text: (В ШКОЛЕ)
+          - generic [ref=e275]: ИМЯ, БАЛЛЫ
+        - generic [ref=e277]:
+          - generic [ref=e278]:
+            - generic [ref=e279]: "3"
+            - generic [ref=e280]:
+              - generic [ref=e281]: Толоконникова Дарья
+              - generic [ref=e282]: "35.00"
+          - generic [ref=e284]:
+            - generic [ref=e285]: "4"
+            - generic [ref=e286]:
+              - generic [ref=e287]: Омельянчук Захар
+              - generic [ref=e288]: "0.00"

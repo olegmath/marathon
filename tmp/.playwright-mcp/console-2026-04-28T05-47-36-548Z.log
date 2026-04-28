@@ -1,0 +1,19 @@
+[      26ms] [LOG] Загружаю: Математика ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8000/?nocache:721
+[     845ms] [LOG] Загружаю: Математика ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8000/?nocache:721
+[    1213ms] [LOG] Загружаю: Информатика ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8000/?nocache:721
+[    1755ms] [LOG] Загружаю: Информатика ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8000/?nocache:721
+[    2093ms] [LOG] Загружаю: Русский язык ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8000/?nocache:721
+[    2611ms] [LOG] Загружаю: Русский язык ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8000/?nocache:721
+[    3078ms] [LOG] Загружаю: Обществознание ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8000/?nocache:721
+[    3500ms] [LOG] Загружаю: Обществознание ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8000/?nocache:721
+[    3829ms] [LOG] Загружаю: История ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8000/?nocache:721
+[    4143ms] [LOG] Загружаю: Физика ЕГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8000/?nocache:721
+[    4544ms] [LOG] Загружаю: Физика ОГЭ https://docs.google.com/spreadsheets/d/1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_Ptn... @ http://localhost:8000/?nocache:721
+[    4892ms] [LOG] Загружено студентов: 364 @ http://localhost:8000/?nocache:745
+[    4893ms] [LOG] По предметам: [математика: 2 уровней, информатика: 2 уровней, русский язык: 2 уровней, обществознание: 2 уровней, история: 1 уровней, физика: 2 уровней] @ http://localhost:8000/?nocache:746
+[   44180ms] [LOG] Математика ЕГЭ легенды count: 9 @ :2
+[   44180ms] [LOG] Первый студент: {subject: математика, level: ЕГЭ, name: Демидов Дэниэл, score: 98, place: 1} @ :3
+[   51149ms] [LOG] Физика ОГЭ первый студент: {subject: физика, level: ОГЭ, name: Худобец Александра, score: 100, place: 1} @ :2
+[   59343ms] [LOG] currentSubject: математика @ :1
+[   59343ms] [LOG] currentExam: ЕГЭ @ :2
+[   59343ms] [LOG] Выводятся легенды: Демидов Дэниэл @ :4

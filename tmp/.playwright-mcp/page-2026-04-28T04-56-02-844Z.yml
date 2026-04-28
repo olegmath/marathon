@@ -1,0 +1,107 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - heading "🏃 Марафон Рейтинг" [level=1] [ref=e3]
+    - generic [ref=e4]:
+      - generic [ref=e5]: загрузка...
+      - button "Обновить" [ref=e6] [cursor=pointer]
+  - navigation [ref=e7]:
+    - link "Математика" [ref=e8] [cursor=pointer]:
+      - /url: "#sec-математика"
+    - link "Информатика" [ref=e9] [cursor=pointer]:
+      - /url: "#sec-информатика"
+    - link "Русский язык" [ref=e10] [cursor=pointer]:
+      - /url: "#sec-русский"
+    - link "Обществознание" [ref=e11] [cursor=pointer]:
+      - /url: "#sec-обществознание"
+    - link "История" [ref=e12] [cursor=pointer]:
+      - /url: "#sec-история"
+    - link "Физика" [ref=e13] [cursor=pointer]:
+      - /url: "#sec-физика"
+  - main [ref=e14]:
+    - generic [ref=e15]:
+      - heading "Математика" [level=2] [ref=e17]
+      - generic [ref=e18]:
+        - button "ЕГЭ" [ref=e19] [cursor=pointer]
+        - button "ОГЭ" [ref=e20] [cursor=pointer]
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - heading "🏆 Легенды" [level=3] [ref=e24]
+          - list
+        - generic [ref=e25]:
+          - heading "⭐ Крутыши" [level=3] [ref=e26]
+          - list
+        - generic [ref=e27]:
+          - heading "🚀 На старте" [level=3] [ref=e28]
+          - list
+    - generic [ref=e29]:
+      - heading "Информатика" [level=2] [ref=e31]
+      - generic [ref=e32]:
+        - button "ЕГЭ" [ref=e33] [cursor=pointer]
+        - button "ОГЭ" [ref=e34] [cursor=pointer]
+      - generic [ref=e36]:
+        - generic [ref=e37]:
+          - heading "🏆 Легенды" [level=3] [ref=e38]
+          - list
+        - generic [ref=e39]:
+          - heading "⭐ Крутыши" [level=3] [ref=e40]
+          - list
+        - generic [ref=e41]:
+          - heading "🚀 На старте" [level=3] [ref=e42]
+          - list
+    - generic [ref=e43]:
+      - heading "Русский язык" [level=2] [ref=e45]
+      - generic [ref=e46]:
+        - button "ЕГЭ" [ref=e47] [cursor=pointer]
+        - button "ОГЭ" [ref=e48] [cursor=pointer]
+      - generic [ref=e50]:
+        - generic [ref=e51]:
+          - heading "🏆 Легенды" [level=3] [ref=e52]
+          - list
+        - generic [ref=e53]:
+          - heading "⭐ Крутыши" [level=3] [ref=e54]
+          - list
+        - generic [ref=e55]:
+          - heading "🚀 На старте" [level=3] [ref=e56]
+          - list
+    - generic [ref=e57]:
+      - heading "Обществознание" [level=2] [ref=e59]
+      - generic [ref=e60]:
+        - button "ЕГЭ" [ref=e61] [cursor=pointer]
+        - button "ОГЭ" [ref=e62] [cursor=pointer]
+      - generic [ref=e64]:
+        - generic [ref=e65]:
+          - heading "🏆 Легенды" [level=3] [ref=e66]
+          - list
+        - generic [ref=e67]:
+          - heading "⭐ Крутыши" [level=3] [ref=e68]
+          - list
+        - generic [ref=e69]:
+          - heading "🚀 На старте" [level=3] [ref=e70]
+          - list
+    - generic [ref=e71]:
+      - heading "История" [level=2] [ref=e73]
+      - generic [ref=e75]:
+        - generic [ref=e76]:
+          - heading "🏆 Легенды" [level=3] [ref=e77]
+          - list
+        - generic [ref=e78]:
+          - heading "⭐ Крутыши" [level=3] [ref=e79]
+          - list
+        - generic [ref=e80]:
+          - heading "🚀 На старте" [level=3] [ref=e81]
+          - list
+    - generic [ref=e82]:
+      - heading "Физика" [level=2] [ref=e84]
+      - generic [ref=e85]:
+        - button "ЕГЭ" [ref=e86] [cursor=pointer]
+        - button "ОГЭ" [ref=e87] [cursor=pointer]
+      - generic [ref=e89]:
+        - generic [ref=e90]:
+          - heading "🏆 Легенды" [level=3] [ref=e91]
+          - list
+        - generic [ref=e92]:
+          - heading "⭐ Крутыши" [level=3] [ref=e93]
+          - list
+        - generic [ref=e94]:
+          - heading "🚀 На старте" [level=3] [ref=e95]
+          - list

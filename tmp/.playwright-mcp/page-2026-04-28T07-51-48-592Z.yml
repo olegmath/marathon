@@ -1,0 +1,24 @@
+- generic [active] [ref=e1]:
+  - img
+  - img
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e13]:
+          - button "Математика" [ref=e181] [cursor=pointer]
+          - button "Информатика" [ref=e182] [cursor=pointer]
+          - button "Русский язык" [ref=e183] [cursor=pointer]
+          - button "Обществознание" [ref=e184] [cursor=pointer]
+          - button "История" [ref=e185] [cursor=pointer]
+          - button "Физика" [ref=e186] [cursor=pointer]
+        - generic [ref=e5]:
+          - button "ЕГЭ" [ref=e187] [cursor=pointer]
+          - button "ОГЭ" [ref=e188] [cursor=pointer]
+      - generic [ref=e6]:
+        - generic [ref=e7]: РЕЙТИНГ
+        - generic [ref=e8]: История | ОГЭ
+        - generic [ref=e9]:
+          - button "⟳" [ref=e10] [cursor=pointer]
+          - generic [ref=e11]: "Обновлено: 14:51:38"
+    - img "Лого"
+    - paragraph [ref=e189]: Нет данных

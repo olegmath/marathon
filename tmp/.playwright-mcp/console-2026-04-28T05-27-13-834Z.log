@@ -1,0 +1,5 @@
+[      42ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8000/logoplanka.png:0
+[     583ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8000/logoplanka.png:0
+[     584ms] [LOG] Логотип не найден (logoplanka.png) @ http://localhost:8000/:735
+[   24153ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8000/logoplanka.png:0
+[   24153ms] [LOG] Логотип не найден (logoplanka.png) @ http://localhost:8000/:735
