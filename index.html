@@ -566,14 +566,16 @@
     const rows = table.rows;
     const students = [];
 
-    // DEBUG: логируем структуру для первой строки
+    // DEBUG: логируем Перца Ивана
     if (rows.length > 0) {
       console.log(`\n=== ${subject} ${level} ===`);
-      if (rows[0]) {
-        console.log('Строка 0 (служебная):', rows[0].c.map((c, i) => `[${i}]: ${c?.v}`).filter((_, i) => i <= 15));
-      }
-      if (rows[1]) {
-        console.log('Строка 1 (первый ученик):', rows[1].c.map((c, i) => `[${i}]: ${c?.v}`).filter((_, i) => i <= 15));
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const cells = row.c || [];
+        const nameCell = cells[2]?.v;
+        if (nameCell && nameCell.toString().includes('Перец')) {
+          console.log(`Найден Перец Иван в строке ${i}:`, cells.map((c, idx) => `[${idx}]: ${c?.v}`).filter((_, idx) => idx <= 15));
+        }
       }
     }
 
