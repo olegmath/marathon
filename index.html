@@ -482,7 +482,7 @@
 </div>
 
 <script>
-  const SHEET_ID = '1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_PtntIU';
+  const PROXY_URL = 'https://script.google.com/macros/s/AKfycby9ivHb9vqRsSu3Lh23GEJO-KnXdzS0HrWbTz-_Njg2EY1QAzfDi3NpuS4P8lrAxKfFCg/exec';
 
   const SUBJECTS = [
     { key: 'математика', label: 'Математика', levels: ['ЕГЭ', 'ОГЭ'] },
@@ -508,7 +508,7 @@
 
   function buildApiUrl(subject, level) {
     const sheetName = getSheetName(subject, level);
-    return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
+    return `${PROXY_URL}?sheet=${encodeURIComponent(sheetName)}`;
   }
 
   const EXAMS = ['ЕГЭ', 'ОГЭ'];
@@ -516,6 +516,7 @@
   let appData = null;
   let currentSubject = 'физика';
   let currentExam = 'ОГЭ';
+  let globalNullScoreStudents = []; // Для отслеживания студентов с null в cells[10]
 
   // SVG Icons
   const FlameIcon = () => `
@@ -563,24 +564,17 @@
       throw new Error('Неожиданный формат данных');
     }
 
+    // DEBUG: выводим заголовки и структуру
+    if (subject === 'математика' && level === 'ЕГЭ') {
+      console.log(`📊 Структура таблицы (${subject} ${level}):`);
+      console.log(`  - Всего столбцов: ${table.cols.length}`);
+      console.log(`  - Заголовки:`, table.cols.map((col, i) => ({idx: i, label: col.label, id: col.id})).slice(0, 20));
+      console.log(`  - First row cells count:`, table.rows[1]?.c?.length);
+    }
+
     const rows = table.rows;
     const students = [];
-
-    // DEBUG: логируем ячейку [10] для учеников без балла
-    if (rows.length > 0) {
-      console.log(`\n=== ${subject} ${level} ===`);
-
-      for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        const cells = row.c || [];
-        const nameCell = cells[2]?.v;
-        const scoreCell = cells[10];
-
-        if (nameCell && nameCell.toString().trim() !== '' && (scoreCell?.v === undefined || scoreCell?.v === null)) {
-          console.log(`❌ ${nameCell} (строка ${i}): cells[10]=`, scoreCell);
-        }
-      }
-    }
+    const nullScoreStudents = []; // Для отслеживания студентов с null в cells[10]
 
     // Столбец C (индекс 2) = Ученик, столбец K (индекс 10) = Итоговый балл
     for (let rowIdx = 1; rowIdx < rows.length; rowIdx++) { // Начинаем с 1 (2-я строка)
@@ -588,13 +582,95 @@
       const cells = row.c || [];
 
       const name = cells[2]?.v; // Столбец C
-      const score = cells[10]?.v; // Столбец K
 
-      if (!name || name.toString().trim() === '') continue;
+      // Берём балл из cells[10] — проверяем .v, затем .f, затем .fv
+      let scoreCell = cells[10];
+      let score = scoreCell?.v;
+
+      // DEBUG: построчный дебаг для Перца Ивана и Демидова Дэниэла
+      const isDebugStudent = (
+        (name === 'Перец Иван' || name === 'Демидов Дэниэл') &&
+        subject === 'математика' &&
+        level === 'ЕГЭ'
+      );
+
+      if (isDebugStudent) {
+        console.log(`\n🔍 ШАГ 1: Читаем row ${rowIdx}`);
+        console.log(`   cells.length = ${cells.length}`);
+        console.log(`   cells[0-12]:`, cells.slice(0, 13).map((c, i) => ({i, v: c?.v, f: c?.f})));
+      }
+
+      if (isDebugStudent) {
+        console.log(`\n🔍 ШАГ 2: Извлекаем имя`);
+        console.log(`   cells[2] = ${JSON.stringify(cells[2])}`);
+        console.log(`   name = '${name}'`);
+      }
+
+      if (isDebugStudent) {
+        console.log(`\n🔍 ШАГ 3: Извлекаем балл из cells[10]`);
+        console.log(`   cells[10] = ${JSON.stringify(scoreCell)}`);
+        console.log(`   cells[10].v = ${scoreCell?.v}`);
+        console.log(`   cells[10].f = ${scoreCell?.f}`);
+        console.log(`   score (before fallback) = ${score}`);
+      }
+
+      // Отслеживаем студентов с undefined/null в cells[10]
+      if ((scoreCell === null || scoreCell === undefined) && name && name.toString().trim() !== '') {
+        const studentInfo = {
+          name: name.toString().trim(),
+          subject,
+          level,
+          cells10: scoreCell,
+          cells8: cells[8],
+          cells9: cells[9]
+        };
+        nullScoreStudents.push(studentInfo);
+        globalNullScoreStudents.push(studentInfo); // Добавляем в глобальный массив
+      }
+
+      if (score === null || score === undefined) {
+        if (isDebugStudent) console.log(`\n🔍 ШАГ 4: Применяем fallback (score был null/undefined)`);
+
+        // Пробуем .f (отформатированное значение)
+        if (scoreCell?.f !== null && scoreCell?.f !== undefined) {
+          score = String(scoreCell.f).replace(',', '.');
+          if (isDebugStudent) console.log(`   Fallback 1: используем scoreCell.f = '${scoreCell.f}' → score = '${score}'`);
+        }
+        // Пробуем .fv (значение формулы)
+        else if (scoreCell?.fv !== null && scoreCell?.fv !== undefined) {
+          score = scoreCell.fv;
+          if (isDebugStudent) console.log(`   Fallback 2: используем scoreCell.fv = ${scoreCell.fv}`);
+        }
+        else {
+          if (isDebugStudent) console.log(`   ❌ Fallback не сработал! Нет .f и .fv`);
+        }
+      }
+
+      if (isDebugStudent) {
+        console.log(`\n🔍 ШАГ 5: Проверяем имя`);
+        console.log(`   trim() = '${name?.toString().trim()}'`);
+        console.log(`   isEmpty = ${!name || name.toString().trim() === ''}`);
+      }
+
+      if (!name || name.toString().trim() === '') {
+        if (isDebugStudent) console.log(`\n   ⏭️  SKIP: имя пусто\n`);
+        continue;
+      }
+
+      const finalName = name.toString().trim();
+      const finalScore = Number(score) || 0;
+
+      if (isDebugStudent) {
+        console.log(`\n🔍 ШАГ 6: Добавляем в массив`);
+        console.log(`   name = '${finalName}'`);
+        console.log(`   score (raw) = ${score}`);
+        console.log(`   score (Number) = ${finalScore}`);
+        console.log(`   students.push({name: '${finalName}', score: ${finalScore}})\n`);
+      }
 
       students.push({
-        name: name.toString().trim(),
-        score: Number(score) || 0,
+        name: finalName,
+        score: finalScore,
       });
     }
 
@@ -624,6 +700,8 @@
       };
     });
 
+    // Возвращаем и студентов И информацию о null values
+    result._nullScoreStudents = nullScoreStudents;
     return result;
   }
 
@@ -822,15 +900,36 @@
       const allStudents = [];
 
       // Парсим результаты
+      const allNullScoreStudents = [];
       for (const response of responses) {
         if (!response) continue;
         try {
           const gvizJson = extractGvizJson(response.text);
           const students = parseGvizData(gvizJson, response.subject.key, response.level);
           allStudents.push(...students);
+
+          // Собираем информацию о студентах с null в cells[10]
+          if (students._nullScoreStudents) {
+            for (const nullStudent of students._nullScoreStudents) {
+              allNullScoreStudents.push({
+                name: nullStudent.name,
+                subject: response.subject.label,
+                level: response.level
+              });
+            }
+          }
         } catch (e) {
           console.warn(`Ошибка парсинга ${response.subject.label} ${response.level}:`, e.message);
         }
+      }
+
+      // Выводим список всех студентов с null в cells[10]
+      if (allNullScoreStudents.length > 0) {
+        console.log(`\n\n❌❌❌ ПОЛНЫЙ СПИСОК СТУДЕНТОВ С NULL В CELLS[10]:\n`);
+        allNullScoreStudents.forEach(s => {
+          console.log(`${s.name} — ${s.subject} ${s.level}`);
+        });
+        console.log(`\nВсего: ${allNullScoreStudents.length} студент(ов)\n`);
       }
 
       if (allStudents.length === 0) {
@@ -840,6 +939,21 @@
       appData = groupAndSort(allStudents);
       console.log('Загружено студентов:', allStudents.length);
       console.log('По предметам:', Object.keys(appData || {}).map(k => `${k}: ${Object.keys(appData[k]).length} уровней`));
+
+      // Выводим список студентов с null в cells[10]
+      if (globalNullScoreStudents.length > 0) {
+        console.log('\n\n' + '='.repeat(60));
+        console.log('❌ СТУДЕНТЫ С NULL В CELLS[10]:');
+        console.log('='.repeat(60));
+        globalNullScoreStudents.forEach(s => {
+          console.log(`${s.name} — ${s.subject} ${s.level}`);
+        });
+        console.log(`Всего: ${globalNullScoreStudents.length}`);
+        console.log('='.repeat(60) + '\n');
+      } else {
+        console.log('✅ Все студенты загружены корректно!');
+      }
+
       render();
       if (!window.listenersInitialized) {
         initEventListeners();
