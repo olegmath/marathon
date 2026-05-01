@@ -614,7 +614,37 @@
 
     .admin-panel-header {
       display: flex;
-      justify-content: flex-end;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .admin-section-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .admin-section-btn {
+      height: 40px;
+      border: none;
+      border-radius: 8px;
+      padding: 0 16px;
+      background: rgba(255,255,255,0.35);
+      color: white;
+      font-family: 'Oswald', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      font-style: italic;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .admin-section-btn.active {
+      background: white;
+      color: #3595B8;
+      box-shadow: 0 2px 10px rgba(0,80,120,0.15);
     }
 
     /* Background SVGs */
@@ -823,6 +853,15 @@
   let detailStudent = '';
   let detailSortKey = 'finalScore';
   let detailSortDirection = 'desc';
+  let adminSection = 'details';
+  let teacherRatingSubject = '';
+  let teacherRatingExam = '';
+  let teacherRatingSortKey = 'rating';
+  let teacherRatingSortDirection = 'desc';
+  let dailyProgressSubject = '';
+  let dailyProgressExam = '';
+  let dailyProgressSortKey = 'dateOrder';
+  let dailyProgressSortDirection = 'asc';
   let adminToken = sessionStorage.getItem('adminToken') || '';
   let adminLoading = false;
   let adminError = '';
@@ -921,6 +960,13 @@
       ...row,
       score: Number(row.score) || 0,
       finalScore: Number(row.finalScore ?? row.score) || 0,
+      dailyScores: Array.isArray(row.dailyScores)
+        ? row.dailyScores.map((item) => ({
+          ...item,
+          score: Number(item.score) || 0,
+          dateOrder: Number(item.dateOrder) || 0,
+        }))
+        : [],
     })));
   }
 
@@ -1186,11 +1232,195 @@
     });
   }
 
+  function getCurrentTeacherRatingRows() {
+    return allStudentRows.filter((row) => {
+      if (teacherRatingSubject && row.subject !== teacherRatingSubject) return false;
+      if (teacherRatingExam && row.level !== teacherRatingExam) return false;
+      return true;
+    });
+  }
+
+  function normalizeTeacherRatingFilters() {
+    const subjects = uniqueSorted(allStudentRows.map((row) => row.subject));
+    const exams = uniqueSorted(allStudentRows.map((row) => row.level));
+
+    if (teacherRatingSubject && !subjects.includes(teacherRatingSubject)) teacherRatingSubject = '';
+    if (teacherRatingExam && !exams.includes(teacherRatingExam)) teacherRatingExam = '';
+  }
+
+  function getCurrentDailyProgressRows() {
+    return allStudentRows.filter((row) => {
+      if (dailyProgressSubject && row.subject !== dailyProgressSubject) return false;
+      if (dailyProgressExam && row.level !== dailyProgressExam) return false;
+      return true;
+    });
+  }
+
+  function normalizeDailyProgressFilters() {
+    const subjects = uniqueSorted(allStudentRows.map((row) => row.subject));
+    const exams = uniqueSorted(allStudentRows.map((row) => row.level));
+
+    if (dailyProgressSubject && !subjects.includes(dailyProgressSubject)) dailyProgressSubject = '';
+    if (dailyProgressExam && !exams.includes(dailyProgressExam)) dailyProgressExam = '';
+  }
+
+  function getSubjectLabel(subjectKey) {
+    return SUBJECTS.find((subject) => subject.key === subjectKey)?.label || subjectKey;
+  }
+
+  function averageNumbers(values) {
+    if (values.length === 0) return 0;
+    return values.reduce((sum, value) => sum + Number(value || 0), 0) / values.length;
+  }
+
+  function buildTeacherRatingRows(rows) {
+    const teachers = new Map();
+
+    for (const row of rows) {
+      const teacher = row.teacher || 'Без преподавателя';
+      if (teacher === 'Без преподавателя') continue;
+
+      if (!teachers.has(teacher)) {
+        teachers.set(teacher, {
+          teacher,
+          groups: new Map(),
+        });
+      }
+
+      const groupName = row.group || 'Без группы';
+      const groupKey = `${row.subject}||${row.level}||${groupName}`;
+      const teacherItem = teachers.get(teacher);
+
+      if (!teacherItem.groups.has(groupKey)) {
+        teacherItem.groups.set(groupKey, {
+          subject: row.subject,
+          level: row.level,
+          group: groupName,
+          totalScore: 0,
+          studentCount: 0,
+        });
+      }
+
+      const group = teacherItem.groups.get(groupKey);
+      group.totalScore += Number(row.finalScore ?? row.score) || 0;
+      group.studentCount++;
+    }
+
+    const ratings = [...teachers.values()].map((teacherItem) => {
+      const groups = [...teacherItem.groups.values()].map((group) => ({
+        ...group,
+        label: `${getSubjectLabel(group.subject)} ${group.level} - ${group.group}`,
+        averageScore: group.studentCount === 0 ? 0 : group.totalScore / group.studentCount,
+      }));
+      const sortedGroups = [...groups].sort((a, b) => b.averageScore - a.averageScore);
+      const groupAverages = groups.map((group) => group.averageScore);
+      const bestGroup = sortedGroups[0] || null;
+      const worstGroup = sortedGroups[sortedGroups.length - 1] || null;
+
+      return {
+        teacher: teacherItem.teacher,
+        rating: averageNumbers(groupAverages),
+        groupCount: groups.length,
+        studentCount: groups.reduce((sum, group) => sum + group.studentCount, 0),
+        bestGroup: bestGroup?.label || '',
+        bestGroupScore: bestGroup?.averageScore || 0,
+        worstGroup: worstGroup?.label || '',
+        worstGroupScore: worstGroup?.averageScore || 0,
+      };
+    });
+
+    const sortedByRating = [...ratings].sort((a, b) => b.rating - a.rating);
+    let place = 0;
+    let previousRating = null;
+
+    return sortedByRating.map((row) => {
+      if (row.rating !== previousRating) {
+        place++;
+        previousRating = row.rating;
+      }
+      return { ...row, place };
+    });
+  }
+
+  function buildDailyProgressRows(rows) {
+    const studentCounts = new Map();
+    const days = new Map();
+
+    for (const row of rows) {
+      const subjectLevelKey = `${row.subject}||${row.level}`;
+      studentCounts.set(subjectLevelKey, (studentCounts.get(subjectLevelKey) || 0) + 1);
+
+      for (const dailyScore of row.dailyScores || []) {
+        const key = `${subjectLevelKey}||${dailyScore.dateKey}`;
+        if (!days.has(key)) {
+          days.set(key, {
+            subject: row.subject,
+            level: row.level,
+            dateLabel: dailyScore.dateLabel,
+            dateOrder: Number(dailyScore.dateOrder) || 0,
+            totalScore: 0,
+            filledCount: 0,
+          });
+        }
+
+        const day = days.get(key);
+        day.totalScore += Number(dailyScore.score) || 0;
+        day.filledCount++;
+      }
+    }
+
+    return [...days.values()]
+      .filter((day) => day.filledCount > 0)
+      .map((day) => {
+        const subjectLevelKey = `${day.subject}||${day.level}`;
+        const studentCount = studentCounts.get(subjectLevelKey) || 0;
+        return {
+          subject: day.subject,
+          subjectLabel: getSubjectLabel(day.subject),
+          level: day.level,
+          dateLabel: day.dateLabel,
+          dateOrder: day.dateOrder,
+          averageScore: day.totalScore / day.filledCount,
+          filledCount: day.filledCount,
+          studentCount,
+          filledPercent: studentCount === 0 ? 0 : day.filledCount / studentCount * 100,
+        };
+      });
+  }
+
   function sortDetailRows(rows) {
     const direction = detailSortDirection === 'asc' ? 1 : -1;
     return [...rows].sort((a, b) => {
       const aValue = a[detailSortKey];
       const bValue = b[detailSortKey];
+
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return (aValue - bValue) * direction;
+      }
+
+      return String(aValue || '').localeCompare(String(bValue || ''), 'ru') * direction;
+    });
+  }
+
+  function sortTeacherRatingRows(rows) {
+    const direction = teacherRatingSortDirection === 'asc' ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      const aValue = a[teacherRatingSortKey];
+      const bValue = b[teacherRatingSortKey];
+
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return (aValue - bValue) * direction;
+      }
+
+      return String(aValue || '').localeCompare(String(bValue || ''), 'ru') * direction;
+    });
+  }
+
+  function sortDailyProgressRows(rows) {
+    const direction = dailyProgressSortDirection === 'asc' ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      const aValue = a[dailyProgressSortKey];
+      const bValue = b[dailyProgressSortKey];
 
       if (typeof aValue === 'number' && typeof bValue === 'number') {
         return (aValue - bValue) * direction;
@@ -1219,11 +1449,32 @@
     `;
   }
 
-  function renderMetricCard(title, value, colorClass) {
+  function renderMetricCard(title, value, colorClass, digits = 2) {
     return `
       <div class="metric-card">
         <div class="metric-title">${title}</div>
-        <div class="metric-value ${colorClass}">${formatNumber(value)}</div>
+        <div class="metric-value ${colorClass}">${formatNumber(value, digits)}</div>
+      </div>
+    `;
+  }
+
+  function renderAdminHeader() {
+    const sections = [
+      { key: 'details', label: 'Детали' },
+      { key: 'teacherRating', label: 'Рейтинг преподов' },
+      { key: 'dailyProgress', label: 'По дням' },
+    ];
+
+    return `
+      <div class="admin-panel-header">
+        <div class="admin-section-tabs">
+          ${sections.map((section) => `
+            <button class="admin-section-btn ${adminSection === section.key ? 'active' : ''}" type="button" data-admin-section="${section.key}">
+              ${section.label}
+            </button>
+          `).join('')}
+        </div>
+        <button class="admin-logout-btn" type="button" id="admin-logout-btn">Выйти</button>
       </div>
     `;
   }
@@ -1263,6 +1514,14 @@
     if (allStudentRows.length === 0) {
       loadAdminData();
       return '<div class="details-table-empty">Загружаем админские данные...</div>';
+    }
+
+    if (adminSection === 'teacherRating') {
+      return renderTeacherRatingView();
+    }
+
+    if (adminSection === 'dailyProgress') {
+      return renderDailyProgressView();
     }
 
     normalizeDetailFilters();
@@ -1324,9 +1583,7 @@
 
     return `
       <div class="details-panel">
-        <div class="admin-panel-header">
-          <button class="admin-logout-btn" type="button" id="admin-logout-btn">Выйти</button>
-        </div>
+        ${renderAdminHeader()}
         <div class="details-filters">
           ${renderDetailSelect('detailSubject', 'Предмет', detailSubject, subjectOptions, 'Все предметы', subjectLabels)}
           ${renderDetailSelect('detailExam', 'Экзамен', detailExam, examOptions, 'Все экзамены')}
@@ -1340,6 +1597,141 @@
           ${renderMetricCard('качество', average(filteredRows, 'quality'), 'pink')}
           ${renderMetricCard('штраф за просрочку', average(filteredRows, 'penalty'), 'green')}
           ${renderMetricCard('итоговый балл', average(filteredRows, 'finalScore'), 'purple')}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderTeacherRatingView() {
+    normalizeTeacherRatingFilters();
+
+    const subjectLabels = new Map(SUBJECTS.map((subject) => [subject.key, subject.label]));
+    const subjectOptions = uniqueSorted(allStudentRows.map((row) => row.subject));
+    const examOptions = uniqueSorted(allStudentRows.map((row) => row.level));
+    const rows = getCurrentTeacherRatingRows();
+    const ratingRows = buildTeacherRatingRows(rows);
+    const sortedRows = sortTeacherRatingRows(ratingRows);
+
+    const columns = [
+      { key: 'place', label: 'Место', numeric: true, digits: 0 },
+      { key: 'teacher', label: 'Преподаватель' },
+      { key: 'rating', label: 'Рейтинг', numeric: true },
+      { key: 'groupCount', label: 'Групп', numeric: true, digits: 0 },
+      { key: 'studentCount', label: 'Учеников', numeric: true, digits: 0 },
+      { key: 'bestGroup', label: 'Лучшая группа' },
+      { key: 'bestGroupScore', label: 'Средний балл', numeric: true },
+      { key: 'worstGroup', label: 'Низшая группа' },
+      { key: 'worstGroupScore', label: 'Средний балл', numeric: true },
+    ];
+
+    const tableHtml = sortedRows.length > 0 ? `
+      <div class="details-table-wrap">
+        <table class="details-table">
+          <thead>
+            <tr>
+              ${columns.map((column) => {
+                const arrow = teacherRatingSortKey === column.key ? (teacherRatingSortDirection === 'asc' ? ' ↑' : ' ↓') : '';
+                return `<th class="${column.numeric ? 'numeric' : ''}" data-teacher-rating-sort="${column.key}">${column.label}${arrow}</th>`;
+              }).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${sortedRows.map((row) => `
+              <tr>
+                ${columns.map((column) => {
+                  const rawValue = row[column.key];
+                  const value = column.numeric
+                    ? formatNumber(rawValue, column.digits ?? 2)
+                    : escapeHtml(rawValue || '');
+                  return `<td class="${column.numeric ? 'numeric' : ''}">${value}</td>`;
+                }).join('')}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    ` : '<div class="details-table-empty">Нет данных по выбранным фильтрам</div>';
+
+    return `
+      <div class="details-panel">
+        ${renderAdminHeader()}
+        <div class="details-filters">
+          ${renderDetailSelect('teacherRatingSubject', 'Предмет', teacherRatingSubject, subjectOptions, 'Все предметы', subjectLabels)}
+          ${renderDetailSelect('teacherRatingExam', 'Экзамен', teacherRatingExam, examOptions, 'Все экзамены')}
+        </div>
+        ${tableHtml}
+        <div class="metrics-grid">
+          ${renderMetricCard('средний рейтинг', averageNumbers(ratingRows.map((row) => row.rating)), 'purple')}
+          ${renderMetricCard('преподавателей', ratingRows.length, 'blue', 0)}
+          ${renderMetricCard('групп', ratingRows.reduce((sum, row) => sum + row.groupCount, 0), 'green', 0)}
+          ${renderMetricCard('учеников', ratingRows.reduce((sum, row) => sum + row.studentCount, 0), 'pink', 0)}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderDailyProgressView() {
+    normalizeDailyProgressFilters();
+
+    const subjectLabels = new Map(SUBJECTS.map((subject) => [subject.key, subject.label]));
+    const subjectOptions = uniqueSorted(allStudentRows.map((row) => row.subject));
+    const examOptions = uniqueSorted(allStudentRows.map((row) => row.level));
+    const rows = getCurrentDailyProgressRows();
+    const progressRows = buildDailyProgressRows(rows);
+    const sortedRows = sortDailyProgressRows(progressRows);
+
+    const columns = [
+      { key: 'dateLabel', sortKey: 'dateOrder', label: 'Дата' },
+      { key: 'subjectLabel', sortKey: 'subjectLabel', label: 'Предмет' },
+      { key: 'level', sortKey: 'level', label: 'Экзамен' },
+      { key: 'averageScore', sortKey: 'averageScore', label: 'Процент решения', numeric: true },
+      { key: 'filledCount', sortKey: 'filledCount', label: 'Заполнено', numeric: true, digits: 0 },
+      { key: 'studentCount', sortKey: 'studentCount', label: 'Учеников', numeric: true, digits: 0 },
+      { key: 'filledPercent', sortKey: 'filledPercent', label: 'Заполнено %', numeric: true },
+    ];
+
+    const tableHtml = sortedRows.length > 0 ? `
+      <div class="details-table-wrap">
+        <table class="details-table">
+          <thead>
+            <tr>
+              ${columns.map((column) => {
+                const sortKey = column.sortKey || column.key;
+                const arrow = dailyProgressSortKey === sortKey ? (dailyProgressSortDirection === 'asc' ? ' ↑' : ' ↓') : '';
+                return `<th class="${column.numeric ? 'numeric' : ''}" data-daily-progress-sort="${sortKey}">${column.label}${arrow}</th>`;
+              }).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${sortedRows.map((row) => `
+              <tr>
+                ${columns.map((column) => {
+                  const rawValue = row[column.key];
+                  const value = column.numeric
+                    ? `${formatNumber(rawValue, column.digits ?? 2)}${column.digits === 0 ? '' : '%'}`
+                    : escapeHtml(rawValue || '');
+                  return `<td class="${column.numeric ? 'numeric' : ''}">${value}</td>`;
+                }).join('')}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    ` : '<div class="details-table-empty">Нет данных по выбранным фильтрам</div>';
+
+    return `
+      <div class="details-panel">
+        ${renderAdminHeader()}
+        <div class="details-filters">
+          ${renderDetailSelect('dailyProgressSubject', 'Предмет', dailyProgressSubject, subjectOptions, 'Все предметы', subjectLabels)}
+          ${renderDetailSelect('dailyProgressExam', 'Экзамен', dailyProgressExam, examOptions, 'Все экзамены')}
+        </div>
+        ${tableHtml}
+        <div class="metrics-grid">
+          ${renderMetricCard('средний процент', averageNumbers(progressRows.map((row) => row.averageScore)), 'purple')}
+          ${renderMetricCard('дней с данными', progressRows.length, 'blue', 0)}
+          ${renderMetricCard('заполненных ячеек', progressRows.reduce((sum, row) => sum + row.filledCount, 0), 'green', 0)}
+          ${renderMetricCard('среднее заполнение', averageNumbers(progressRows.map((row) => row.filledPercent)), 'pink')}
         </div>
       </div>
     `;
@@ -1453,11 +1845,21 @@
     document.getElementById('teacher-filter').innerHTML = teacherFilterHtml;
 
     // Update title
+    const adminTitle = adminSection === 'teacherRating'
+      ? 'Рейтинг преподов'
+      : adminSection === 'dailyProgress'
+        ? 'Процент по дням'
+        : 'Детальная статистика';
+    const adminSubtitle = adminSection === 'teacherRating'
+      ? 'Средние по группам'
+      : adminSection === 'dailyProgress'
+        ? 'Решение по датам'
+        : 'Для преподавателей';
     document.querySelector('.main-title').textContent = currentView === 'details' ? 'АДМИН' : 'РЕЙТИНГ';
     const subjectLabel = SUBJECTS.find(s => s.key === currentSubject)?.label || '';
-    document.getElementById('subject-label').textContent = currentView === 'details' ? 'Детальная статистика' : subjectLabel;
+    document.getElementById('subject-label').textContent = currentView === 'details' ? adminTitle : subjectLabel;
     const teacherLabel = currentScope === 'teacher' && currentTeacher ? ` | ${currentTeacher}` : '';
-    const viewLabel = currentView === 'details' ? ' | Для преподавателей' : teacherLabel;
+    const viewLabel = currentView === 'details' ? ` | ${adminSubtitle}` : teacherLabel;
     document.getElementById('exam-label').textContent = currentView === 'details' ? viewLabel.replace(' | ', '') : `${currentExam}${viewLabel}`;
 
     if (currentView === 'details') {
@@ -1561,6 +1963,22 @@
         const options = uniqueSorted(rows.map((row) => row.name));
         detailStudent = e.target.value === '' ? '' : options[index] || '';
       }
+      if (filter === 'teacherRatingSubject') {
+        const options = uniqueSorted(allStudentRows.map((row) => row.subject));
+        teacherRatingSubject = e.target.value === '' ? '' : options[index] || '';
+      }
+      if (filter === 'teacherRatingExam') {
+        const options = uniqueSorted(allStudentRows.map((row) => row.level));
+        teacherRatingExam = e.target.value === '' ? '' : options[index] || '';
+      }
+      if (filter === 'dailyProgressSubject') {
+        const options = uniqueSorted(allStudentRows.map((row) => row.subject));
+        dailyProgressSubject = e.target.value === '' ? '' : options[index] || '';
+      }
+      if (filter === 'dailyProgressExam') {
+        const options = uniqueSorted(allStudentRows.map((row) => row.level));
+        dailyProgressExam = e.target.value === '' ? '' : options[index] || '';
+      }
       render();
     });
 
@@ -1578,6 +1996,39 @@
         adminError = '';
         allStudentRows = [];
         sessionStorage.removeItem('adminToken');
+        render();
+        return;
+      }
+
+      const adminSectionKey = e.target.dataset.adminSection;
+      if (adminSectionKey) {
+        adminSection = adminSectionKey;
+        render();
+        return;
+      }
+
+      const teacherRatingSortKeyValue = e.target.dataset.teacherRatingSort;
+      if (teacherRatingSortKeyValue) {
+        if (teacherRatingSortKey === teacherRatingSortKeyValue) {
+          teacherRatingSortDirection = teacherRatingSortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+          const numericKeys = ['rating', 'groupCount', 'studentCount', 'bestGroupScore', 'worstGroupScore'];
+          teacherRatingSortKey = teacherRatingSortKeyValue;
+          teacherRatingSortDirection = teacherRatingSortKeyValue === 'place' || !numericKeys.includes(teacherRatingSortKeyValue) ? 'asc' : 'desc';
+        }
+        render();
+        return;
+      }
+
+      const dailyProgressSortKeyValue = e.target.dataset.dailyProgressSort;
+      if (dailyProgressSortKeyValue) {
+        if (dailyProgressSortKey === dailyProgressSortKeyValue) {
+          dailyProgressSortDirection = dailyProgressSortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+          const descKeys = ['averageScore', 'filledCount', 'studentCount', 'filledPercent'];
+          dailyProgressSortKey = dailyProgressSortKeyValue;
+          dailyProgressSortDirection = descKeys.includes(dailyProgressSortKeyValue) ? 'desc' : 'asc';
+        }
         render();
         return;
       }

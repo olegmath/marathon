@@ -133,6 +133,9 @@ function parseRows(gvizJson, subject, level, includeDetails) {
   }
 
   const result = [];
+  const headerCells = (table.rows[0] && table.rows[0].c) || [];
+  const dailyColumns = includeDetails ? getDailyColumns(headerCells) : [];
+
   for (let rowIdx = 1; rowIdx < table.rows.length; rowIdx++) {
     const cells = table.rows[rowIdx].c || [];
     const name = cells[2] && cells[2].v;
@@ -160,6 +163,14 @@ function parseRows(gvizJson, subject, level, includeDetails) {
       row.finalScore = getCellNumber(cells[10]);
       row.groupPlace = getCellNumber(cells[11]);
       row.schoolPlace = getCellNumber(cells[12]);
+      row.dailyScores = dailyColumns
+        .filter((column) => hasCellValue(cells[column.index]))
+        .map((column) => ({
+          dateKey: column.dateKey,
+          dateLabel: column.dateLabel,
+          dateOrder: column.dateOrder,
+          score: getCellNumber(cells[column.index]),
+        }));
     }
 
     result.push(row);
@@ -168,8 +179,63 @@ function parseRows(gvizJson, subject, level, includeDetails) {
   return result;
 }
 
+function getDailyColumns(headerCells) {
+  const columns = [];
+
+  for (let index = 14; index < headerCells.length; index++) {
+    const cell = headerCells[index];
+    const label = getCellDisplayString(cell).replace(/\.$/, '');
+
+    if (!label) {
+      continue;
+    }
+
+    if (/^родитель/i.test(label)) {
+      break;
+    }
+
+    if (!/^\d{1,2}\./.test(label)) {
+      continue;
+    }
+
+    columns.push({
+      index,
+      dateKey: getDateKey(cell, index),
+      dateLabel: label,
+      dateOrder: index,
+    });
+  }
+
+  return columns;
+}
+
+function getDateKey(cell, fallbackIndex) {
+  const value = cell && cell.v;
+
+  if (typeof value === 'number') {
+    return String(value);
+  }
+
+  if (typeof value === 'string') {
+    const match = value.match(/^Date\((\d+),(\d+),(\d+)\)$/);
+    if (match) {
+      const year = match[1];
+      const month = String(Number(match[2]) + 1).padStart(2, '0');
+      const day = String(Number(match[3])).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+  }
+
+  return `column-${fallbackIndex}`;
+}
+
 function getCellString(cell) {
   const value = cell && (cell.v !== null && cell.v !== undefined ? cell.v : cell.f);
+  return value === null || value === undefined ? '' : String(value).trim();
+}
+
+function getCellDisplayString(cell) {
+  const value = cell && (cell.f !== null && cell.f !== undefined ? cell.f : cell.v);
   return value === null || value === undefined ? '' : String(value).trim();
 }
 
@@ -179,6 +245,11 @@ function getCellNumber(cell) {
     return 0;
   }
   return Number(String(value).replace(',', '.')) || 0;
+}
+
+function hasCellValue(cell) {
+  const value = cell && (cell.v !== null && cell.v !== undefined ? cell.v : cell.f);
+  return value !== null && value !== undefined && value !== '';
 }
 
 function jsonResponse(payload) {
