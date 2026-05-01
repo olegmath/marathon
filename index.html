@@ -110,10 +110,76 @@
       box-shadow: 0 2px 8px rgba(0,80,120,0.15);
     }
 
+    .rating-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .scope-toggle {
+      display: flex;
+      background: rgba(255,255,255,0.2);
+      border-radius: 30px;
+      padding: 3px;
+      gap: 3px;
+      width: fit-content;
+    }
+
+    .scope-btn {
+      font-family: 'Oswald', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      font-style: italic;
+      padding: 5px 18px;
+      border-radius: 26px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      background: transparent;
+      color: white;
+      white-space: nowrap;
+    }
+
+    .scope-btn.active {
+      background: white;
+      color: #3595B8;
+      box-shadow: 0 2px 8px rgba(0,80,120,0.15);
+    }
+
+    .teacher-select {
+      min-width: 220px;
+      max-width: 320px;
+      height: 36px;
+      padding: 0 36px 0 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.45);
+      background: rgba(255,255,255,0.25);
+      color: white;
+      font-family: 'Oswald', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      font-style: italic;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .teacher-select option {
+      color: #1a1a1a;
+      background: white;
+    }
+
     .title-section {
       text-align: right;
       line-height: 1;
       flex-shrink: 0;
+    }
+
+    .title-heading {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 14px;
     }
 
     .main-title {
@@ -188,12 +254,10 @@
 
     /* Logo */
     .logo {
-      position: fixed;
-      bottom: 24px;
-      left: 28px;
-      width: 90px;
+      width: 74px;
+      height: auto;
       opacity: 0.9;
-      z-index: 10;
+      flex-shrink: 0;
       pointer-events: none;
     }
 
@@ -357,6 +421,202 @@
       margin-top: 18px;
     }
 
+    .details-panel {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .details-filters {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(180px, 1fr));
+      gap: 10px;
+      background: white;
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 4px 20px rgba(0,80,120,0.12);
+    }
+
+    .details-filter {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      font-family: 'Oswald', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      color: #4AB8E0;
+      text-transform: uppercase;
+    }
+
+    .details-select {
+      height: 36px;
+      border: 1px solid rgba(74,184,224,0.28);
+      border-radius: 8px;
+      background: white;
+      color: #1a1a1a;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      padding: 0 10px;
+      outline: none;
+    }
+
+    .details-table-wrap {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,80,120,0.12);
+      overflow: auto;
+      max-height: 54vh;
+    }
+
+    .details-table {
+      width: 100%;
+      min-width: 1180px;
+      border-collapse: collapse;
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+    }
+
+    .details-table th,
+    .details-table td {
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+      border-right: 1px solid rgba(0,0,0,0.04);
+      padding: 9px 10px;
+      text-align: left;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    .details-table th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #f8fcfe;
+      color: #1a1a1a;
+      font-family: 'Oswald', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
+    .details-table th.numeric,
+    .details-table td.numeric {
+      text-align: right;
+    }
+
+    .details-table tr:hover td {
+      background: rgba(74,184,224,0.06);
+    }
+
+    .details-table-empty {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      text-align: center;
+      color: rgba(0,0,0,0.55);
+      font-family: 'Inter', sans-serif;
+      box-shadow: 0 4px 20px rgba(0,80,120,0.12);
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(160px, 1fr));
+      gap: 10px;
+    }
+
+    .metric-card {
+      background: white;
+      border-radius: 12px;
+      padding: 14px 16px 16px;
+      box-shadow: 0 4px 20px rgba(0,80,120,0.12);
+    }
+
+    .metric-title {
+      font-family: 'Oswald', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      color: #1a1a1a;
+      margin-bottom: 5px;
+    }
+
+    .metric-value {
+      font-family: 'Oswald', sans-serif;
+      font-size: 38px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .metric-value.blue { color: #4AB8E0; }
+    .metric-value.pink { color: #E95797; }
+    .metric-value.green { color: #63D45B; }
+    .metric-value.purple { color: #7F62C7; }
+
+    .admin-login {
+      width: min(420px, 100%);
+      margin: 44px auto 0;
+      background: white;
+      border-radius: 16px;
+      padding: 22px;
+      box-shadow: 0 4px 20px rgba(0,80,120,0.12);
+    }
+
+    .admin-login-title {
+      font-family: 'Oswald', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      font-style: italic;
+      color: #4AB8E0;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+    }
+
+    .admin-login-form {
+      display: flex;
+      gap: 8px;
+    }
+
+    .admin-password-input {
+      flex: 1;
+      min-width: 0;
+      height: 40px;
+      border: 1px solid rgba(74,184,224,0.32);
+      border-radius: 8px;
+      padding: 0 12px;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .admin-login-btn,
+    .admin-logout-btn {
+      height: 40px;
+      border: none;
+      border-radius: 8px;
+      padding: 0 16px;
+      background: #4AB8E0;
+      color: white;
+      font-family: 'Oswald', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      font-style: italic;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .admin-login-error {
+      display: none;
+      margin-top: 10px;
+      color: #D33E5F;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+    }
+
+    .admin-panel-header {
+      display: flex;
+      justify-content: flex-end;
+    }
+
     /* Background SVGs */
     .bg-diamonds-right {
       position: fixed;
@@ -393,12 +653,24 @@
         min-width: unset;
       }
 
+      .details-filters {
+        grid-template-columns: 1fr;
+      }
+
+      .metrics-grid {
+        grid-template-columns: repeat(2, minmax(160px, 1fr));
+      }
+
       .top-nav {
         flex-direction: column;
       }
 
       .title-section {
         text-align: left;
+      }
+
+      .title-heading {
+        justify-content: flex-start;
       }
 
       .main-title {
@@ -429,10 +701,26 @@
         padding: 5px 12px;
       }
 
+      .rating-controls {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .teacher-select {
+        width: 100%;
+        max-width: none;
+      }
+
+      .metrics-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .admin-login-form {
+        flex-direction: column;
+      }
+
       .logo {
-        width: 70px;
-        bottom: 16px;
-        left: 16px;
+        width: 58px;
       }
     }
   </style>
@@ -463,9 +751,16 @@
     <div class="nav-left">
       <div class="subject-tabs" id="subject-tabs"></div>
       <div class="exam-toggle" id="exam-toggle"></div>
+      <div class="rating-controls">
+        <div class="scope-toggle" id="scope-toggle"></div>
+        <div class="teacher-filter" id="teacher-filter"></div>
+      </div>
     </div>
     <div class="title-section">
-      <div class="main-title">РЕЙТИНГ</div>
+      <div class="title-heading">
+        <img src="logoplanka.png" alt="Лого" class="logo" id="logo" style="display: none;">
+        <div class="main-title">РЕЙТИНГ</div>
+      </div>
       <div class="subtitle"><span id="subject-label">Физика</span> | <span id="exam-label">ОГЭ</span></div>
       <div class="update-section">
         <button class="refresh-btn" id="refresh-btn" title="Обновить данные">⟳</button>
@@ -473,16 +768,12 @@
       </div>
     </div>
   </div>
-
-  <!-- Logo -->
-  <img src="logoplanka.png" alt="Лого" class="logo" id="logo" style="display: none;">
-
   <!-- Three columns -->
   <div class="columns-container" id="columns-container"></div>
 </div>
 
 <script>
-  const PROXY_URL = 'https://script.google.com/macros/s/AKfycby9ivHb9vqRsSu3Lh23GEJO-KnXdzS0HrWbTz-_Njg2EY1QAzfDi3NpuS4P8lrAxKfFCg/exec';
+  const PROXY_URL = 'https://script.google.com/macros/s/AKfycbyRMo1Sqm57vXg85VAtOYPDJ-PscpR1AuAGpcuCQmoT1WMuNeykYXaTpf8UPL5R8WPc_w/exec';
 
   const SUBJECTS = [
     { key: 'математика', label: 'Математика', levels: ['ЕГЭ', 'ОГЭ'] },
@@ -508,14 +799,33 @@
 
   function buildApiUrl(subject, level) {
     const sheetName = getSheetName(subject, level);
-    return `${PROXY_URL}?sheet=${encodeURIComponent(sheetName)}`;
+    return `${PROXY_URL}?mode=public&sheet=${encodeURIComponent(sheetName)}`;
   }
 
   const EXAMS = ['ЕГЭ', 'ОГЭ'];
+  const SCOPES = [
+    { key: 'school', label: 'Школа' },
+    { key: 'teacher', label: 'Преподаватель' },
+  ];
 
   let appData = null;
+  let teacherData = null;
+  let allStudentRows = [];
   let currentSubject = 'физика';
   let currentExam = 'ОГЭ';
+  let currentView = 'rating';
+  let currentScope = 'school';
+  let currentTeacher = '';
+  let detailSubject = '';
+  let detailExam = '';
+  let detailTeacher = '';
+  let detailGroup = '';
+  let detailStudent = '';
+  let detailSortKey = 'finalScore';
+  let detailSortDirection = 'desc';
+  let adminToken = sessionStorage.getItem('adminToken') || '';
+  let adminLoading = false;
+  let adminError = '';
   let globalNullScoreStudents = []; // Для отслеживания студентов с null в cells[10]
 
   // SVG Icons
@@ -558,6 +868,62 @@
     return JSON.parse(text.substring(start, end));
   }
 
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function getCellNumber(cell) {
+    const value = cell?.v ?? cell?.f ?? cell?.fv;
+    if (value === null || value === undefined || value === '') return 0;
+    return Number(String(value).replace(',', '.')) || 0;
+  }
+
+  function formatNumber(value, digits = 2) {
+    return Number(value || 0).toFixed(digits).replace('.', ',');
+  }
+
+  function uniqueSorted(values) {
+    return [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ru'));
+  }
+
+  function getScoreStatus(score) {
+    if (score >= 95) return 'legends';
+    if (score >= 45) return 'champs';
+    return 'starters';
+  }
+
+  function createRankedStudents(students) {
+    const sorted = [...students].sort((a, b) => b.score - a.score);
+    let place = 0;
+    let prevScore = null;
+
+    return sorted.map((student) => {
+      if (student.score !== prevScore) {
+        place++;
+        prevScore = student.score;
+      }
+
+      return {
+        ...student,
+        place,
+        status: getScoreStatus(student.score),
+      };
+    });
+  }
+
+  function parseApiRows(rows) {
+    return createRankedStudents(rows.map((row) => ({
+      ...row,
+      score: Number(row.score) || 0,
+      finalScore: Number(row.finalScore ?? row.score) || 0,
+    })));
+  }
+
   function parseGvizData(gvizJson, subject, level) {
     const table = gvizJson.table;
     if (!table || !table.cols || !table.rows) {
@@ -576,12 +942,15 @@
     const students = [];
     const nullScoreStudents = []; // Для отслеживания студентов с null в cells[10]
 
-    // Столбец C (индекс 2) = Ученик, столбец K (индекс 10) = Итоговый балл
+    // Столбец C (индекс 2) = Ученик, K (индекс 10) = итоговый балл,
+    // L/M = места, N (индекс 13) = Преподаватель.
     for (let rowIdx = 1; rowIdx < rows.length; rowIdx++) { // Начинаем с 1 (2-я строка)
       const row = rows[rowIdx];
       const cells = row.c || [];
 
+      const group = cells[1]?.v; // Столбец B
       const name = cells[2]?.v; // Столбец C
+      const teacher = cells[13]?.v; // Столбец N
 
       // Берём балл из cells[10] — проверяем .v, затем .f, затем .fv
       let scoreCell = cells[10];
@@ -658,6 +1027,8 @@
       }
 
       const finalName = name.toString().trim();
+      const finalGroup = group?.toString().trim() || '';
+      const finalTeacher = teacher?.toString().trim() || 'Без преподавателя';
       const finalScore = Number(score) || 0;
 
       if (isDebugStudent) {
@@ -669,36 +1040,25 @@
       }
 
       students.push({
+        subject,
+        level,
+        group: finalGroup,
         name: finalName,
+        teacher: finalTeacher,
+        daysDone: getCellNumber(cells[3]),
+        daysTotal: getCellNumber(cells[4]),
+        coefficient: getCellNumber(cells[5]),
+        quality: getCellNumber(cells[6]),
+        baseScore: getCellNumber(cells[8]),
+        penalty: getCellNumber(cells[9]),
+        finalScore,
+        groupPlace: getCellNumber(cells[11]),
+        schoolPlace: getCellNumber(cells[12]),
         score: finalScore,
       });
     }
 
-    // Определяем места и категории
-    students.sort((a, b) => b.score - a.score);
-
-    let place = 0;
-    let prevScore = null;
-
-    const result = students.map((s) => {
-      if (s.score !== prevScore) {
-        place++;
-        prevScore = s.score;
-      }
-
-      let category = 'starters';
-      if (s.score >= 95) category = 'legends';
-      else if (s.score >= 45) category = 'champs';
-
-      return {
-        subject,
-        level,
-        name: s.name,
-        score: s.score,
-        place,
-        status: category,
-      };
-    });
+    const result = createRankedStudents(students);
 
     // Возвращаем и студентов И информацию о null values
     result._nullScoreStudents = nullScoreStudents;
@@ -742,7 +1102,250 @@
     return grouped;
   }
 
-  function renderRatingColumn(type, players) {
+  function groupTeacherRatings(students) {
+    const grouped = {};
+
+    for (const subject of SUBJECTS) {
+      grouped[subject.key] = {};
+      for (const level of subject.levels) {
+        grouped[subject.key][level] = {};
+      }
+    }
+
+    for (const student of students) {
+      const key = student.subject.toLowerCase();
+      if (!grouped[key]) continue;
+      if (!grouped[key][student.level]) continue;
+
+      const teacher = student.teacher || 'Без преподавателя';
+      if (!grouped[key][student.level][teacher]) {
+        grouped[key][student.level][teacher] = [];
+      }
+      grouped[key][student.level][teacher].push(student);
+    }
+
+    for (const subjectKey in grouped) {
+      for (const level in grouped[subjectKey]) {
+        for (const teacher in grouped[subjectKey][level]) {
+          const ranked = createRankedStudents(grouped[subjectKey][level][teacher]);
+          grouped[subjectKey][level][teacher] = {
+            legends: ranked.filter((s) => s.status === 'legends'),
+            champs: ranked.filter((s) => s.status === 'champs'),
+            starters: ranked.filter((s) => s.status === 'starters'),
+          };
+        }
+      }
+    }
+
+    return grouped;
+  }
+
+  function getCurrentTeacherNames() {
+    const teachers = teacherData?.[currentSubject]?.[currentExam];
+    if (!teachers) return [];
+    return Object.keys(teachers).sort((a, b) => a.localeCompare(b, 'ru'));
+  }
+
+  function normalizeTeacherSelection() {
+    const names = getCurrentTeacherNames();
+    if (!names.includes(currentTeacher)) {
+      currentTeacher = names[0] || '';
+    }
+  }
+
+  function getCurrentDetailRows() {
+    return allStudentRows.filter((row) => {
+      if (detailSubject && row.subject !== detailSubject) return false;
+      if (detailExam && row.level !== detailExam) return false;
+      return true;
+    });
+  }
+
+  function normalizeDetailFilters() {
+    const subjects = uniqueSorted(allStudentRows.map((row) => row.subject));
+    const exams = uniqueSorted(allStudentRows.map((row) => row.level));
+    const rows = getCurrentDetailRows();
+    const teachers = uniqueSorted(rows.map((row) => row.teacher));
+    const groups = uniqueSorted(rows.map((row) => row.group));
+    const students = uniqueSorted(rows.map((row) => row.name));
+
+    if (detailSubject && !subjects.includes(detailSubject)) detailSubject = '';
+    if (detailExam && !exams.includes(detailExam)) detailExam = '';
+    if (detailTeacher && !teachers.includes(detailTeacher)) detailTeacher = '';
+    if (detailGroup && !groups.includes(detailGroup)) detailGroup = '';
+    if (detailStudent && !students.includes(detailStudent)) detailStudent = '';
+  }
+
+  function getFilteredDetailRows() {
+    normalizeDetailFilters();
+    return getCurrentDetailRows().filter((row) => {
+      if (detailTeacher && row.teacher !== detailTeacher) return false;
+      if (detailGroup && row.group !== detailGroup) return false;
+      if (detailStudent && row.name !== detailStudent) return false;
+      return true;
+    });
+  }
+
+  function sortDetailRows(rows) {
+    const direction = detailSortDirection === 'asc' ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      const aValue = a[detailSortKey];
+      const bValue = b[detailSortKey];
+
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return (aValue - bValue) * direction;
+      }
+
+      return String(aValue || '').localeCompare(String(bValue || ''), 'ru') * direction;
+    });
+  }
+
+  function average(rows, key) {
+    if (rows.length === 0) return 0;
+    return rows.reduce((sum, row) => sum + Number(row[key] || 0), 0) / rows.length;
+  }
+
+  function renderDetailSelect(id, label, value, options, allLabel, labelMap = null) {
+    return `
+      <label class="details-filter">
+        ${label}
+        <select class="details-select" id="${id}" data-detail-filter="${id}">
+          <option value="">${allLabel}</option>
+          ${options.map((option, index) => `
+            <option value="${index}" ${value === option ? 'selected' : ''}>${escapeHtml(labelMap?.get(option) || option)}</option>
+          `).join('')}
+        </select>
+      </label>
+    `;
+  }
+
+  function renderMetricCard(title, value, colorClass) {
+    return `
+      <div class="metric-card">
+        <div class="metric-title">${title}</div>
+        <div class="metric-value ${colorClass}">${formatNumber(value)}</div>
+      </div>
+    `;
+  }
+
+  function renderAdminLogin() {
+    return `
+      <div class="admin-login">
+        <div class="admin-login-title">Админ панель</div>
+        <form class="admin-login-form" id="admin-login-form">
+          <input class="admin-password-input" id="admin-password-input" type="password" placeholder="Пароль" autocomplete="current-password">
+          <button class="admin-login-btn" type="submit">Войти</button>
+        </form>
+        <div class="admin-login-error" id="admin-login-error" style="${adminError ? 'display:block;' : ''}">${escapeHtml(adminError || 'Неверный пароль')}</div>
+      </div>
+    `;
+  }
+
+  function renderDetailsView() {
+    if (!adminToken) {
+      return renderAdminLogin();
+    }
+
+    if (adminLoading) {
+      return '<div class="details-table-empty">Загружаем админские данные...</div>';
+    }
+
+    if (adminError) {
+      return `
+        <div class="admin-login">
+          <div class="admin-login-title">Админ панель</div>
+          <div class="admin-login-error" style="display:block;">${escapeHtml(adminError)}</div>
+          <button class="admin-login-btn" type="button" id="admin-logout-btn" style="margin-top:12px;">Войти заново</button>
+        </div>
+      `;
+    }
+
+    if (allStudentRows.length === 0) {
+      loadAdminData();
+      return '<div class="details-table-empty">Загружаем админские данные...</div>';
+    }
+
+    normalizeDetailFilters();
+    const subjectLabels = new Map(SUBJECTS.map((subject) => [subject.key, subject.label]));
+    const subjectOptions = uniqueSorted(allStudentRows.map((row) => row.subject));
+    const examOptions = uniqueSorted(allStudentRows.map((row) => row.level));
+    const rows = getCurrentDetailRows();
+    const filteredRows = getFilteredDetailRows();
+    const sortedRows = sortDetailRows(filteredRows);
+
+    const teachers = uniqueSorted(rows.map((row) => row.teacher));
+    const groups = uniqueSorted(rows.map((row) => row.group));
+    const students = uniqueSorted(rows.map((row) => row.name));
+
+    const columns = [
+      { key: 'subject', label: 'Предмет' },
+      { key: 'level', label: 'Экзамен' },
+      { key: 'group', label: 'Группа' },
+      { key: 'name', label: 'Ученик' },
+      { key: 'daysDone', label: 'Дней сделано', numeric: true, digits: 0 },
+      { key: 'daysTotal', label: 'Дней всего', numeric: true, digits: 0 },
+      { key: 'coefficient', label: 'Коэффициент', numeric: true },
+      { key: 'quality', label: 'Качество', numeric: true },
+      { key: 'baseScore', label: 'Балл', numeric: true },
+      { key: 'penalty', label: 'Штраф', numeric: true },
+      { key: 'finalScore', label: 'Итоговый балл', numeric: true },
+      { key: 'groupPlace', label: 'Место в группе', numeric: true, digits: 0 },
+      { key: 'schoolPlace', label: 'Место в школе', numeric: true, digits: 0 },
+      { key: 'teacher', label: 'Преподаватель' },
+    ];
+
+    const tableHtml = sortedRows.length > 0 ? `
+      <div class="details-table-wrap">
+        <table class="details-table">
+          <thead>
+            <tr>
+              ${columns.map((column) => {
+                const arrow = detailSortKey === column.key ? (detailSortDirection === 'asc' ? ' ↑' : ' ↓') : '';
+                return `<th class="${column.numeric ? 'numeric' : ''}" data-sort="${column.key}">${column.label}${arrow}</th>`;
+              }).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${sortedRows.map((row) => `
+              <tr>
+                ${columns.map((column) => {
+                  const rawValue = row[column.key];
+                  const value = column.numeric
+                    ? formatNumber(rawValue, column.digits ?? 2)
+                    : escapeHtml(rawValue || '');
+                  return `<td class="${column.numeric ? 'numeric' : ''}">${value}</td>`;
+                }).join('')}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    ` : '<div class="details-table-empty">Нет данных по выбранным фильтрам</div>';
+
+    return `
+      <div class="details-panel">
+        <div class="admin-panel-header">
+          <button class="admin-logout-btn" type="button" id="admin-logout-btn">Выйти</button>
+        </div>
+        <div class="details-filters">
+          ${renderDetailSelect('detailSubject', 'Предмет', detailSubject, subjectOptions, 'Все предметы', subjectLabels)}
+          ${renderDetailSelect('detailExam', 'Экзамен', detailExam, examOptions, 'Все экзамены')}
+          ${renderDetailSelect('detailTeacher', 'Преподаватель', detailTeacher, teachers, 'Все преподаватели')}
+          ${renderDetailSelect('detailGroup', 'Группа', detailGroup, groups, 'Все группы')}
+          ${renderDetailSelect('detailStudent', 'Ученик', detailStudent, students, 'Все ученики')}
+        </div>
+        ${tableHtml}
+        <div class="metrics-grid">
+          ${renderMetricCard('коэффициент (дней сделано)', average(filteredRows, 'coefficient'), 'blue')}
+          ${renderMetricCard('качество', average(filteredRows, 'quality'), 'pink')}
+          ${renderMetricCard('штраф за просрочку', average(filteredRows, 'penalty'), 'green')}
+          ${renderMetricCard('итоговый балл', average(filteredRows, 'finalScore'), 'purple')}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderRatingColumn(type, players, placeLabel = 'В ШКОЛЕ') {
     const configs = {
       legends: {
         title: 'ЛЕГЕНДЫ',
@@ -767,7 +1370,7 @@
       <div class="player-item">
         <div class="player-place">${p.place}</div>
         <div class="player-info">
-          <div class="player-name">${p.name}</div>
+          <div class="player-name">${escapeHtml(p.name)}</div>
           <div class="player-score">${p.score.toFixed(2)}</div>
         </div>
       </div>
@@ -789,7 +1392,7 @@
           ${cfg.extra}
         </div>
         <div class="column-subheader">
-          <div class="subheader-place">МЕСТО<br><span style="font-size:8px;font-weight:400;">(В ШКОЛЕ)</span></div>
+          <div class="subheader-place">МЕСТО<br><span style="font-size:8px;font-weight:400;">(${placeLabel})</span></div>
           <div class="subheader-name">ИМЯ, БАЛЛЫ</div>
         </div>
         <div class="column-divider"></div>
@@ -803,14 +1406,21 @@
 
   function render() {
     if (!appData) return;
+    if (currentScope === 'teacher') {
+      normalizeTeacherSelection();
+    }
 
     // Render subject tabs
-    const subjectTabsHtml = SUBJECTS.map(s => `
-      <button class="subject-btn ${currentSubject === s.key ? 'active' : ''}" data-subject="${s.key}">
+    const subjectTabsHtml = `
+      ${SUBJECTS.map(s => `
+      <button class="subject-btn ${currentView === 'rating' && currentSubject === s.key ? 'active' : ''}" data-subject="${s.key}">
         ${s.label}
       </button>
-    `).join('');
+    `).join('')}
+      <button class="subject-btn ${currentView === 'details' ? 'active' : ''}" data-view="details">Админ</button>
+    `;
     document.getElementById('subject-tabs').innerHTML = subjectTabsHtml;
+    document.getElementById('subject-tabs').style.display = 'flex';
 
     // Render exam toggle - only available levels for current subject
     const currentSubjectConfig = SUBJECTS.find(s => s.key === currentSubject);
@@ -821,24 +1431,55 @@
       </button>
     `).join('');
     document.getElementById('exam-toggle').innerHTML = examToggleHtml;
+    document.getElementById('exam-toggle').style.display = currentView === 'rating' ? 'flex' : 'none';
+
+    // Render rating scope controls
+    const scopeToggleHtml = SCOPES.map(scope => `
+      <button class="scope-btn ${currentScope === scope.key ? 'active' : ''}" data-scope="${scope.key}">
+        ${scope.label}
+      </button>
+    `).join('');
+    document.getElementById('scope-toggle').innerHTML = scopeToggleHtml;
+    document.querySelector('.rating-controls').style.display = currentView === 'rating' ? 'flex' : 'none';
+
+    const teacherNames = getCurrentTeacherNames();
+    const teacherFilterHtml = currentScope === 'teacher' ? `
+      <select class="teacher-select" id="teacher-select" ${teacherNames.length === 0 ? 'disabled' : ''}>
+        ${teacherNames.map((name, index) => `
+          <option value="${index}" ${currentTeacher === name ? 'selected' : ''}>${escapeHtml(name)}</option>
+        `).join('')}
+      </select>
+    ` : '';
+    document.getElementById('teacher-filter').innerHTML = teacherFilterHtml;
 
     // Update title
+    document.querySelector('.main-title').textContent = currentView === 'details' ? 'АДМИН' : 'РЕЙТИНГ';
     const subjectLabel = SUBJECTS.find(s => s.key === currentSubject)?.label || '';
-    document.getElementById('subject-label').textContent = subjectLabel;
-    document.getElementById('exam-label').textContent = currentExam;
+    document.getElementById('subject-label').textContent = currentView === 'details' ? 'Детальная статистика' : subjectLabel;
+    const teacherLabel = currentScope === 'teacher' && currentTeacher ? ` | ${currentTeacher}` : '';
+    const viewLabel = currentView === 'details' ? ' | Для преподавателей' : teacherLabel;
+    document.getElementById('exam-label').textContent = currentView === 'details' ? viewLabel.replace(' | ', '') : `${currentExam}${viewLabel}`;
+
+    if (currentView === 'details') {
+      document.getElementById('columns-container').innerHTML = renderDetailsView();
+      return;
+    }
 
     // Get data
-    const levelData = appData[currentSubject]?.[currentExam];
+    const levelData = currentScope === 'teacher'
+      ? teacherData?.[currentSubject]?.[currentExam]?.[currentTeacher]
+      : appData[currentSubject]?.[currentExam];
     if (!levelData) {
       document.getElementById('columns-container').innerHTML = '<p>Нет данных</p>';
       return;
     }
 
     // Render columns
+    const placeLabel = currentScope === 'teacher' ? 'У ПРЕПОД.' : 'В ШКОЛЕ';
     const columnsHtml = `
-      ${renderRatingColumn('legends', levelData.legends)}
-      ${renderRatingColumn('champs', levelData.champs)}
-      ${renderRatingColumn('starters', levelData.starters)}
+      ${renderRatingColumn('legends', levelData.legends, placeLabel)}
+      ${renderRatingColumn('champs', levelData.champs, placeLabel)}
+      ${renderRatingColumn('starters', levelData.starters, placeLabel)}
     `;
     document.getElementById('columns-container').innerHTML = columnsHtml;
   }
@@ -846,6 +1487,12 @@
   function initEventListeners() {
     document.getElementById('subject-tabs').addEventListener('click', (e) => {
       if (e.target.classList.contains('subject-btn')) {
+        if (e.target.dataset.view === 'details') {
+          currentView = 'details';
+          render();
+          return;
+        }
+
         const newSubject = e.target.dataset.subject;
         if (currentSubject !== newSubject) {
           currentSubject = newSubject;
@@ -854,8 +1501,9 @@
           if (subjectConfig && !subjectConfig.levels.includes(currentExam)) {
             currentExam = subjectConfig.levels[0];
           }
-          render();
         }
+        currentView = 'rating';
+        render();
       }
     });
 
@@ -868,6 +1516,137 @@
         }
       }
     });
+
+    document.getElementById('scope-toggle').addEventListener('click', (e) => {
+      if (e.target.classList.contains('scope-btn')) {
+        const newScope = e.target.dataset.scope;
+        if (currentScope !== newScope) {
+          currentScope = newScope;
+          render();
+        }
+      }
+    });
+
+    document.getElementById('teacher-filter').addEventListener('change', (e) => {
+      if (e.target.classList.contains('teacher-select')) {
+        const teacherNames = getCurrentTeacherNames();
+        currentTeacher = teacherNames[Number(e.target.value)] || '';
+        render();
+      }
+    });
+
+    document.getElementById('columns-container').addEventListener('change', (e) => {
+      const filter = e.target.dataset.detailFilter;
+      if (!filter) return;
+
+      const rows = getCurrentDetailRows();
+      const index = Number(e.target.value);
+      if (filter === 'detailSubject') {
+        const options = uniqueSorted(allStudentRows.map((row) => row.subject));
+        detailSubject = e.target.value === '' ? '' : options[index] || '';
+      }
+      if (filter === 'detailExam') {
+        const options = uniqueSorted(allStudentRows.map((row) => row.level));
+        detailExam = e.target.value === '' ? '' : options[index] || '';
+      }
+      if (filter === 'detailTeacher') {
+        const options = uniqueSorted(rows.map((row) => row.teacher));
+        detailTeacher = e.target.value === '' ? '' : options[index] || '';
+      }
+      if (filter === 'detailGroup') {
+        const options = uniqueSorted(rows.map((row) => row.group));
+        detailGroup = e.target.value === '' ? '' : options[index] || '';
+      }
+      if (filter === 'detailStudent') {
+        const options = uniqueSorted(rows.map((row) => row.name));
+        detailStudent = e.target.value === '' ? '' : options[index] || '';
+      }
+      render();
+    });
+
+    document.getElementById('columns-container').addEventListener('submit', (e) => {
+      if (e.target.id !== 'admin-login-form') return;
+      e.preventDefault();
+
+      const input = document.getElementById('admin-password-input');
+      loginAdmin(input?.value || '');
+    });
+
+    document.getElementById('columns-container').addEventListener('click', (e) => {
+      if (e.target.id === 'admin-logout-btn') {
+        adminToken = '';
+        adminError = '';
+        allStudentRows = [];
+        sessionStorage.removeItem('adminToken');
+        render();
+        return;
+      }
+
+      const sortKey = e.target.dataset.sort;
+      if (!sortKey) return;
+
+      if (detailSortKey === sortKey) {
+        detailSortDirection = detailSortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        detailSortKey = sortKey;
+        detailSortDirection = 'asc';
+      }
+      render();
+    });
+  }
+
+  async function loginAdmin(password) {
+    adminError = '';
+    adminLoading = true;
+    render();
+
+    try {
+      const response = await fetch(`${PROXY_URL}?mode=login&password=${encodeURIComponent(password)}&_t=${Date.now()}`);
+      const data = await response.json();
+
+      if (!data.ok || !data.token) {
+        throw new Error('Неверный пароль');
+      }
+
+      adminToken = data.token;
+      sessionStorage.setItem('adminToken', adminToken);
+      adminLoading = false;
+      await loadAdminData();
+    } catch (error) {
+      adminToken = '';
+      sessionStorage.removeItem('adminToken');
+      adminError = error.message || 'Не удалось войти';
+    } finally {
+      adminLoading = false;
+      render();
+    }
+  }
+
+  async function loadAdminData() {
+    if (!adminToken || adminLoading) return;
+
+    adminLoading = true;
+    adminError = '';
+    render();
+
+    try {
+      const response = await fetch(`${PROXY_URL}?mode=admin&token=${encodeURIComponent(adminToken)}&_t=${Date.now()}`);
+      const data = await response.json();
+
+      if (!data.ok || !Array.isArray(data.rows)) {
+        throw new Error(data.error === 'unauthorized' ? 'Сессия истекла, войдите заново' : 'Не удалось загрузить админские данные');
+      }
+
+      allStudentRows = parseApiRows(data.rows);
+    } catch (error) {
+      allStudentRows = [];
+      adminToken = '';
+      sessionStorage.removeItem('adminToken');
+      adminError = error.message || 'Не удалось загрузить админские данные';
+    } finally {
+      adminLoading = false;
+      render();
+    }
   }
 
   async function loadData() {
@@ -899,37 +1678,27 @@
       const responses = await Promise.all(fetchPromises);
       const allStudents = [];
 
-      // Парсим результаты
-      const allNullScoreStudents = [];
       for (const response of responses) {
         if (!response) continue;
         try {
-          const gvizJson = extractGvizJson(response.text);
-          const students = parseGvizData(gvizJson, response.subject.key, response.level);
-          allStudents.push(...students);
+          const trimmedText = response.text.trim();
+          let students;
 
-          // Собираем информацию о студентах с null в cells[10]
-          if (students._nullScoreStudents) {
-            for (const nullStudent of students._nullScoreStudents) {
-              allNullScoreStudents.push({
-                name: nullStudent.name,
-                subject: response.subject.label,
-                level: response.level
-              });
+          if (trimmedText.startsWith('{')) {
+            const data = JSON.parse(trimmedText);
+            if (!data.ok || !Array.isArray(data.rows)) {
+              throw new Error(data.error || 'Неожиданный формат данных');
             }
+            students = parseApiRows(data.rows);
+          } else {
+            const gvizJson = extractGvizJson(response.text);
+            students = parseGvizData(gvizJson, response.subject.key, response.level);
           }
+
+          allStudents.push(...students);
         } catch (e) {
           console.warn(`Ошибка парсинга ${response.subject.label} ${response.level}:`, e.message);
         }
-      }
-
-      // Выводим список всех студентов с null в cells[10]
-      if (allNullScoreStudents.length > 0) {
-        console.log(`\n\n❌❌❌ ПОЛНЫЙ СПИСОК СТУДЕНТОВ С NULL В CELLS[10]:\n`);
-        allNullScoreStudents.forEach(s => {
-          console.log(`${s.name} — ${s.subject} ${s.level}`);
-        });
-        console.log(`\nВсего: ${allNullScoreStudents.length} студент(ов)\n`);
       }
 
       if (allStudents.length === 0) {
@@ -937,6 +1706,7 @@
       }
 
       appData = groupAndSort(allStudents);
+      teacherData = groupTeacherRatings(allStudents);
       console.log('Загружено студентов:', allStudents.length);
       console.log('По предметам:', Object.keys(appData || {}).map(k => `${k}: ${Object.keys(appData[k]).length} уровней`));
 
