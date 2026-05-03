@@ -1742,18 +1742,21 @@
   function renderAdminIssues() {
     const errors = adminLoadMeta.errors || [];
     const missing = adminLoadMeta.missingConfigNames || [];
-    if (errors.length === 0 && missing.length === 0) return '';
+    const statusMessage = adminError || '';
+    if (errors.length === 0 && missing.length === 0 && !statusMessage) return '';
 
     const errorRows = errors.slice(0, 8).map((error) => {
       const group = error.group ? `${error.group} (${error.groupId || ''})` : `groupId ${error.groupId || ''}`;
       return `<div>${escapeHtml(group)}: ${escapeHtml(error.error || 'ошибка загрузки')}</div>`;
     }).join('');
     const missingRows = missing.map((name) => `<div>${escapeHtml(name)}</div>`).join('');
+    const isSuccessMessage = statusMessage.startsWith('Telegram PDF:') || statusMessage.startsWith('Кеш очищен');
 
     return `
-      <div class="details-table-empty" style="text-align:left;color:#D33E5F;">
-        ${missing.length ? `<div><strong>Не найдены группы из конфига:</strong>${missingRows}</div>` : ''}
-        ${errors.length ? `<div style="${missing.length ? 'margin-top:10px;' : ''}"><strong>Ошибки загрузки XLSX:</strong>${errorRows}${errors.length > 8 ? `<div>...и ещё ${errors.length - 8}</div>` : ''}</div>` : ''}
+      <div class="details-table-empty" style="text-align:left;">
+        ${statusMessage ? `<div style="color:${isSuccessMessage ? '#267EA0' : '#D33E5F'};"><strong>${escapeHtml(statusMessage)}</strong></div>` : ''}
+        ${missing.length ? `<div style="color:#D33E5F;${statusMessage ? 'margin-top:10px;' : ''}"><strong>Не найдены группы из конфига:</strong>${missingRows}</div>` : ''}
+        ${errors.length ? `<div style="color:#D33E5F;${missing.length || statusMessage ? 'margin-top:10px;' : ''}"><strong>Ошибки загрузки XLSX:</strong>${errorRows}${errors.length > 8 ? `<div>...и ещё ${errors.length - 8}</div>` : ''}</div>` : ''}
       </div>
     `;
   }
@@ -1780,7 +1783,7 @@
       return '<div class="details-table-empty">Загружаем админские данные...</div>';
     }
 
-    if (adminError) {
+    if (adminError && allStudentRows.length === 0) {
       return `
         <div class="admin-login">
           <div class="admin-login-title">Админ панель</div>
