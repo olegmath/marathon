@@ -133,6 +133,7 @@ SOHOLMS_CACHE_SECONDS     кеш в памяти, по умолчанию 900 с
 SOHOLMS_CONCURRENCY       параллельные XLSX-загрузки, по умолчанию 4
 SOHOLMS_MAX_GROUPS        лимит групп за запрос, по умолчанию 80
 CORS_ORIGIN               CORS, по умолчанию *
+BACKEND_ADMIN_KEY         ключ для служебных endpoint: очистка кеша и debug
 ```
 
 Токены должны быть ровно тем значением, которое Soholms ожидает в заголовке `Authorization`.
@@ -191,6 +192,51 @@ sudo systemctl status marathon-soholms
 ```
 
 Для Render/Railway-подобного хостинга используй `Procfile`; токены и остальные настройки задаются как environment variables. После деплоя на сайте нужно один раз указать URL бэкенда:
+
+## Нормальный публичный backend
+
+Для GitHub Pages нужен публичный backend с `https://`, потому что страница GitHub Pages открывается по HTTPS и браузер блокирует запросы к домашнему `http://192.168...`.
+
+В папке `backend` есть `Dockerfile`, поэтому backend можно деплоить как Docker/Web Service. В настройках сервиса укажи environment variables:
+
+```text
+HOST=0.0.0.0
+PORT=8787
+CORS_ORIGIN=https://YOUR_GITHUB_USERNAME.github.io
+SOHOLMS_API_TOKEN=...
+SOHOLMS_EXCEL_TOKEN=Bearer ...
+BACKEND_ADMIN_KEY=длинный_случайный_ключ
+SOHOLMS_CACHE_SECONDS=900
+SOHOLMS_CONCURRENCY=2
+SOHOLMS_MAX_GROUPS=80
+SOHOLMS_DEADLINE_SHIFT_DAYS=1
+```
+
+После деплоя проверь:
+
+```text
+https://YOUR-BACKEND-DOMAIN/health
+```
+
+Должно вернуться:
+
+```json
+{"ok":true}
+```
+
+Служебные endpoint защищаются `BACKEND_ADMIN_KEY`. Для проверки:
+
+```bash
+curl -H 'x-admin-key: ТВОЙ_BACKEND_ADMIN_KEY' https://YOUR-BACKEND-DOMAIN/api/cache/clear
+```
+
+На сайте ключ для кнопки `Очистить кеш` можно сохранить только у себя в браузере:
+
+```js
+localStorage.setItem('backendAdminKey', 'ТВОЙ_BACKEND_ADMIN_KEY');
+```
+
+Если не задать `BACKEND_ADMIN_KEY` на сервере, служебные endpoint останутся открытыми. Для публичного backend так делать не стоит.
 
 В постоянной версии лучше прописать URL в корневом `config.js`:
 

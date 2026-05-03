@@ -51,6 +51,7 @@ DEFAULT_CONCURRENCY = int(os.getenv("SOHOLMS_CONCURRENCY", "4"))
 MAX_GROUPS_PER_REQUEST = int(os.getenv("SOHOLMS_MAX_GROUPS", "80"))
 DEADLINE_SHIFT_DAYS = int(os.getenv("SOHOLMS_DEADLINE_SHIFT_DAYS", "1"))
 DEFAULT_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "groups.config.json")
+BACKEND_ADMIN_KEY = os.getenv("BACKEND_ADMIN_KEY", "").strip()
 
 GROUP_TREE_PATH = "/api/v1/learning_group/get_tree"
 ATTENDANCE_PATH = "/master/api/learning/attendance-sheet/excel/data"
@@ -962,6 +963,10 @@ def json_bytes(payload: Any) -> bytes:
     return json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
 
 
+def admin_key_matches(value: str) -> bool:
+    return bool(BACKEND_ADMIN_KEY) and value.strip() == BACKEND_ADMIN_KEY
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "SoholmsMarathonBackend/1.0"
 
@@ -979,6 +984,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json({"ok": True})
 
             if parsed.path == "/api/debug/auth":
+                self.require_admin(query)
                 return self.send_json({
                     "ok": True,
                     "apiToken": token_fingerprint("SOHOLMS_API_TOKEN"),
@@ -988,10 +994,12 @@ class Handler(BaseHTTPRequestHandler):
                 })
 
             if parsed.path == "/api/cache/clear":
+                self.require_admin(query)
                 clear_cache()
                 return self.send_json({"ok": True, "cacheItems": len(_CACHE)})
 
             if parsed.path == "/api/debug/xlsx":
+                self.require_admin(query)
                 group_id_value = query.get("groupId", "")
                 period_from = query.get("periodFrom") or os.getenv("SOHOLMS_PERIOD_FROM") or load_group_config().get("periodFrom") or current_month_range()[0]
                 period_to = query.get("periodTo") or os.getenv("SOHOLMS_PERIOD_TO") or load_group_config().get("periodTo") or current_month_range()[1]
@@ -1068,8 +1076,15 @@ class Handler(BaseHTTPRequestHandler):
     def send_cors_headers(self):
         self.send_header("Access-Control-Allow-Origin", os.getenv("CORS_ORIGIN", "*"))
         self.send_header("Access-Control-Allow-Methods", "GET,OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "content-type,authorization")
+        self.send_header("Access-Control-Allow-Headers", "content-type,authorization,x-admin-key")
         self.send_header("Access-Control-Allow-Private-Network", "true")
+
+    def require_admin(self, query: dict[str, str]) -> None:
+        if not BACKEND_ADMIN_KEY:
+            return
+        value = self.headers.get("x-admin-key", "") or query.get("adminKey", "")
+        if not admin_key_matches(value):
+            raise BackendError("Forbidden", HTTPStatus.FORBIDDEN)
 
     def send_json(self, payload: Any, status: int = HTTPStatus.OK):
         body = json_bytes(payload)

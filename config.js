@@ -1,3 +1,4 @@
 window.SOHOLMS_BACKEND_URL = window.SOHOLMS_BACKEND_URL || '';
 window.SOHOLMS_PERIOD_FROM = window.SOHOLMS_PERIOD_FROM || '';
 window.SOHOLMS_PERIOD_TO = window.SOHOLMS_PERIOD_TO || '';
+window.BACKEND_ADMIN_KEY = window.BACKEND_ADMIN_KEY || '';
