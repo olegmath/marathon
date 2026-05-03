@@ -1,0 +1,14 @@
+[Unit]
+Description=Marathon Soholms backend
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/marathon/backend
+EnvironmentFile=/opt/marathon/backend/.env
+ExecStart=/usr/bin/python3 /opt/marathon/backend/soholms_backend.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

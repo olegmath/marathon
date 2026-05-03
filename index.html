@@ -438,6 +438,103 @@
       box-shadow: 0 4px 20px rgba(0,80,120,0.12);
     }
 
+    .admin-period-panel {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      background: white;
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 4px 20px rgba(0,80,120,0.12);
+    }
+
+    .period-controls {
+      display: flex;
+      align-items: end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .period-field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      font-family: 'Oswald', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      color: #4AB8E0;
+      text-transform: uppercase;
+    }
+
+    .period-input {
+      width: 160px;
+      height: 36px;
+      border: 1px solid rgba(74,184,224,0.28);
+      border-radius: 8px;
+      background: white;
+      color: #1a1a1a;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      padding: 0 10px;
+      outline: none;
+    }
+
+    .period-apply-btn,
+    .period-reset-btn,
+    .cache-clear-btn {
+      height: 36px;
+      border: none;
+      border-radius: 8px;
+      padding: 0 14px;
+      font-family: 'Oswald', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      font-style: italic;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .period-apply-btn {
+      background: #4AB8E0;
+      color: white;
+    }
+
+    .period-reset-btn {
+      background: rgba(74,184,224,0.12);
+      color: #3595B8;
+    }
+
+    .cache-clear-btn {
+      background: #D33E5F;
+      color: white;
+    }
+
+    .admin-load-summary {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      color: rgba(0,0,0,0.58);
+    }
+
+    .admin-load-pill {
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: rgba(74,184,224,0.1);
+      color: #267ea0;
+      font-weight: 600;
+    }
+
+    .admin-load-pill.error {
+      background: rgba(211,62,95,0.11);
+      color: #D33E5F;
+    }
+
     .details-filter {
       display: flex;
       flex-direction: column;
@@ -802,8 +899,17 @@
   <div class="columns-container" id="columns-container"></div>
 </div>
 
+<script src="config.js"></script>
 <script>
   const PROXY_URL = 'https://script.google.com/macros/s/AKfycbyRMo1Sqm57vXg85VAtOYPDJ-PscpR1AuAGpcuCQmoT1WMuNeykYXaTpf8UPL5R8WPc_w/exec';
+  const SOHOLMS_BACKEND_URL = String(window.SOHOLMS_BACKEND_URL || localStorage.getItem('soholmsBackendUrl') || '').replace(/\/$/, '');
+  let soholmsPeriodFrom = String(window.SOHOLMS_PERIOD_FROM || localStorage.getItem('soholmsPeriodFrom') || '');
+  let soholmsPeriodTo = String(window.SOHOLMS_PERIOD_TO || localStorage.getItem('soholmsPeriodTo') || '');
+  const SOHOLMS_GROUP_IDS = String(window.SOHOLMS_GROUP_IDS || localStorage.getItem('soholmsGroupIds') || '');
+  const SOHOLMS_SUBJECTS = String(window.SOHOLMS_SUBJECTS || localStorage.getItem('soholmsSubjects') || '');
+  const SOHOLMS_ORIGINS = String(window.SOHOLMS_ORIGINS || localStorage.getItem('soholmsOrigins') || '');
+  const SOHOLMS_LIMIT = String(window.SOHOLMS_LIMIT || localStorage.getItem('soholmsLimit') || '');
+  const AUTO_REFRESH_MS = Number(window.AUTO_REFRESH_MS || localStorage.getItem('autoRefreshMs') || 15 * 60 * 1000);
 
   const SUBJECTS = [
     { key: 'математика', label: 'Математика', levels: ['ЕГЭ', 'ОГЭ'] },
@@ -830,6 +936,23 @@
   function buildApiUrl(subject, level) {
     const sheetName = getSheetName(subject, level);
     return `${PROXY_URL}?mode=public&sheet=${encodeURIComponent(sheetName)}`;
+  }
+
+  function hasSoholmsBackend() {
+    return SOHOLMS_BACKEND_URL.length > 0;
+  }
+
+  function buildSoholmsRatingsUrl(publicOnly = false) {
+    const params = new URLSearchParams();
+    if (soholmsPeriodFrom) params.set('periodFrom', soholmsPeriodFrom);
+    if (soholmsPeriodTo) params.set('periodTo', soholmsPeriodTo);
+    if (SOHOLMS_GROUP_IDS) params.set('groupIds', SOHOLMS_GROUP_IDS);
+    if (SOHOLMS_SUBJECTS) params.set('subjects', SOHOLMS_SUBJECTS);
+    if (SOHOLMS_ORIGINS) params.set('origins', SOHOLMS_ORIGINS);
+    if (SOHOLMS_LIMIT) params.set('limit', SOHOLMS_LIMIT);
+    if (publicOnly) params.set('public', '1');
+    params.set('_t', String(Date.now()));
+    return `${SOHOLMS_BACKEND_URL}/api/ratings?${params.toString()}`;
   }
 
   const EXAMS = ['ЕГЭ', 'ОГЭ'];
@@ -860,11 +983,20 @@
   let teacherRatingSortDirection = 'desc';
   let dailyProgressSubject = '';
   let dailyProgressExam = '';
+  let dailyProgressTeacher = '';
   let dailyProgressSortKey = 'dateOrder';
   let dailyProgressSortDirection = 'asc';
   let adminToken = sessionStorage.getItem('adminToken') || '';
   let adminLoading = false;
   let adminError = '';
+  let dataLoading = false;
+  let adminLoadMeta = {
+    period: null,
+    groupCount: 0,
+    rowCount: 0,
+    errors: [],
+    missingConfigNames: [],
+  };
   let globalNullScoreStudents = []; // Для отслеживания студентов с null в cells[10]
 
   // SVG Icons
@@ -1248,7 +1380,7 @@
     if (teacherRatingExam && !exams.includes(teacherRatingExam)) teacherRatingExam = '';
   }
 
-  function getCurrentDailyProgressRows() {
+  function getDailyProgressBaseRows() {
     return allStudentRows.filter((row) => {
       if (dailyProgressSubject && row.subject !== dailyProgressSubject) return false;
       if (dailyProgressExam && row.level !== dailyProgressExam) return false;
@@ -1256,12 +1388,21 @@
     });
   }
 
+  function getCurrentDailyProgressRows() {
+    return getDailyProgressBaseRows().filter((row) => {
+      if (dailyProgressTeacher && row.teacher !== dailyProgressTeacher) return false;
+      return true;
+    });
+  }
+
   function normalizeDailyProgressFilters() {
     const subjects = uniqueSorted(allStudentRows.map((row) => row.subject));
     const exams = uniqueSorted(allStudentRows.map((row) => row.level));
+    const teachers = uniqueSorted(getDailyProgressBaseRows().map((row) => row.teacher));
 
     if (dailyProgressSubject && !subjects.includes(dailyProgressSubject)) dailyProgressSubject = '';
     if (dailyProgressExam && !exams.includes(dailyProgressExam)) dailyProgressExam = '';
+    if (dailyProgressTeacher && !teachers.includes(dailyProgressTeacher)) dailyProgressTeacher = '';
   }
 
   function getSubjectLabel(subjectKey) {
@@ -1479,6 +1620,62 @@
     `;
   }
 
+  function renderAdminPeriodPanel() {
+    const periodLabel = adminLoadMeta.period?.from && adminLoadMeta.period?.to
+      ? `${adminLoadMeta.period.from} — ${adminLoadMeta.period.to}`
+      : soholmsPeriodFrom || soholmsPeriodTo
+        ? `${soholmsPeriodFrom || '...'} — ${soholmsPeriodTo || '...'}`
+        : 'период из бэкенда';
+    const errors = adminLoadMeta.errors || [];
+    const missing = adminLoadMeta.missingConfigNames || [];
+    const sourceLabel = hasSoholmsBackend() ? 'Soholms' : 'Google Sheets';
+
+    return `
+      <div class="admin-period-panel">
+        <div class="period-controls">
+          <label class="period-field">
+            С
+            <input class="period-input" id="admin-period-from" type="date" value="${escapeHtml(soholmsPeriodFrom)}" ${hasSoholmsBackend() ? '' : 'disabled'}>
+          </label>
+          <label class="period-field">
+            По
+            <input class="period-input" id="admin-period-to" type="date" value="${escapeHtml(soholmsPeriodTo)}" ${hasSoholmsBackend() ? '' : 'disabled'}>
+          </label>
+          <button class="period-apply-btn" type="button" id="admin-period-apply" ${hasSoholmsBackend() ? '' : 'disabled'}>Применить</button>
+          <button class="period-reset-btn" type="button" id="admin-period-reset" ${hasSoholmsBackend() ? '' : 'disabled'}>Сброс</button>
+          <button class="cache-clear-btn" type="button" id="admin-cache-clear" ${hasSoholmsBackend() ? '' : 'disabled'}>Очистить кеш</button>
+        </div>
+        <div class="admin-load-summary">
+          <span class="admin-load-pill">${escapeHtml(sourceLabel)}</span>
+          <span class="admin-load-pill">${escapeHtml(periodLabel)}</span>
+          <span class="admin-load-pill">групп: ${adminLoadMeta.groupCount || 0}</span>
+          <span class="admin-load-pill">учеников: ${adminLoadMeta.rowCount || allStudentRows.length || 0}</span>
+          <span class="admin-load-pill ${errors.length ? 'error' : ''}">ошибок: ${errors.length}</span>
+          ${missing.length ? `<span class="admin-load-pill error">не найдены: ${missing.length}</span>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderAdminIssues() {
+    const errors = adminLoadMeta.errors || [];
+    const missing = adminLoadMeta.missingConfigNames || [];
+    if (errors.length === 0 && missing.length === 0) return '';
+
+    const errorRows = errors.slice(0, 8).map((error) => {
+      const group = error.group ? `${error.group} (${error.groupId || ''})` : `groupId ${error.groupId || ''}`;
+      return `<div>${escapeHtml(group)}: ${escapeHtml(error.error || 'ошибка загрузки')}</div>`;
+    }).join('');
+    const missingRows = missing.map((name) => `<div>${escapeHtml(name)}</div>`).join('');
+
+    return `
+      <div class="details-table-empty" style="text-align:left;color:#D33E5F;">
+        ${missing.length ? `<div><strong>Не найдены группы из конфига:</strong>${missingRows}</div>` : ''}
+        ${errors.length ? `<div style="${missing.length ? 'margin-top:10px;' : ''}"><strong>Ошибки загрузки XLSX:</strong>${errorRows}${errors.length > 8 ? `<div>...и ещё ${errors.length - 8}</div>` : ''}</div>` : ''}
+      </div>
+    `;
+  }
+
   function renderAdminLogin() {
     return `
       <div class="admin-login">
@@ -1584,6 +1781,8 @@
     return `
       <div class="details-panel">
         ${renderAdminHeader()}
+        ${renderAdminPeriodPanel()}
+        ${renderAdminIssues()}
         <div class="details-filters">
           ${renderDetailSelect('detailSubject', 'Предмет', detailSubject, subjectOptions, 'Все предметы', subjectLabels)}
           ${renderDetailSelect('detailExam', 'Экзамен', detailExam, examOptions, 'Все экзамены')}
@@ -1655,6 +1854,8 @@
     return `
       <div class="details-panel">
         ${renderAdminHeader()}
+        ${renderAdminPeriodPanel()}
+        ${renderAdminIssues()}
         <div class="details-filters">
           ${renderDetailSelect('teacherRatingSubject', 'Предмет', teacherRatingSubject, subjectOptions, 'Все предметы', subjectLabels)}
           ${renderDetailSelect('teacherRatingExam', 'Экзамен', teacherRatingExam, examOptions, 'Все экзамены')}
@@ -1676,6 +1877,7 @@
     const subjectLabels = new Map(SUBJECTS.map((subject) => [subject.key, subject.label]));
     const subjectOptions = uniqueSorted(allStudentRows.map((row) => row.subject));
     const examOptions = uniqueSorted(allStudentRows.map((row) => row.level));
+    const teacherOptions = uniqueSorted(getDailyProgressBaseRows().map((row) => row.teacher));
     const rows = getCurrentDailyProgressRows();
     const progressRows = buildDailyProgressRows(rows);
     const sortedRows = sortDailyProgressRows(progressRows);
@@ -1722,9 +1924,12 @@
     return `
       <div class="details-panel">
         ${renderAdminHeader()}
+        ${renderAdminPeriodPanel()}
+        ${renderAdminIssues()}
         <div class="details-filters">
           ${renderDetailSelect('dailyProgressSubject', 'Предмет', dailyProgressSubject, subjectOptions, 'Все предметы', subjectLabels)}
           ${renderDetailSelect('dailyProgressExam', 'Экзамен', dailyProgressExam, examOptions, 'Все экзамены')}
+          ${renderDetailSelect('dailyProgressTeacher', 'Преподаватель', dailyProgressTeacher, teacherOptions, 'Все преподаватели')}
         </div>
         ${tableHtml}
         <div class="metrics-grid">
@@ -1794,6 +1999,68 @@
         </div>
       </div>
     `;
+  }
+
+  function applyAdminPeriod() {
+    if (!hasSoholmsBackend()) return;
+
+    const from = document.getElementById('admin-period-from')?.value || '';
+    const to = document.getElementById('admin-period-to')?.value || '';
+
+    if (from) {
+      localStorage.setItem('soholmsPeriodFrom', from);
+    } else {
+      localStorage.removeItem('soholmsPeriodFrom');
+    }
+
+    if (to) {
+      localStorage.setItem('soholmsPeriodTo', to);
+    } else {
+      localStorage.removeItem('soholmsPeriodTo');
+    }
+
+    location.reload();
+  }
+
+  function resetAdminPeriod() {
+    if (!hasSoholmsBackend()) return;
+    localStorage.removeItem('soholmsPeriodFrom');
+    localStorage.removeItem('soholmsPeriodTo');
+    location.reload();
+  }
+
+  async function clearBackendCacheAndReload() {
+    if (!hasSoholmsBackend() || adminLoading) return;
+
+    adminLoading = true;
+    adminError = '';
+    render();
+
+    try {
+      const response = await fetch(`${SOHOLMS_BACKEND_URL}/api/cache/clear?_t=${Date.now()}`);
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || 'Не удалось очистить кеш');
+      }
+
+      allStudentRows = [];
+      adminLoadMeta = {
+        period: null,
+        groupCount: 0,
+        rowCount: 0,
+        errors: [],
+        missingConfigNames: [],
+      };
+      await loadData();
+      if (adminToken) {
+        await loadAdminData();
+      }
+    } catch (error) {
+      adminError = error.message || 'Не удалось очистить кеш';
+    } finally {
+      adminLoading = false;
+      render();
+    }
   }
 
   function render() {
@@ -1979,6 +2246,10 @@
         const options = uniqueSorted(allStudentRows.map((row) => row.level));
         dailyProgressExam = e.target.value === '' ? '' : options[index] || '';
       }
+      if (filter === 'dailyProgressTeacher') {
+        const options = uniqueSorted(getDailyProgressBaseRows().map((row) => row.teacher));
+        dailyProgressTeacher = e.target.value === '' ? '' : options[index] || '';
+      }
       render();
     });
 
@@ -1995,8 +2266,30 @@
         adminToken = '';
         adminError = '';
         allStudentRows = [];
+        adminLoadMeta = {
+          period: null,
+          groupCount: 0,
+          rowCount: 0,
+          errors: [],
+          missingConfigNames: [],
+        };
         sessionStorage.removeItem('adminToken');
         render();
+        return;
+      }
+
+      if (e.target.id === 'admin-period-apply') {
+        applyAdminPeriod();
+        return;
+      }
+
+      if (e.target.id === 'admin-period-reset') {
+        resetAdminPeriod();
+        return;
+      }
+
+      if (e.target.id === 'admin-cache-clear') {
+        clearBackendCacheAndReload();
         return;
       }
 
@@ -2081,7 +2374,11 @@
     render();
 
     try {
-      const response = await fetch(`${PROXY_URL}?mode=admin&token=${encodeURIComponent(adminToken)}&_t=${Date.now()}`);
+      const response = await fetch(
+        hasSoholmsBackend()
+          ? buildSoholmsRatingsUrl(false)
+          : `${PROXY_URL}?mode=admin&token=${encodeURIComponent(adminToken)}&_t=${Date.now()}`
+      );
       const data = await response.json();
 
       if (!data.ok || !Array.isArray(data.rows)) {
@@ -2089,10 +2386,26 @@
       }
 
       allStudentRows = parseApiRows(data.rows);
+      adminLoadMeta = {
+        period: data.period || null,
+        groupCount: Array.isArray(data.groups) ? data.groups.length : 0,
+        rowCount: data.rows.length,
+        errors: Array.isArray(data.errors) ? data.errors : [],
+        missingConfigNames: Array.isArray(data.missingConfigNames) ? data.missingConfigNames : [],
+      };
     } catch (error) {
       allStudentRows = [];
-      adminToken = '';
-      sessionStorage.removeItem('adminToken');
+      adminLoadMeta = {
+        period: null,
+        groupCount: 0,
+        rowCount: 0,
+        errors: [],
+        missingConfigNames: [],
+      };
+      if (!hasSoholmsBackend()) {
+        adminToken = '';
+        sessionStorage.removeItem('adminToken');
+      }
       adminError = error.message || 'Не удалось загрузить админские данные';
     } finally {
       adminLoading = false;
@@ -2100,8 +2413,44 @@
     }
   }
 
-  async function loadData() {
+  async function loadData(options = {}) {
+    const silent = Boolean(options.silent);
+    if (dataLoading) return;
+    dataLoading = true;
     try {
+      if (hasSoholmsBackend()) {
+        const response = await fetch(buildSoholmsRatingsUrl(true));
+        const data = await response.json();
+
+        if (!response.ok || !data.ok || !Array.isArray(data.rows)) {
+          throw new Error(data.error || 'Не удалось загрузить данные Soholms');
+        }
+
+        if (Array.isArray(data.errors) && data.errors.length > 0) {
+          console.warn('Ошибки загрузки Soholms:', data.errors);
+        }
+
+        const allStudents = parseApiRows(data.rows);
+        if (allStudents.length === 0 && Array.isArray(data.errors) && data.errors.length > 0) {
+          throw new Error(`Soholms вернул 0 учеников. Первая ошибка: ${data.errors[0].error || 'неизвестно'}`);
+        }
+
+        appData = groupAndSort(allStudents);
+        teacherData = groupTeacherRatings(allStudents);
+        console.log('Загружено студентов из Soholms:', allStudents.length);
+
+        if (!silent || currentView !== 'details') {
+          render();
+        }
+        if (!window.listenersInitialized) {
+          initEventListeners();
+          window.listenersInitialized = true;
+        }
+        updateLastUpdateTime();
+        document.getElementById('refresh-btn').classList.remove('loading');
+        return;
+      }
+
       // Создаём параллельные fetch запросы вместо последовательных
       const fetchPromises = [];
 
@@ -2184,12 +2533,16 @@
       document.getElementById('refresh-btn').classList.remove('loading');
     } catch (error) {
       console.error('Ошибка загрузки:', error);
-      document.getElementById('columns-container').innerHTML = `
-        <div style="color: white; text-align: center; padding: 40px;">
-          <p>Ошибка загрузки: ${error.message}</p>
-        </div>
-      `;
+      if (!silent) {
+        document.getElementById('columns-container').innerHTML = `
+          <div style="color: white; text-align: center; padding: 40px;">
+            <p>Ошибка загрузки: ${error.message}</p>
+          </div>
+        `;
+      }
       document.getElementById('refresh-btn').classList.remove('loading');
+    } finally {
+      dataLoading = false;
     }
   }
 
@@ -2211,6 +2564,14 @@
     }
   }
 
+  function startAutoRefresh() {
+    if (!AUTO_REFRESH_MS || AUTO_REFRESH_MS < 60000) return;
+    window.setInterval(() => {
+      if (document.hidden) return;
+      loadData({ silent: true });
+    }, AUTO_REFRESH_MS);
+  }
+
   function checkLogoBrowser() {
     const img = new Image();
     img.onload = () => {
@@ -2226,6 +2587,7 @@
   displayLastUpdateTime();
   checkLogoBrowser();
   loadData();
+  startAutoRefresh();
 
   // Обработчик кнопки обновить
   document.getElementById('refresh-btn').addEventListener('click', () => {
