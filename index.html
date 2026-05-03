@@ -2054,9 +2054,9 @@
     });
 
     const averageFinalScore = averageNumbers(sortedRows.map((row) => row.finalScore));
+    const averageCoefficient = averageNumbers(sortedRows.map((row) => row.coefficient));
+    const averageQuality = averageNumbers(sortedRows.map((row) => row.quality));
     const totalPenalty = sortedRows.reduce((sum, row) => sum + Number(row.penalty || 0), 0);
-    const totalDaysDone = sortedRows.reduce((sum, row) => sum + Number(row.daysDone || 0), 0);
-    const totalDaysTotal = sortedRows.reduce((sum, row) => sum + Number(row.daysTotal || 0), 0);
 
     return `
       <section class="report-student">
@@ -2069,10 +2069,10 @@
         </header>
 
         <div class="report-metrics">
-          <div><span>Марафонов</span><strong>${sortedRows.length}</strong></div>
-          <div><span>Средний итог</span><strong>${formatNumber(averageFinalScore)}</strong></div>
-          <div><span>Дней сделано</span><strong>${totalDaysDone}/${totalDaysTotal}</strong></div>
+          <div><span>Коэффициент</span><strong>${formatNumber(averageCoefficient)}</strong></div>
+          <div><span>Качество</span><strong>${formatNumber(averageQuality)}</strong></div>
           <div><span>Штраф</span><strong>${formatNumber(totalPenalty, 0)}</strong></div>
+          <div><span>Итоговый балл</span><strong>${formatNumber(averageFinalScore)}</strong></div>
         </div>
 
         <table class="report-table">
@@ -2107,34 +2107,6 @@
             `).join('')}
           </tbody>
         </table>
-
-        ${sortedRows.map((row) => `
-          <div class="report-marathon">
-            <h2>${escapeHtml(getSubjectLabel(row.subject))} ${escapeHtml(row.level || '')} · ${escapeHtml(row.group || '')}</h2>
-            ${Array.isArray(row.dailyScores) && row.dailyScores.length > 0 ? `
-              <table class="report-days">
-                <thead>
-                  <tr>
-                    <th>День</th>
-                    <th>Дата</th>
-                    <th>Процент</th>
-                    <th>Штраф</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${[...row.dailyScores].sort((a, b) => Number(a.dateOrder || 0) - Number(b.dateOrder || 0)).map((day) => `
-                    <tr>
-                      <td>${formatNumber(day.dateOrder, 0)}</td>
-                      <td>${escapeHtml(day.dateLabel || day.dateKey || '')}</td>
-                      <td>${formatNumber(day.score)}%</td>
-                      <td>${formatNumber(day.lateDays, 0)}</td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
-            ` : '<div class="report-empty">Нет детализации по дням</div>'}
-          </div>
-        `).join('')}
       </section>
     `;
   }
@@ -2181,10 +2153,6 @@
             font-size: 28px;
             line-height: 1.12;
           }
-          h2 {
-            margin: 18px 0 8px;
-            font-size: 15px;
-          }
           .report-period {
             color: #555;
             font-size: 12px;
@@ -2224,13 +2192,6 @@
           th {
             background: #eef9fd;
             font-weight: 700;
-          }
-          .report-days {
-            max-width: 520px;
-          }
-          .report-empty {
-            color: #777;
-            font-size: 12px;
           }
           @media print {
             @page { size: A4; margin: 0; }
