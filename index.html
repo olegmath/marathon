@@ -541,6 +541,10 @@
       background: #7F62C7;
     }
 
+    .pdf-action-btn.telegram {
+      background: #2AABEE;
+    }
+
     .pdf-action-note {
       color: rgba(0,0,0,0.58);
       font-family: 'Inter', sans-serif;
@@ -2231,6 +2235,41 @@
     reportWindow.document.close();
   }
 
+  async function sendTelegramReport(studentName = '') {
+    if (!hasSoholmsBackend() || adminLoading) return;
+
+    adminLoading = true;
+    adminError = '';
+    render();
+
+    try {
+      const params = new URLSearchParams();
+      if (soholmsPeriodFrom) params.set('periodFrom', soholmsPeriodFrom);
+      if (soholmsPeriodTo) params.set('periodTo', soholmsPeriodTo);
+      const adminKey = getBackendAdminKey();
+      const response = await fetch(`${SOHOLMS_BACKEND_URL}/api/telegram/send-report?${params.toString()}`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          ...(adminKey ? { 'x-admin-key': adminKey } : {}),
+        },
+        body: JSON.stringify({ studentName }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        const firstError = data.errors?.[0]?.error;
+        throw new Error(firstError || data.error || 'Не удалось отправить Telegram-отчёт');
+      }
+      const missingText = data.missing?.length ? ` Не найден chat_id: ${data.missing.length}.` : '';
+      adminError = `Telegram: отправлено ${data.sent?.length || 0}.${missingText}`;
+    } catch (error) {
+      adminError = error.message || 'Не удалось отправить Telegram-отчёт';
+    } finally {
+      adminLoading = false;
+      render();
+    }
+  }
+
   function renderPdfReportsView() {
     const studentOptions = groupedRowsByStudent(allStudentRows).map(([studentName]) => studentName);
     if (pdfStudent && !studentOptions.includes(pdfStudent)) pdfStudent = '';
@@ -2246,6 +2285,8 @@
         <div class="pdf-actions">
           <button class="pdf-action-btn" type="button" id="pdf-one-student" ${pdfStudent ? '' : 'disabled'}>PDF по ученику</button>
           <button class="pdf-action-btn secondary" type="button" id="pdf-all-students">PDF по всем ученикам</button>
+          <button class="pdf-action-btn telegram" type="button" id="telegram-one-student" ${pdfStudent ? '' : 'disabled'}>Telegram по ученику</button>
+          <button class="pdf-action-btn telegram" type="button" id="telegram-all-students">Telegram всем</button>
           <span class="pdf-action-note">Откроется печатная версия. В окне печати выбери “Сохранить в PDF”.</span>
         </div>
       </div>
@@ -2617,6 +2658,16 @@
 
       if (e.target.id === 'pdf-all-students') {
         openPdfReport('');
+        return;
+      }
+
+      if (e.target.id === 'telegram-one-student') {
+        sendTelegramReport(pdfStudent);
+        return;
+      }
+
+      if (e.target.id === 'telegram-all-students') {
+        sendTelegramReport('');
         return;
       }
 

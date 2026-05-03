@@ -1,0 +1,9 @@
+{
+  "students": [
+    {
+      "name": "Аникин Денис",
+      "chatId": "123456789",
+      "enabled": true
+    }
+  ]
+}

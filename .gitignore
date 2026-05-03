@@ -1,5 +1,6 @@
 .env
 backend/.env
+backend/telegram_chats.json
 .DS_Store
 backend/.DS_Store
 tmp/

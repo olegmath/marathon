@@ -52,9 +52,21 @@ MAX_GROUPS_PER_REQUEST = int(os.getenv("SOHOLMS_MAX_GROUPS", "80"))
 DEADLINE_SHIFT_DAYS = int(os.getenv("SOHOLMS_DEADLINE_SHIFT_DAYS", "1"))
 DEFAULT_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "groups.config.json")
 BACKEND_ADMIN_KEY = os.getenv("BACKEND_ADMIN_KEY", "").strip()
+DEFAULT_TELEGRAM_CHAT_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "telegram_chats.json")
+TELEGRAM_API_BASE = os.getenv("TELEGRAM_API_BASE", "https://api.telegram.org").rstrip("/")
 
 GROUP_TREE_PATH = "/api/v1/learning_group/get_tree"
 ATTENDANCE_PATH = "/master/api/learning/attendance-sheet/excel/data"
+
+SUBJECT_LABELS = {
+    "математика": "Математика",
+    "русский язык": "Русский язык",
+    "физика": "Физика",
+    "информатика": "Информатика",
+    "обществознание": "Обществознание",
+    "история": "История",
+    "без предмета": "Без предмета",
+}
 
 SUBJECT_ALIASES = (
     ("математика", ("матем", "мат11", "м2", "м1")),
@@ -216,6 +228,37 @@ def load_group_config() -> dict[str, Any]:
         return {}
     with open(path, "r", encoding="utf-8") as file:
         return json.load(file)
+
+
+def load_telegram_chats() -> dict[str, str]:
+    path = os.getenv("TELEGRAM_CHAT_CONFIG", DEFAULT_TELEGRAM_CHAT_CONFIG_PATH)
+    raw_json = os.getenv("TELEGRAM_CHATS_JSON", "").strip()
+    if raw_json:
+        raw = json.loads(raw_json)
+    elif os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as file:
+            raw = json.load(file)
+    else:
+        return {}
+
+    if isinstance(raw, dict) and isinstance(raw.get("students"), list):
+        items = raw["students"]
+    elif isinstance(raw, list):
+        items = raw
+    elif isinstance(raw, dict):
+        items = [{"name": name, "chatId": chat_id} for name, chat_id in raw.items()]
+    else:
+        raise BackendError("Unexpected TELEGRAM_CHAT_CONFIG format", HTTPStatus.INTERNAL_SERVER_ERROR)
+
+    chats: dict[str, str] = {}
+    for item in items:
+        if not isinstance(item, dict) or item.get("enabled") is False:
+            continue
+        name = normalize_text(item.get("name"))
+        chat_id = normalize_text(item.get("chatId") or item.get("chat_id"))
+        if name and chat_id:
+            chats[normalize_group_name(name)] = chat_id
+    return chats
 
 
 def children_by_parent(groups: list[dict[str, Any]]) -> dict[int, list[int]]:
@@ -862,6 +905,115 @@ def strip_for_public(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def format_report_number(value: Any, digits: int = 2) -> str:
+    return f"{float(value or 0):.{digits}f}".replace(".", ",")
+
+
+def average_values(values: list[Any]) -> float:
+    numbers = [float(value or 0) for value in values]
+    return sum(numbers) / len(numbers) if numbers else 0.0
+
+
+def build_student_telegram_report(student_name: str, rows: list[dict[str, Any]], period: dict[str, Any]) -> str:
+    sorted_rows = sorted(
+        rows,
+        key=lambda row: (
+            str(row.get("subject") or ""),
+            str(row.get("level") or ""),
+            str(row.get("group") or ""),
+        ),
+    )
+    period_label = f"{period.get('from', '...')} — {period.get('to', '...')}"
+    average_coefficient = average_values([row.get("coefficient") for row in sorted_rows])
+    average_quality = average_values([row.get("quality") for row in sorted_rows])
+    average_final = average_values([row.get("finalScore") for row in sorted_rows])
+    total_penalty = sum(float(row.get("penalty") or 0) for row in sorted_rows)
+
+    lines = [
+        f"Отчёт по марафону: {student_name}",
+        f"Период: {period_label}",
+        "",
+        f"Коэффициент: {format_report_number(average_coefficient)}",
+        f"Качество: {format_report_number(average_quality)}",
+        f"Штраф: {format_report_number(total_penalty, 0)}",
+        f"Итоговый балл: {format_report_number(average_final)}",
+        "",
+    ]
+
+    for row in sorted_rows:
+        subject = SUBJECT_LABELS.get(str(row.get("subject") or ""), row.get("subject") or "")
+        lines.extend([
+            f"{subject} {row.get('level') or ''} · {row.get('group') or ''}",
+            f"Дни: {int(row.get('daysDone') or 0)}/{int(row.get('daysTotal') or 0)} · "
+            f"Качество: {format_report_number(row.get('quality'))} · "
+            f"Балл: {format_report_number(row.get('baseScore'))} · "
+            f"Штраф: {format_report_number(row.get('penalty'), 0)} · "
+            f"Итог: {format_report_number(row.get('finalScore'))}",
+            f"Место в группе: {int(row.get('groupPlace') or 0)} · "
+            f"Место в школе: {int(row.get('schoolPlace') or 0)}",
+            f"Преподаватель: {row.get('teacher') or 'Без преподавателя'}",
+            "",
+        ])
+
+    text = "\n".join(lines).strip()
+    if len(text) > 3900:
+        return text[:3850].rstrip() + "\n\nОтчёт сокращён, полная версия доступна в админке."
+    return text
+
+
+def send_telegram_message(chat_id: str, text: str) -> dict[str, Any]:
+    token = clean_authorization_header(os.getenv("TELEGRAM_BOT_TOKEN", ""))
+    if not token:
+        raise BackendError("TELEGRAM_BOT_TOKEN is not configured", HTTPStatus.INTERNAL_SERVER_ERROR)
+    response = requests.post(
+        f"{TELEGRAM_API_BASE}/bot{token}/sendMessage",
+        json={
+            "chat_id": chat_id,
+            "text": text,
+            "disable_web_page_preview": True,
+        },
+        timeout=30,
+    )
+    if response.status_code >= 400:
+        raise BackendError(f"Telegram API error {response.status_code}: {response.text[:500]}", response.status_code)
+    return response.json()
+
+
+def send_telegram_reports(rows: list[dict[str, Any]], period: dict[str, Any], student_name: str = "") -> dict[str, Any]:
+    chats = load_telegram_chats()
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        name = normalize_text(row.get("name"))
+        if student_name and name != student_name:
+            continue
+        if name:
+            grouped[name].append(row)
+
+    sent: list[dict[str, Any]] = []
+    missing: list[str] = []
+    errors: list[dict[str, Any]] = []
+
+    for name in sorted(grouped):
+        chat_id = chats.get(normalize_group_name(name))
+        if not chat_id:
+            missing.append(name)
+            continue
+        try:
+            text = build_student_telegram_report(name, grouped[name], period)
+            result = send_telegram_message(chat_id, text)
+            sent.append({"name": name, "chatId": chat_id, "messageId": result.get("result", {}).get("message_id")})
+            time.sleep(0.05)
+        except Exception as error:
+            errors.append({"name": name, "chatId": chat_id, "error": str(error)})
+
+    return {
+        "ok": len(errors) == 0,
+        "sent": sent,
+        "missing": missing,
+        "errors": errors,
+    }
+
+
 def load_ratings(
     period_from: str,
     period_to: str,
@@ -907,6 +1059,32 @@ def load_ratings(
         "rows": rows,
         "errors": errors,
     }
+
+
+def resolve_ratings_payload(query: dict[str, str]) -> dict[str, Any]:
+    default_from, default_to = current_month_range()
+    config = load_group_config()
+    configured_ids, missing_names, missing_candidates = resolve_config_group_ids(fetch_group_tree(), config)
+    period_from = query.get("periodFrom") or os.getenv("SOHOLMS_PERIOD_FROM") or config.get("periodFrom") or default_from
+    period_to = query.get("periodTo") or os.getenv("SOHOLMS_PERIOD_TO") or config.get("periodTo") or default_to
+    group_ids = parse_int_set(query.get("groupIds", "")) or configured_ids or None
+    subjects = parse_str_set(query.get("subjects", ""))
+    include_virtual = query.get("includeVirtual") == "1" or bool(config.get("includeVirtual"))
+    origins = parse_origin_set(query.get("origins", ""))
+    limit = parse_limit(query.get("limit", ""))
+    cache_key = f"ratings:{period_from}:{period_to}:{group_ids}:{subjects}:{include_virtual}:{origins}:{limit}"
+    payload = cached(
+        cache_key,
+        DEFAULT_CACHE_SECONDS,
+        lambda: load_ratings(period_from, period_to, group_ids, subjects, include_virtual, origins, limit),
+    )
+    if missing_names:
+        payload = {
+            **payload,
+            "missingConfigNames": missing_names,
+            "missingConfigCandidates": missing_candidates,
+        }
+    return payload
 
 
 def parse_int_set(value: str) -> set[int] | None:
@@ -977,6 +1155,28 @@ class Handler(BaseHTTPRequestHandler):
         self.send_cors_headers()
         self.end_headers()
 
+    def do_POST(self):
+        try:
+            parsed = urlparse(self.path)
+            query = {key: values[-1] for key, values in parse_qs(parsed.query).items()}
+
+            if parsed.path == "/api/telegram/send-report":
+                self.require_admin(query)
+                body = self.read_json_body()
+                payload = resolve_ratings_payload(query)
+                result = send_telegram_reports(
+                    payload.get("rows", []),
+                    payload.get("period", {}),
+                    normalize_text(body.get("studentName") if isinstance(body, dict) else ""),
+                )
+                return self.send_json(result, HTTPStatus.OK if result.get("ok") else HTTPStatus.BAD_GATEWAY)
+
+            self.send_json({"ok": False, "error": "Not found"}, HTTPStatus.NOT_FOUND)
+        except BackendError as error:
+            self.send_json({"ok": False, "error": str(error)}, error.status)
+        except Exception as error:
+            self.send_json({"ok": False, "error": str(error)}, HTTPStatus.INTERNAL_SERVER_ERROR)
+
     def do_GET(self):
         try:
             parsed = urlparse(self.path)
@@ -1043,30 +1243,9 @@ class Handler(BaseHTTPRequestHandler):
                 })
 
             if parsed.path == "/api/ratings":
-                default_from, default_to = current_month_range()
-                config = load_group_config()
-                configured_ids, missing_names, missing_candidates = resolve_config_group_ids(fetch_group_tree(), config)
-                period_from = query.get("periodFrom") or os.getenv("SOHOLMS_PERIOD_FROM") or config.get("periodFrom") or default_from
-                period_to = query.get("periodTo") or os.getenv("SOHOLMS_PERIOD_TO") or config.get("periodTo") or default_to
-                group_ids = parse_int_set(query.get("groupIds", "")) or configured_ids or None
-                subjects = parse_str_set(query.get("subjects", ""))
-                include_virtual = query.get("includeVirtual") == "1" or bool(config.get("includeVirtual"))
-                origins = parse_origin_set(query.get("origins", ""))
-                limit = parse_limit(query.get("limit", ""))
-                cache_key = f"ratings:{period_from}:{period_to}:{group_ids}:{subjects}:{include_virtual}:{origins}:{limit}"
-                payload = cached(
-                    cache_key,
-                    DEFAULT_CACHE_SECONDS,
-                    lambda: load_ratings(period_from, period_to, group_ids, subjects, include_virtual, origins, limit),
-                )
+                payload = resolve_ratings_payload(query)
                 if query.get("public") == "1":
                     payload = strip_for_public(payload)
-                if missing_names:
-                    payload = {
-                        **payload,
-                        "missingConfigNames": missing_names,
-                        "missingConfigCandidates": missing_candidates,
-                    }
                 return self.send_json(payload)
 
             self.send_json({"ok": False, "error": "Not found"}, HTTPStatus.NOT_FOUND)
@@ -1077,7 +1256,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def send_cors_headers(self):
         self.send_header("Access-Control-Allow-Origin", os.getenv("CORS_ORIGIN", "*"))
-        self.send_header("Access-Control-Allow-Methods", "GET,OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "content-type,authorization,x-admin-key")
         self.send_header("Access-Control-Allow-Private-Network", "true")
 
@@ -1087,6 +1266,17 @@ class Handler(BaseHTTPRequestHandler):
         value = self.headers.get("x-admin-key", "") or query.get("adminKey", "")
         if not admin_key_matches(value):
             raise BackendError("Forbidden", HTTPStatus.FORBIDDEN)
+
+    def read_json_body(self) -> dict[str, Any]:
+        length = int(self.headers.get("content-length") or 0)
+        if length <= 0:
+            return {}
+        raw = self.rfile.read(length)
+        try:
+            data = json.loads(raw.decode("utf-8"))
+        except json.JSONDecodeError:
+            raise BackendError("Invalid JSON body", HTTPStatus.BAD_REQUEST)
+        return data if isinstance(data, dict) else {}
 
     def send_json(self, payload: Any, status: int = HTTPStatus.OK):
         body = json_bytes(payload)
