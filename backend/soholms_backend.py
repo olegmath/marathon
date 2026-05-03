@@ -113,7 +113,7 @@ class BackendError(Exception):
 
 
 class PdfIcon(Flowable):
-    def __init__(self, kind: str, size: float = 9 * mm):
+    def __init__(self, kind: str, size: float = 7 * mm):
         super().__init__()
         self.kind = kind
         self.width = size
@@ -293,9 +293,23 @@ def telegram_chat_ids_from_item(item: dict[str, Any]) -> list[str]:
     return chat_ids
 
 
+def load_split_env_json(prefix: str) -> str:
+    direct_value = os.getenv(prefix, "").strip()
+    if direct_value:
+        return direct_value
+
+    parts: list[str] = []
+    for index in range(1, 100):
+        value = os.getenv(f"{prefix}_PART_{index}", "")
+        if not value:
+            break
+        parts.append(value)
+    return "".join(parts).strip()
+
+
 def load_telegram_chats() -> dict[str, list[str]]:
     path = os.getenv("TELEGRAM_CHAT_CONFIG", DEFAULT_TELEGRAM_CHAT_CONFIG_PATH)
-    raw_json = os.getenv("TELEGRAM_CHATS_JSON", "").strip()
+    raw_json = load_split_env_json("TELEGRAM_CHATS_JSON")
     if raw_json:
         raw = json.loads(raw_json)
     elif os.path.exists(path):
@@ -1061,73 +1075,73 @@ def build_student_pdf_report(student_name: str, rows: list[dict[str, Any]], peri
     document = SimpleDocTemplate(
         buffer,
         pagesize=A4,
-        leftMargin=18 * mm,
-        rightMargin=18 * mm,
-        topMargin=12 * mm,
-        bottomMargin=12 * mm,
+        leftMargin=14 * mm,
+        rightMargin=14 * mm,
+        topMargin=10 * mm,
+        bottomMargin=10 * mm,
     )
     title_white = ParagraphStyle(
         "TitleWhite",
         fontName=bold_font,
-        fontSize=25,
-        leading=29,
+        fontSize=19,
+        leading=22,
         textColor=colors.white,
     )
     subtitle_white = ParagraphStyle(
         "SubtitleWhite",
         fontName=regular_font,
-        fontSize=12.2,
-        leading=15,
+        fontSize=9.6,
+        leading=12,
         textColor=colors.white,
     )
     body_style = ParagraphStyle(
         "ParentBody",
         fontName=regular_font,
-        fontSize=12.7,
-        leading=17,
+        fontSize=9.7,
+        leading=12.3,
         textColor=colors.HexColor("#2d3146"),
     )
     body_bold = ParagraphStyle(
         "ParentBodyBold",
         parent=body_style,
         fontName=bold_font,
-        fontSize=13.2,
-        leading=17,
+        fontSize=10.4,
+        leading=12.6,
     )
     small_label = ParagraphStyle(
         "SmallLabel",
         fontName=regular_font,
-        fontSize=8.4,
-        leading=11,
+        fontSize=7.4,
+        leading=9,
         textColor=colors.HexColor("#8b97ab"),
     )
     student_name_style = ParagraphStyle(
         "StudentName",
         fontName=bold_font,
-        fontSize=13.2,
-        leading=16,
+        fontSize=10.8,
+        leading=13,
         textColor=colors.HexColor("#2d3146"),
     )
     section_title = ParagraphStyle(
         "SectionTitle",
         fontName=bold_font,
-        fontSize=14.3,
-        leading=17,
+        fontSize=11.6,
+        leading=14,
         textColor=colors.HexColor("#2d3146"),
     )
     table_header_style = ParagraphStyle(
         "TableHeader",
         fontName=bold_font,
-        fontSize=8.8,
-        leading=10.5,
+        fontSize=7.2,
+        leading=8.4,
         alignment=1,
         textColor=colors.white,
     )
     table_cell_style = ParagraphStyle(
         "TableCell",
         fontName=regular_font,
-        fontSize=8.8,
-        leading=10.8,
+        fontSize=7.3,
+        leading=8.6,
         alignment=1,
         textColor=colors.HexColor("#2d3146"),
     )
@@ -1139,10 +1153,10 @@ def build_student_pdf_report(student_name: str, rows: list[dict[str, Any]], peri
 
     logo_path = find_logo_path()
     if logo_path:
-        logo_cell: Any = ReportImage(logo_path, width=22 * mm, height=25 * mm)
+        logo_cell: Any = ReportImage(logo_path, width=18 * mm, height=18 * mm)
     else:
-        logo_cell = pdf_paragraph("постоянная\nпланка", ParagraphStyle("LogoFallback", fontName=bold_font, fontSize=8, leading=9, alignment=1))
-    logo_box = Table([[logo_cell]], colWidths=[26 * mm], rowHeights=[26 * mm])
+        logo_cell = pdf_paragraph("ПП", ParagraphStyle("LogoFallback", fontName=bold_font, fontSize=12, leading=14, alignment=1, textColor=colors.white))
+    logo_box = Table([[logo_cell]], colWidths=[20 * mm], rowHeights=[20 * mm])
     logo_box.setStyle(
         TableStyle(
             [
@@ -1167,8 +1181,8 @@ def build_student_pdf_report(student_name: str, rows: list[dict[str, Any]], peri
                 ],
             ]
         ],
-        colWidths=[34 * mm, 135 * mm],
-        rowHeights=[32 * mm],
+        colWidths=[28 * mm, 153 * mm],
+        rowHeights=[24 * mm],
     )
     header.setStyle(
         TableStyle(
@@ -1176,16 +1190,16 @@ def build_student_pdf_report(student_name: str, rows: list[dict[str, Any]], peri
                 ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#4562f0")),
                 ("ALIGN", (0, 0), (0, 0), "CENTER"),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("LEFTPADDING", (0, 0), (0, 0), 4 * mm),
-                ("RIGHTPADDING", (0, 0), (0, 0), 2 * mm),
-                ("TOPPADDING", (0, 0), (0, 0), 3 * mm),
-                ("BOTTOMPADDING", (0, 0), (0, 0), 3 * mm),
-                ("LEFTPADDING", (1, 0), (1, 0), 5 * mm),
-                ("RIGHTPADDING", (1, 0), (1, 0), 8 * mm),
+                ("LEFTPADDING", (0, 0), (0, 0), 3 * mm),
+                ("RIGHTPADDING", (0, 0), (0, 0), 1 * mm),
+                ("TOPPADDING", (0, 0), (0, 0), 2 * mm),
+                ("BOTTOMPADDING", (0, 0), (0, 0), 2 * mm),
+                ("LEFTPADDING", (1, 0), (1, 0), 3 * mm),
+                ("RIGHTPADDING", (1, 0), (1, 0), 5 * mm),
             ]
         )
     )
-    story: list[Any] = [header, Spacer(1, 6 * mm)]
+    story: list[Any] = [header, Spacer(1, 4 * mm)]
 
     about = Table(
         [
@@ -1199,28 +1213,28 @@ def build_student_pdf_report(student_name: str, rows: list[dict[str, Any]], peri
                 )
             ],
         ],
-        colWidths=[169 * mm],
+        colWidths=[181 * mm],
     )
     about.setStyle(
         TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f2f6ff")),
                 ("LINEBEFORE", (0, 0), (0, -1), 3, colors.HexColor("#4562f0")),
-                ("LEFTPADDING", (0, 0), (-1, -1), 12),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 12),
-                ("TOPPADDING", (0, 0), (-1, 0), 10),
-                ("BOTTOMPADDING", (0, 0), (-1, 0), 4),
+                ("LEFTPADDING", (0, 0), (-1, -1), 9),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 9),
+                ("TOPPADDING", (0, 0), (-1, 0), 7),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 2),
                 ("TOPPADDING", (0, 1), (-1, 1), 0),
-                ("BOTTOMPADDING", (0, 1), (-1, 1), 12),
+                ("BOTTOMPADDING", (0, 1), (-1, 1), 8),
             ]
         )
     )
-    story.extend([about, Spacer(1, 6 * mm)])
+    story.extend([about, Spacer(1, 4 * mm)])
 
     check = Table(
         [[PdfIcon("check"), pdf_paragraph("В формате марафона ученики получают", body_bold)]],
-        colWidths=[9 * mm, 153 * mm],
-        rowHeights=[9 * mm],
+        colWidths=[7 * mm, 167 * mm],
+        rowHeights=[7 * mm],
     )
     check.setStyle(
         TableStyle(
@@ -1228,7 +1242,7 @@ def build_student_pdf_report(student_name: str, rows: list[dict[str, Any]], peri
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                 ("LEFTPADDING", (0, 0), (0, 0), 0),
                 ("RIGHTPADDING", (0, 0), (0, 0), 0),
-                ("LEFTPADDING", (1, 0), (1, 0), 8),
+                ("LEFTPADDING", (1, 0), (1, 0), 7),
             ]
         )
     )
@@ -1245,23 +1259,23 @@ def build_student_pdf_report(student_name: str, rows: list[dict[str, Any]], peri
         [
             Spacer(1, 4 * mm),
             pdf_paragraph(bullet_text, body_style),
-            Spacer(1, 2.2 * mm),
+            Spacer(1, 1.5 * mm),
             pdf_paragraph(
                 "Такой формат помогает поддерживать темп подготовки и значительно повышает результат "
                 "по первой части экзамена.",
                 body_style,
             ),
-            Spacer(1, 5 * mm),
+            Spacer(1, 3 * mm),
             pdf_paragraph("Ученик", small_label),
             pdf_paragraph(student_name, student_name_style),
-            Spacer(1, 4 * mm),
+            Spacer(1, 2.5 * mm),
         ]
     )
 
     section = Table(
         [[PdfIcon("chart"), pdf_paragraph("Статистика по марафонам", section_title)]],
-        colWidths=[9 * mm, 153 * mm],
-        rowHeights=[9 * mm],
+        colWidths=[7 * mm, 167 * mm],
+        rowHeights=[7 * mm],
     )
     section.setStyle(
         TableStyle(
@@ -1269,11 +1283,11 @@ def build_student_pdf_report(student_name: str, rows: list[dict[str, Any]], peri
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                 ("LEFTPADDING", (0, 0), (0, 0), 0),
                 ("RIGHTPADDING", (0, 0), (0, 0), 0),
-                ("LEFTPADDING", (1, 0), (1, 0), 8),
+                ("LEFTPADDING", (1, 0), (1, 0), 7),
             ]
         )
     )
-    story.extend([section, Spacer(1, 4 * mm)])
+    story.extend([section, Spacer(1, 3 * mm)])
 
     table_data: list[list[Any]] = [
         [
@@ -1298,7 +1312,7 @@ def build_student_pdf_report(student_name: str, rows: list[dict[str, Any]], peri
             ]
         )
 
-    col_widths = [22 * mm, 32 * mm, 28 * mm, 27 * mm, 32 * mm, 28 * mm]
+    col_widths = [28 * mm, 30 * mm, 26 * mm, 28 * mm, 30 * mm, 39 * mm]
     report_table = Table(table_data, colWidths=col_widths, repeatRows=1)
     report_table.setStyle(
         TableStyle(
@@ -1307,14 +1321,14 @@ def build_student_pdf_report(student_name: str, rows: list[dict[str, Any]], peri
                 ("GRID", (0, 0), (-1, -1), 0.45, colors.HexColor("#d9e5ea")),
                 ("BACKGROUND", (0, 1), (-1, -1), colors.white),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("TOPPADDING", (0, 0), (-1, -1), 7),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
-                ("LEFTPADDING", (0, 0), (-1, -1), 4),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("LEFTPADDING", (0, 0), (-1, -1), 3),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 3),
             ]
         )
     )
-    story.extend([report_table, Spacer(1, 8 * mm)])
+    story.extend([report_table, Spacer(1, 5 * mm)])
 
     parent_note = Table(
         [
@@ -1331,17 +1345,17 @@ def build_student_pdf_report(student_name: str, rows: list[dict[str, Any]], peri
                 )
             ]
         ],
-        colWidths=[169 * mm],
+        colWidths=[181 * mm],
     )
     parent_note.setStyle(
         TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#fff7ed")),
                 ("BOX", (0, 0), (-1, -1), 0.7, colors.HexColor("#ffbd3e")),
-                ("LEFTPADDING", (0, 0), (-1, -1), 12),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 12),
-                ("TOPPADDING", (0, 0), (-1, -1), 12),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+                ("LEFTPADDING", (0, 0), (-1, -1), 9),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 9),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
             ]
         )
     )
