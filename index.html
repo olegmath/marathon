@@ -1092,10 +1092,17 @@
   }
 
   function parseApiRows(rows) {
-    return createRankedStudents(rows.map((row) => ({
+    const parsedRows = rows.map((row) => {
+      const finalScore = Number(row.finalScore ?? row.score) || 0;
+      const schoolPlace = Number(row.schoolPlace) || 0;
+      return {
       ...row,
-      score: Number(row.score) || 0,
-      finalScore: Number(row.finalScore ?? row.score) || 0,
+      score: finalScore,
+      finalScore,
+      groupPlace: Number(row.groupPlace) || 0,
+      schoolPlace,
+      place: schoolPlace,
+      status: getScoreStatus(finalScore),
       dailyScores: Array.isArray(row.dailyScores)
         ? row.dailyScores.map((item) => ({
           ...item,
@@ -1103,7 +1110,36 @@
           dateOrder: Number(item.dateOrder) || 0,
         }))
         : [],
-    })));
+      };
+    });
+
+    const needsFallbackPlaces = parsedRows.some((row) => !row.schoolPlace);
+    if (!needsFallbackPlaces) return parsedRows;
+
+    const grouped = new Map();
+    for (const row of parsedRows) {
+      const key = `${row.subject}||${row.level}`;
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key).push(row);
+    }
+
+    for (const groupRows of grouped.values()) {
+      const sorted = [...groupRows].sort((a, b) => b.score - a.score);
+      let place = 0;
+      let previousScore = null;
+      for (const row of sorted) {
+        if (row.score !== previousScore) {
+          place++;
+          previousScore = row.score;
+        }
+        row.schoolPlace = place;
+      }
+    }
+
+    return parsedRows.map((row) => ({
+      ...row,
+      place: row.schoolPlace,
+    }));
   }
 
   function parseGvizData(gvizJson, subject, level) {

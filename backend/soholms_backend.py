@@ -850,6 +850,8 @@ def public_row(row: dict[str, Any]) -> dict[str, Any]:
         "teacher": row.get("teacher", "Без преподавателя"),
         "score": row.get("score", 0),
         "finalScore": row.get("finalScore", row.get("score", 0)),
+        "groupPlace": row.get("groupPlace", 0),
+        "schoolPlace": row.get("schoolPlace", 0),
     }
 
 
