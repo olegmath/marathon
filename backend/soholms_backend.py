@@ -23,9 +23,17 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
+from xml.sax.saxutils import escape as xml_escape
 
 import requests
 from openpyxl import load_workbook
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.units import mm
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 
 def load_env_file(path: str) -> None:
@@ -93,6 +101,7 @@ MONTHS_RU = {
 }
 
 _CACHE: dict[str, tuple[float, Any]] = {}
+_PDF_FONT_NAMES: tuple[str, str] | None = None
 
 
 class BackendError(Exception):
@@ -914,6 +923,197 @@ def average_values(values: list[Any]) -> float:
     return sum(numbers) / len(numbers) if numbers else 0.0
 
 
+def register_pdf_fonts() -> tuple[str, str]:
+    global _PDF_FONT_NAMES
+    if _PDF_FONT_NAMES:
+        return _PDF_FONT_NAMES
+
+    regular_candidates = (
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/Library/Fonts/DejaVuSans.ttf",
+        "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+        "/System/Library/Fonts/Supplemental/Arial.ttf",
+        "/Library/Fonts/Arial Unicode.ttf",
+        "/Library/Fonts/Arial.ttf",
+    )
+    bold_candidates = (
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/Library/Fonts/DejaVuSans-Bold.ttf",
+        "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+        "/Library/Fonts/Arial Bold.ttf",
+    )
+    regular_path = next((path for path in regular_candidates if os.path.exists(path)), "")
+    bold_path = next((path for path in bold_candidates if os.path.exists(path)), "")
+
+    if regular_path:
+        pdfmetrics.registerFont(TTFont("MarathonSans", regular_path))
+        regular_font = "MarathonSans"
+    else:
+        regular_font = "Helvetica"
+
+    if bold_path:
+        pdfmetrics.registerFont(TTFont("MarathonSans-Bold", bold_path))
+        bold_font = "MarathonSans-Bold"
+    else:
+        bold_font = regular_font if regular_path else "Helvetica-Bold"
+
+    _PDF_FONT_NAMES = (regular_font, bold_font)
+    return _PDF_FONT_NAMES
+
+
+def pdf_text(value: Any) -> Paragraph:
+    regular_font, _ = register_pdf_fonts()
+    style = ParagraphStyle(
+        "Cell",
+        fontName=regular_font,
+        fontSize=7.2,
+        leading=8.6,
+        textColor=colors.HexColor("#20242a"),
+    )
+    return Paragraph(xml_escape(normalize_text(value)), style)
+
+
+def build_student_pdf_report(student_name: str, rows: list[dict[str, Any]], period: dict[str, Any]) -> bytes:
+    regular_font, bold_font = register_pdf_fonts()
+    sorted_rows = sorted(
+        rows,
+        key=lambda row: (
+            str(row.get("subject") or ""),
+            str(row.get("level") or ""),
+            str(row.get("group") or ""),
+        ),
+    )
+    period_label = f"{period.get('from', '...')} - {period.get('to', '...')}"
+    average_coefficient = average_values([row.get("coefficient") for row in sorted_rows])
+    average_quality = average_values([row.get("quality") for row in sorted_rows])
+    average_final = average_values([row.get("finalScore") for row in sorted_rows])
+    total_penalty = sum(float(row.get("penalty") or 0) for row in sorted_rows)
+
+    buffer = io.BytesIO()
+    document = SimpleDocTemplate(
+        buffer,
+        pagesize=landscape(A4),
+        leftMargin=10 * mm,
+        rightMargin=10 * mm,
+        topMargin=9 * mm,
+        bottomMargin=9 * mm,
+    )
+    title_style = ParagraphStyle(
+        "Title",
+        fontName=bold_font,
+        fontSize=18,
+        leading=22,
+        textColor=colors.HexColor("#151820"),
+        spaceAfter=3 * mm,
+    )
+    meta_style = ParagraphStyle(
+        "Meta",
+        fontName=regular_font,
+        fontSize=9,
+        leading=12,
+        textColor=colors.HexColor("#55616a"),
+        spaceAfter=5 * mm,
+    )
+    story: list[Any] = [
+        Paragraph(f"Отчет по марафону: {xml_escape(student_name)}", title_style),
+        Paragraph(f"Период: {xml_escape(period_label)}", meta_style),
+    ]
+
+    metric_data = [
+        ["Коэффициент", "Качество", "Штраф", "Итоговый балл"],
+        [
+            format_report_number(average_coefficient),
+            format_report_number(average_quality),
+            format_report_number(total_penalty, 0),
+            format_report_number(average_final),
+        ],
+    ]
+    metric_table = Table(metric_data, colWidths=[63 * mm, 63 * mm, 63 * mm, 63 * mm])
+    metric_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#eef9fd")),
+                ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#cfeaf4")),
+                ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#dcecf2")),
+                ("FONTNAME", (0, 0), (-1, 0), bold_font),
+                ("FONTNAME", (0, 1), (-1, 1), bold_font),
+                ("FONTSIZE", (0, 0), (-1, 0), 8),
+                ("FONTSIZE", (0, 1), (-1, 1), 16),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#3d4a52")),
+                ("TEXTCOLOR", (0, 1), (-1, 1), colors.HexColor("#151820")),
+                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+                ("LEFTPADDING", (0, 0), (-1, -1), 7),
+            ]
+        )
+    )
+    story.extend([metric_table, Spacer(1, 5 * mm)])
+
+    table_data: list[list[Any]] = [
+        [
+            "Предмет",
+            "Экзамен",
+            "Группа",
+            "Дней",
+            "Коэфф.",
+            "Качество",
+            "Балл",
+            "Штраф",
+            "Итог",
+            "Место\nв группе",
+            "Место\nв школе",
+            "Преподаватель",
+        ]
+    ]
+    for row in sorted_rows:
+        subject = SUBJECT_LABELS.get(str(row.get("subject") or ""), row.get("subject") or "")
+        table_data.append(
+            [
+                pdf_text(subject),
+                pdf_text(row.get("level") or ""),
+                pdf_text(row.get("group") or ""),
+                f"{int(row.get('daysDone') or 0)}/{int(row.get('daysTotal') or 0)}",
+                format_report_number(row.get("coefficient")),
+                format_report_number(row.get("quality")),
+                format_report_number(row.get("baseScore")),
+                format_report_number(row.get("penalty"), 0),
+                format_report_number(row.get("finalScore")),
+                str(int(row.get("groupPlace") or 0)),
+                str(int(row.get("schoolPlace") or 0)),
+                pdf_text(row.get("teacher") or "Без преподавателя"),
+            ]
+        )
+
+    col_widths = [24 * mm, 15 * mm, 43 * mm, 16 * mm, 18 * mm, 20 * mm, 18 * mm, 16 * mm, 18 * mm, 20 * mm, 20 * mm, 42 * mm]
+    report_table = Table(table_data, colWidths=col_widths, repeatRows=1)
+    report_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e9f7fc")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#151820")),
+                ("FONTNAME", (0, 0), (-1, 0), bold_font),
+                ("FONTNAME", (0, 1), (-1, -1), regular_font),
+                ("FONTSIZE", (0, 0), (-1, 0), 7.3),
+                ("FONTSIZE", (0, 1), (-1, -1), 7.2),
+                ("GRID", (0, 0), (-1, -1), 0.45, colors.HexColor("#d9e5ea")),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#fbfdfe")]),
+                ("ALIGN", (3, 1), (10, -1), "RIGHT"),
+                ("ALIGN", (3, 0), (10, 0), "RIGHT"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ]
+        )
+    )
+    story.append(report_table)
+    document.build(story)
+    return buffer.getvalue()
+
+
 def build_student_telegram_report(student_name: str, rows: list[dict[str, Any]], period: dict[str, Any]) -> str:
     sorted_rows = sorted(
         rows,
@@ -961,6 +1161,11 @@ def build_student_telegram_report(student_name: str, rows: list[dict[str, Any]],
     return text
 
 
+def report_filename(student_name: str) -> str:
+    cleaned = re.sub(r"[^0-9A-Za-zА-Яа-яЁё_-]+", "_", normalize_text(student_name)).strip("_")
+    return f"marathon_report_{cleaned or 'student'}.pdf"
+
+
 def send_telegram_message(chat_id: str, text: str) -> dict[str, Any]:
     token = clean_authorization_header(os.getenv("TELEGRAM_BOT_TOKEN", ""))
     if not token:
@@ -979,7 +1184,33 @@ def send_telegram_message(chat_id: str, text: str) -> dict[str, Any]:
     return response.json()
 
 
-def send_telegram_reports(rows: list[dict[str, Any]], period: dict[str, Any], student_name: str = "") -> dict[str, Any]:
+def send_telegram_document(chat_id: str, pdf_bytes: bytes, filename: str, caption: str) -> dict[str, Any]:
+    token = clean_authorization_header(os.getenv("TELEGRAM_BOT_TOKEN", ""))
+    if not token:
+        raise BackendError("TELEGRAM_BOT_TOKEN is not configured", HTTPStatus.INTERNAL_SERVER_ERROR)
+    response = requests.post(
+        f"{TELEGRAM_API_BASE}/bot{token}/sendDocument",
+        data={
+            "chat_id": chat_id,
+            "caption": caption[:1024],
+        },
+        files={
+            "document": (filename, pdf_bytes, "application/pdf"),
+        },
+        timeout=60,
+    )
+    if response.status_code >= 400:
+        raise BackendError(f"Telegram API error {response.status_code}: {response.text[:500]}", response.status_code)
+    return response.json()
+
+
+def send_telegram_reports(
+    rows: list[dict[str, Any]],
+    period: dict[str, Any],
+    student_name: str = "",
+    *,
+    send_pdf: bool = False,
+) -> dict[str, Any]:
     chats = load_telegram_chats()
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
@@ -999,8 +1230,13 @@ def send_telegram_reports(rows: list[dict[str, Any]], period: dict[str, Any], st
             missing.append(name)
             continue
         try:
-            text = build_student_telegram_report(name, grouped[name], period)
-            result = send_telegram_message(chat_id, text)
+            if send_pdf:
+                pdf_bytes = build_student_pdf_report(name, grouped[name], period)
+                caption = f"Отчет по марафону: {name}"
+                result = send_telegram_document(chat_id, pdf_bytes, report_filename(name), caption)
+            else:
+                text = build_student_telegram_report(name, grouped[name], period)
+                result = send_telegram_message(chat_id, text)
             sent.append({"name": name, "chatId": chat_id, "messageId": result.get("result", {}).get("message_id")})
             time.sleep(0.05)
         except Exception as error:
@@ -1008,6 +1244,7 @@ def send_telegram_reports(rows: list[dict[str, Any]], period: dict[str, Any], st
 
     return {
         "ok": len(errors) == 0,
+        "format": "pdf" if send_pdf else "text",
         "sent": sent,
         "missing": missing,
         "errors": errors,
@@ -1168,6 +1405,7 @@ class Handler(BaseHTTPRequestHandler):
                     payload.get("rows", []),
                     payload.get("period", {}),
                     normalize_text(body.get("studentName") if isinstance(body, dict) else ""),
+                    send_pdf=bool(isinstance(body, dict) and body.get("format") == "pdf"),
                 )
                 return self.send_json(result, HTTPStatus.OK if result.get("ok") else HTTPStatus.BAD_GATEWAY)
 

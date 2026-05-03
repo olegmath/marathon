@@ -2253,7 +2253,7 @@
           'content-type': 'application/json',
           ...(adminKey ? { 'x-admin-key': adminKey } : {}),
         },
-        body: JSON.stringify({ studentName }),
+        body: JSON.stringify({ studentName, format: 'pdf' }),
       });
       const data = await response.json();
       if (!response.ok || !data.ok) {
@@ -2261,9 +2261,9 @@
         throw new Error(firstError || data.error || 'Не удалось отправить Telegram-отчёт');
       }
       const missingText = data.missing?.length ? ` Не найден chat_id: ${data.missing.length}.` : '';
-      adminError = `Telegram: отправлено ${data.sent?.length || 0}.${missingText}`;
+      adminError = `Telegram PDF: отправлено ${data.sent?.length || 0}.${missingText}`;
     } catch (error) {
-      adminError = error.message || 'Не удалось отправить Telegram-отчёт';
+      adminError = error.message || 'Не удалось отправить Telegram PDF';
     } finally {
       adminLoading = false;
       render();
@@ -2285,9 +2285,9 @@
         <div class="pdf-actions">
           <button class="pdf-action-btn" type="button" id="pdf-one-student" ${pdfStudent ? '' : 'disabled'}>PDF по ученику</button>
           <button class="pdf-action-btn secondary" type="button" id="pdf-all-students">PDF по всем ученикам</button>
-          <button class="pdf-action-btn telegram" type="button" id="telegram-one-student" ${pdfStudent ? '' : 'disabled'}>Telegram по ученику</button>
-          <button class="pdf-action-btn telegram" type="button" id="telegram-all-students">Telegram всем</button>
-          <span class="pdf-action-note">Откроется печатная версия. В окне печати выбери “Сохранить в PDF”.</span>
+          <button class="pdf-action-btn telegram" type="button" id="telegram-one-student" ${pdfStudent ? '' : 'disabled'}>Telegram PDF по ученику</button>
+          <button class="pdf-action-btn telegram" type="button" id="telegram-all-students">Telegram PDF всем</button>
+          <span class="pdf-action-note">PDF-кнопки открывают печатную версию. Telegram отправляет готовый PDF-файл через бота.</span>
         </div>
       </div>
     `;

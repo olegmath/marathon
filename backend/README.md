@@ -11,6 +11,7 @@
 - Скачивает XLSX-журнал по каждой группе через `attendance-sheet/excel/data`.
 - Парсит учеников, группы, преподавателей, дневные оценки и считает поля для рейтинга.
 - Отдает JSON для сайта.
+- Формирует PDF-отчеты учеников и отправляет их через Telegram-бота.
 
 ## Запуск локально
 
@@ -217,6 +218,24 @@ SOHOLMS_CONCURRENCY=2
 SOHOLMS_MAX_GROUPS=80
 SOHOLMS_DEADLINE_SHIFT_DAYS=1
 ```
+
+## Telegram PDF-отчеты
+
+В админке во вкладке `PDF` есть две кнопки:
+
+- `Telegram PDF по ученику` - отправляет отчет выбранному ученику.
+- `Telegram PDF всем` - отправляет отдельный PDF каждому ученику, у которого есть `chat_id`.
+
+Для отправки нужны:
+
+```text
+TELEGRAM_BOT_TOKEN=токен_бота_от_BotFather
+TELEGRAM_CHATS_JSON={"students":[{"name":"Аникин Денис","chatId":"123456789","enabled":true}]}
+```
+
+Имя в `TELEGRAM_CHATS_JSON` должно совпадать с именем ученика в рейтинге. На Railway удобнее хранить именно `TELEGRAM_CHATS_JSON`, а локально можно использовать файл `backend/telegram_chats.json` по примеру `backend/telegram_chats.example.json`.
+
+PDF создается на backend через `reportlab`. В Dockerfile добавлен шрифт DejaVu, чтобы русские буквы в PDF отображались нормально.
 
 После деплоя проверь:
 
