@@ -230,12 +230,21 @@ SOHOLMS_DEADLINE_SHIFT_DAYS=1
 
 ```text
 TELEGRAM_BOT_TOKEN=токен_бота_от_BotFather
-TELEGRAM_CHATS_JSON={"students":[{"name":"Аникин Денис","chatId":"123456789","enabled":true}]}
+TELEGRAM_CHATS_JSON={"students":[{"name":"Аникин Денис","parents":["Аникина Мария"],"chatIds":["123456789"],"enabled":true}]}
 ```
 
-Имя в `TELEGRAM_CHATS_JSON` должно совпадать с именем ученика в рейтинге. На Railway удобнее хранить именно `TELEGRAM_CHATS_JSON`, а локально можно использовать файл `backend/telegram_chats.json` по примеру `backend/telegram_chats.example.json`.
+Имя в `TELEGRAM_CHATS_JSON` должно совпадать с именем ученика в рейтинге. Если у ученика несколько родителей, можно указать несколько `chatIds`. Старый формат с одним `chatId` тоже поддерживается. На Railway удобнее хранить именно `TELEGRAM_CHATS_JSON`, а локально можно использовать файл `backend/telegram_chats.json` по примеру `backend/telegram_chats.example.json`.
 
-PDF создается на backend через `reportlab`. В Dockerfile добавлен шрифт DejaVu, чтобы русские буквы в PDF отображались нормально.
+PDF создается на backend через `reportlab` в родительском формате: шапка с логотипом, описание марафона, имя ученика, таблица статистики по предметам и поясняющий блок для родителей. В Dockerfile добавлен шрифт DejaVu, чтобы русские буквы в PDF отображались нормально.
+
+Если есть XLSX с колонками `Ученик`, `Родитель`, `Чат ID`, можно собрать локальный файл автоматически:
+
+```bash
+cd /Users/hrabrovoleg/marathon/backend
+python3 import_telegram_chats.py "/Users/hrabrovoleg/Downloads/Отчет (апрель).xlsx"
+```
+
+Скрипт создаст `backend/telegram_chats.json`. Этот файл содержит реальные `chat_id`, поэтому он добавлен в `.gitignore` и не должен попадать в GitHub.
 
 После деплоя проверь:
 
@@ -280,7 +289,8 @@ Backend умеет отправлять компактный отчёт учен
   "students": [
     {
       "name": "Аникин Денис",
-      "chatId": "123456789",
+      "parents": ["Аникина Мария"],
+      "chatIds": ["123456789"],
       "enabled": true
     }
   ]
@@ -292,7 +302,7 @@ Backend умеет отправлять компактный отчёт учен
 На Railway удобнее задать mapping прямо переменной `TELEGRAM_CHATS_JSON`:
 
 ```json
-{"students":[{"name":"Аникин Денис","chatId":"123456789","enabled":true}]}
+{"students":[{"name":"Аникин Денис","parents":["Аникина Мария"],"chatIds":["123456789"],"enabled":true}]}
 ```
 
 Отправка из админки находится во вкладке `PDF`: кнопки `Telegram по ученику` и `Telegram всем`. Они требуют `BACKEND_ADMIN_KEY`, сохранённый в браузере:

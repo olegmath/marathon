@@ -2,7 +2,8 @@
   "students": [
     {
       "name": "Аникин Денис",
-      "chatId": "123456789",
+      "parents": ["Аникина Мария"],
+      "chatIds": ["123456789"],
       "enabled": true
     }
   ]

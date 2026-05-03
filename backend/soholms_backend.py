@@ -273,7 +273,27 @@ def load_group_config() -> dict[str, Any]:
         return json.load(file)
 
 
-def load_telegram_chats() -> dict[str, str]:
+def telegram_chat_ids_from_item(item: dict[str, Any]) -> list[str]:
+    raw_chat_ids = item.get("chatIds")
+    if raw_chat_ids is None:
+        raw_chat_ids = item.get("chat_ids")
+    if raw_chat_ids is None:
+        raw_chat_ids = [item.get("chatId") or item.get("chat_id")]
+    if not isinstance(raw_chat_ids, list):
+        raw_chat_ids = [raw_chat_ids]
+
+    chat_ids: list[str] = []
+    seen: set[str] = set()
+    for raw_chat_id in raw_chat_ids:
+        chat_id = normalize_text(raw_chat_id)
+        if not chat_id or chat_id in seen:
+            continue
+        seen.add(chat_id)
+        chat_ids.append(chat_id)
+    return chat_ids
+
+
+def load_telegram_chats() -> dict[str, list[str]]:
     path = os.getenv("TELEGRAM_CHAT_CONFIG", DEFAULT_TELEGRAM_CHAT_CONFIG_PATH)
     raw_json = os.getenv("TELEGRAM_CHATS_JSON", "").strip()
     if raw_json:
@@ -293,14 +313,17 @@ def load_telegram_chats() -> dict[str, str]:
     else:
         raise BackendError("Unexpected TELEGRAM_CHAT_CONFIG format", HTTPStatus.INTERNAL_SERVER_ERROR)
 
-    chats: dict[str, str] = {}
+    chats: dict[str, list[str]] = {}
     for item in items:
         if not isinstance(item, dict) or item.get("enabled") is False:
             continue
         name = normalize_text(item.get("name"))
-        chat_id = normalize_text(item.get("chatId") or item.get("chat_id"))
-        if name and chat_id:
-            chats[normalize_group_name(name)] = chat_id
+        chat_ids = telegram_chat_ids_from_item(item)
+        if name and chat_ids:
+            current = chats.setdefault(normalize_group_name(name), [])
+            for chat_id in chat_ids:
+                if chat_id not in current:
+                    current.append(chat_id)
     return chats
 
 
@@ -1438,22 +1461,27 @@ def send_telegram_reports(
     errors: list[dict[str, Any]] = []
 
     for name in sorted(grouped):
-        chat_id = chats.get(normalize_group_name(name))
-        if not chat_id:
+        chat_ids = chats.get(normalize_group_name(name)) or []
+        if not chat_ids:
             missing.append(name)
             continue
-        try:
-            if send_pdf:
-                pdf_bytes = build_student_pdf_report(name, grouped[name], period)
-                caption = f"Отчет по марафону: {name}"
-                result = send_telegram_document(chat_id, pdf_bytes, report_filename(name), caption)
-            else:
-                text = build_student_telegram_report(name, grouped[name], period)
-                result = send_telegram_message(chat_id, text)
-            sent.append({"name": name, "chatId": chat_id, "messageId": result.get("result", {}).get("message_id")})
-            time.sleep(0.05)
-        except Exception as error:
-            errors.append({"name": name, "chatId": chat_id, "error": str(error)})
+        pdf_bytes: bytes | None = None
+        text = ""
+        for chat_id in chat_ids:
+            try:
+                if send_pdf:
+                    if pdf_bytes is None:
+                        pdf_bytes = build_student_pdf_report(name, grouped[name], period)
+                    caption = f"Отчет по марафону: {name}"
+                    result = send_telegram_document(chat_id, pdf_bytes, report_filename(name), caption)
+                else:
+                    if not text:
+                        text = build_student_telegram_report(name, grouped[name], period)
+                    result = send_telegram_message(chat_id, text)
+                sent.append({"name": name, "chatId": chat_id, "messageId": result.get("result", {}).get("message_id")})
+                time.sleep(0.05)
+            except Exception as error:
+                errors.append({"name": name, "chatId": chat_id, "error": str(error)})
 
     return {
         "ok": len(errors) == 0,
