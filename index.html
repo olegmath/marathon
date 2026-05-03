@@ -511,6 +511,42 @@
       color: white;
     }
 
+    .pdf-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      background: white;
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 4px 20px rgba(0,80,120,0.12);
+    }
+
+    .pdf-action-btn {
+      height: 40px;
+      border: none;
+      border-radius: 8px;
+      padding: 0 16px;
+      background: #4AB8E0;
+      color: white;
+      font-family: 'Oswald', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      font-style: italic;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .pdf-action-btn.secondary {
+      background: #7F62C7;
+    }
+
+    .pdf-action-note {
+      color: rgba(0,0,0,0.58);
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+    }
+
     .admin-load-summary {
       display: flex;
       align-items: center;
@@ -990,6 +1026,7 @@
   let dailyProgressTeacher = '';
   let dailyProgressSortKey = 'dateOrder';
   let dailyProgressSortDirection = 'asc';
+  let pdfStudent = '';
   let adminToken = sessionStorage.getItem('adminToken') || '';
   let adminLoading = false;
   let adminError = '';
@@ -1644,6 +1681,7 @@
       { key: 'details', label: 'Детали' },
       { key: 'teacherRating', label: 'Рейтинг преподов' },
       { key: 'dailyProgress', label: 'По дням' },
+      { key: 'pdfReports', label: 'PDF' },
     ];
 
     return `
@@ -1759,6 +1797,10 @@
 
     if (adminSection === 'dailyProgress') {
       return renderDailyProgressView();
+    }
+
+    if (adminSection === 'pdfReports') {
+      return renderPdfReportsView();
     }
 
     normalizeDetailFilters();
@@ -1977,6 +2019,273 @@
           ${renderMetricCard('дней с данными', progressRows.length, 'blue', 0)}
           ${renderMetricCard('заполненных ячеек', progressRows.reduce((sum, row) => sum + row.filledCount, 0), 'green', 0)}
           ${renderMetricCard('среднее заполнение', averageNumbers(progressRows.map((row) => row.filledPercent)), 'pink')}
+        </div>
+      </div>
+    `;
+  }
+
+  function groupedRowsByStudent(rows) {
+    const groups = new Map();
+    for (const row of rows) {
+      const key = row.name || 'Без имени';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(row);
+    }
+    return [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0], 'ru'));
+  }
+
+  function reportPeriodLabel() {
+    if (adminLoadMeta.period?.from && adminLoadMeta.period?.to) {
+      return `${adminLoadMeta.period.from} — ${adminLoadMeta.period.to}`;
+    }
+    if (soholmsPeriodFrom || soholmsPeriodTo) {
+      return `${soholmsPeriodFrom || '...'} — ${soholmsPeriodTo || '...'}`;
+    }
+    return 'текущий период';
+  }
+
+  function renderStudentReportSection(studentName, rows) {
+    const sortedRows = [...rows].sort((a, b) => {
+      const subjectCompare = String(a.subject || '').localeCompare(String(b.subject || ''), 'ru');
+      if (subjectCompare !== 0) return subjectCompare;
+      const levelCompare = String(a.level || '').localeCompare(String(b.level || ''), 'ru');
+      if (levelCompare !== 0) return levelCompare;
+      return String(a.group || '').localeCompare(String(b.group || ''), 'ru');
+    });
+
+    const averageFinalScore = averageNumbers(sortedRows.map((row) => row.finalScore));
+    const totalPenalty = sortedRows.reduce((sum, row) => sum + Number(row.penalty || 0), 0);
+    const totalDaysDone = sortedRows.reduce((sum, row) => sum + Number(row.daysDone || 0), 0);
+    const totalDaysTotal = sortedRows.reduce((sum, row) => sum + Number(row.daysTotal || 0), 0);
+
+    return `
+      <section class="report-student">
+        <header class="report-header">
+          <div>
+            <div class="report-kicker">Отчёт по марафону</div>
+            <h1>${escapeHtml(studentName)}</h1>
+          </div>
+          <div class="report-period">${escapeHtml(reportPeriodLabel())}</div>
+        </header>
+
+        <div class="report-metrics">
+          <div><span>Марафонов</span><strong>${sortedRows.length}</strong></div>
+          <div><span>Средний итог</span><strong>${formatNumber(averageFinalScore)}</strong></div>
+          <div><span>Дней сделано</span><strong>${totalDaysDone}/${totalDaysTotal}</strong></div>
+          <div><span>Штраф</span><strong>${formatNumber(totalPenalty, 0)}</strong></div>
+        </div>
+
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th>Предмет</th>
+              <th>Экзамен</th>
+              <th>Группа</th>
+              <th>Преподаватель</th>
+              <th>Дни</th>
+              <th>Качество</th>
+              <th>Штраф</th>
+              <th>Итог</th>
+              <th>Место в группе</th>
+              <th>Место в школе</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${sortedRows.map((row) => `
+              <tr>
+                <td>${escapeHtml(getSubjectLabel(row.subject))}</td>
+                <td>${escapeHtml(row.level || '')}</td>
+                <td>${escapeHtml(row.group || '')}</td>
+                <td>${escapeHtml(row.teacher || '')}</td>
+                <td>${Number(row.daysDone || 0)}/${Number(row.daysTotal || 0)}</td>
+                <td>${formatNumber(row.quality)}</td>
+                <td>${formatNumber(row.penalty, 0)}</td>
+                <td>${formatNumber(row.finalScore)}</td>
+                <td>${formatNumber(row.groupPlace, 0)}</td>
+                <td>${formatNumber(row.schoolPlace, 0)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        ${sortedRows.map((row) => `
+          <div class="report-marathon">
+            <h2>${escapeHtml(getSubjectLabel(row.subject))} ${escapeHtml(row.level || '')} · ${escapeHtml(row.group || '')}</h2>
+            ${Array.isArray(row.dailyScores) && row.dailyScores.length > 0 ? `
+              <table class="report-days">
+                <thead>
+                  <tr>
+                    <th>День</th>
+                    <th>Дата</th>
+                    <th>Процент</th>
+                    <th>Штраф</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${[...row.dailyScores].sort((a, b) => Number(a.dateOrder || 0) - Number(b.dateOrder || 0)).map((day) => `
+                    <tr>
+                      <td>${formatNumber(day.dateOrder, 0)}</td>
+                      <td>${escapeHtml(day.dateLabel || day.dateKey || '')}</td>
+                      <td>${formatNumber(day.score)}%</td>
+                      <td>${formatNumber(day.lateDays, 0)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            ` : '<div class="report-empty">Нет детализации по дням</div>'}
+          </div>
+        `).join('')}
+      </section>
+    `;
+  }
+
+  function buildPdfReportHtml(studentGroups, title) {
+    return `
+      <!DOCTYPE html>
+      <html lang="ru">
+      <head>
+        <meta charset="UTF-8">
+        <title>${escapeHtml(title)}</title>
+        <style>
+          * { box-sizing: border-box; }
+          body {
+            margin: 0;
+            color: #151515;
+            font-family: Arial, sans-serif;
+            background: white;
+          }
+          .report-student {
+            padding: 22mm 16mm;
+            page-break-after: always;
+          }
+          .report-student:last-child {
+            page-break-after: auto;
+          }
+          .report-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            border-bottom: 2px solid #4AB8E0;
+            padding-bottom: 14px;
+            margin-bottom: 16px;
+          }
+          .report-kicker {
+            color: #4AB8E0;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+          }
+          h1 {
+            margin: 4px 0 0;
+            font-size: 28px;
+            line-height: 1.12;
+          }
+          h2 {
+            margin: 18px 0 8px;
+            font-size: 15px;
+          }
+          .report-period {
+            color: #555;
+            font-size: 12px;
+            white-space: nowrap;
+          }
+          .report-metrics {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+          }
+          .report-metrics div {
+            border: 1px solid #d8edf5;
+            border-radius: 8px;
+            padding: 10px;
+          }
+          .report-metrics span {
+            display: block;
+            color: #5b6a70;
+            font-size: 11px;
+            margin-bottom: 4px;
+          }
+          .report-metrics strong {
+            font-size: 20px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+          }
+          th, td {
+            border: 1px solid #dde8ec;
+            padding: 6px 7px;
+            text-align: left;
+            vertical-align: top;
+          }
+          th {
+            background: #eef9fd;
+            font-weight: 700;
+          }
+          .report-days {
+            max-width: 520px;
+          }
+          .report-empty {
+            color: #777;
+            font-size: 12px;
+          }
+          @media print {
+            @page { size: A4; margin: 0; }
+          }
+        </style>
+      </head>
+      <body>
+        ${studentGroups.map(([studentName, rows]) => renderStudentReportSection(studentName, rows)).join('')}
+        <script>
+          window.addEventListener('load', () => setTimeout(() => window.print(), 250));
+        <\/script>
+      </body>
+      </html>
+    `;
+  }
+
+  function openPdfReport(studentName = '') {
+    const studentGroups = studentName
+      ? groupedRowsByStudent(allStudentRows).filter(([name]) => name === studentName)
+      : groupedRowsByStudent(allStudentRows);
+
+    if (studentGroups.length === 0) {
+      adminError = 'Нет данных для PDF-отчёта';
+      render();
+      return;
+    }
+
+    const title = studentName ? `Отчёт ${studentName}` : 'Отчёты по всем ученикам';
+    const reportWindow = window.open('', '_blank');
+    if (!reportWindow) {
+      adminError = 'Браузер заблокировал новое окно для PDF';
+      render();
+      return;
+    }
+    reportWindow.document.open();
+    reportWindow.document.write(buildPdfReportHtml(studentGroups, title));
+    reportWindow.document.close();
+  }
+
+  function renderPdfReportsView() {
+    const studentOptions = groupedRowsByStudent(allStudentRows).map(([studentName]) => studentName);
+    if (pdfStudent && !studentOptions.includes(pdfStudent)) pdfStudent = '';
+
+    return `
+      <div class="details-panel">
+        ${renderAdminHeader()}
+        ${renderAdminPeriodPanel()}
+        ${renderAdminIssues()}
+        <div class="details-filters">
+          ${renderDetailSelect('pdfStudent', 'Ученик', pdfStudent, studentOptions, 'Выбери ученика')}
+        </div>
+        <div class="pdf-actions">
+          <button class="pdf-action-btn" type="button" id="pdf-one-student" ${pdfStudent ? '' : 'disabled'}>PDF по ученику</button>
+          <button class="pdf-action-btn secondary" type="button" id="pdf-all-students">PDF по всем ученикам</button>
+          <span class="pdf-action-note">Откроется печатная версия. В окне печати выбери “Сохранить в PDF”.</span>
         </div>
       </div>
     `;
@@ -2293,6 +2602,10 @@
         const options = uniqueSorted(getDailyProgressBaseRows().map((row) => row.teacher));
         dailyProgressTeacher = e.target.value === '' ? '' : options[index] || '';
       }
+      if (filter === 'pdfStudent') {
+        const options = groupedRowsByStudent(allStudentRows).map(([studentName]) => studentName);
+        pdfStudent = e.target.value === '' ? '' : options[index] || '';
+      }
       render();
     });
 
@@ -2333,6 +2646,16 @@
 
       if (e.target.id === 'admin-cache-clear') {
         clearBackendCacheAndReload();
+        return;
+      }
+
+      if (e.target.id === 'pdf-one-student') {
+        openPdfReport(pdfStudent);
+        return;
+      }
+
+      if (e.target.id === 'pdf-all-students') {
+        openPdfReport('');
         return;
       }
 
