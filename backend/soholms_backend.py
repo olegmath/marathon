@@ -28,11 +28,13 @@ from xml.sax.saxutils import escape as xml_escape
 import requests
 from openpyxl import load_workbook
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.platypus import Flowable
+from reportlab.platypus import Image as ReportImage
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 
@@ -108,6 +110,38 @@ class BackendError(Exception):
     def __init__(self, message: str, status: int = 500):
         super().__init__(message)
         self.status = status
+
+
+class PdfIcon(Flowable):
+    def __init__(self, kind: str, size: float = 9 * mm):
+        super().__init__()
+        self.kind = kind
+        self.width = size
+        self.height = size
+
+    def draw(self) -> None:
+        canvas = self.canv
+        canvas.saveState()
+        canvas.setFillColor(colors.HexColor("#4562f0"))
+        canvas.roundRect(0, 0, self.width, self.height, 2.2, fill=1, stroke=0)
+        canvas.setStrokeColor(colors.white)
+        canvas.setFillColor(colors.white)
+        canvas.setLineWidth(1.8)
+
+        if self.kind == "check":
+            canvas.line(self.width * 0.27, self.height * 0.52, self.width * 0.43, self.height * 0.35)
+            canvas.line(self.width * 0.43, self.height * 0.35, self.width * 0.73, self.height * 0.68)
+        else:
+            bar_width = self.width * 0.12
+            gap = self.width * 0.09
+            start = self.width * 0.28
+            base = self.height * 0.24
+            heights = (self.height * 0.36, self.height * 0.52, self.height * 0.25)
+            for index, height in enumerate(heights):
+                x = start + index * (bar_width + gap)
+                canvas.rect(x, base, bar_width, height, fill=1, stroke=0)
+
+        canvas.restoreState()
 
 
 @dataclass(frozen=True)
@@ -973,6 +1007,22 @@ def pdf_text(value: Any) -> Paragraph:
     return Paragraph(xml_escape(normalize_text(value)), style)
 
 
+def pdf_paragraph(value: Any, style: ParagraphStyle) -> Paragraph:
+    text = str(value or "").strip()
+    lines = [re.sub(r"\s+", " ", line).strip() for line in text.splitlines()]
+    return Paragraph(xml_escape("\n".join(lines)).replace("\n", "<br/>"), style)
+
+
+def find_logo_path() -> str:
+    candidates = (
+        os.path.join(os.path.dirname(__file__), "logoplanka-cropped.png"),
+        os.path.join(os.path.dirname(__file__), "logoplanka.png"),
+        os.path.join(os.path.dirname(__file__), "..", "logoplanka.png"),
+        os.path.join(os.getcwd(), "logoplanka.png"),
+    )
+    return next((path for path in candidates if os.path.exists(path)), "")
+
+
 def build_student_pdf_report(student_name: str, rows: list[dict[str, Any]], period: dict[str, Any]) -> bytes:
     regular_font, bold_font = register_pdf_fonts()
     sorted_rows = sorted(
@@ -983,133 +1033,296 @@ def build_student_pdf_report(student_name: str, rows: list[dict[str, Any]], peri
             str(row.get("group") or ""),
         ),
     )
-    period_label = f"{period.get('from', '...')} - {period.get('to', '...')}"
-    average_coefficient = average_values([row.get("coefficient") for row in sorted_rows])
-    average_quality = average_values([row.get("quality") for row in sorted_rows])
-    average_final = average_values([row.get("finalScore") for row in sorted_rows])
-    total_penalty = sum(float(row.get("penalty") or 0) for row in sorted_rows)
 
     buffer = io.BytesIO()
     document = SimpleDocTemplate(
         buffer,
-        pagesize=landscape(A4),
-        leftMargin=10 * mm,
-        rightMargin=10 * mm,
-        topMargin=9 * mm,
-        bottomMargin=9 * mm,
+        pagesize=A4,
+        leftMargin=18 * mm,
+        rightMargin=18 * mm,
+        topMargin=12 * mm,
+        bottomMargin=12 * mm,
     )
-    title_style = ParagraphStyle(
-        "Title",
+    title_white = ParagraphStyle(
+        "TitleWhite",
         fontName=bold_font,
-        fontSize=18,
-        leading=22,
-        textColor=colors.HexColor("#151820"),
-        spaceAfter=3 * mm,
+        fontSize=25,
+        leading=29,
+        textColor=colors.white,
     )
-    meta_style = ParagraphStyle(
-        "Meta",
+    subtitle_white = ParagraphStyle(
+        "SubtitleWhite",
         fontName=regular_font,
-        fontSize=9,
-        leading=12,
-        textColor=colors.HexColor("#55616a"),
-        spaceAfter=5 * mm,
+        fontSize=12.2,
+        leading=15,
+        textColor=colors.white,
     )
-    story: list[Any] = [
-        Paragraph(f"Отчет по марафону: {xml_escape(student_name)}", title_style),
-        Paragraph(f"Период: {xml_escape(period_label)}", meta_style),
-    ]
+    body_style = ParagraphStyle(
+        "ParentBody",
+        fontName=regular_font,
+        fontSize=12.7,
+        leading=17,
+        textColor=colors.HexColor("#2d3146"),
+    )
+    body_bold = ParagraphStyle(
+        "ParentBodyBold",
+        parent=body_style,
+        fontName=bold_font,
+        fontSize=13.2,
+        leading=17,
+    )
+    small_label = ParagraphStyle(
+        "SmallLabel",
+        fontName=regular_font,
+        fontSize=8.4,
+        leading=11,
+        textColor=colors.HexColor("#8b97ab"),
+    )
+    student_name_style = ParagraphStyle(
+        "StudentName",
+        fontName=bold_font,
+        fontSize=13.2,
+        leading=16,
+        textColor=colors.HexColor("#2d3146"),
+    )
+    section_title = ParagraphStyle(
+        "SectionTitle",
+        fontName=bold_font,
+        fontSize=14.3,
+        leading=17,
+        textColor=colors.HexColor("#2d3146"),
+    )
+    table_header_style = ParagraphStyle(
+        "TableHeader",
+        fontName=bold_font,
+        fontSize=8.8,
+        leading=10.5,
+        alignment=1,
+        textColor=colors.white,
+    )
+    table_cell_style = ParagraphStyle(
+        "TableCell",
+        fontName=regular_font,
+        fontSize=8.8,
+        leading=10.8,
+        alignment=1,
+        textColor=colors.HexColor("#2d3146"),
+    )
+    table_cell_bold = ParagraphStyle(
+        "TableCellBold",
+        parent=table_cell_style,
+        fontName=bold_font,
+    )
 
-    metric_data = [
-        ["Коэффициент", "Качество", "Штраф", "Итоговый балл"],
-        [
-            format_report_number(average_coefficient),
-            format_report_number(average_quality),
-            format_report_number(total_penalty, 0),
-            format_report_number(average_final),
-        ],
-    ]
-    metric_table = Table(metric_data, colWidths=[63 * mm, 63 * mm, 63 * mm, 63 * mm])
-    metric_table.setStyle(
+    logo_path = find_logo_path()
+    if logo_path:
+        logo_cell: Any = ReportImage(logo_path, width=22 * mm, height=25 * mm)
+    else:
+        logo_cell = pdf_paragraph("постоянная\nпланка", ParagraphStyle("LogoFallback", fontName=bold_font, fontSize=8, leading=9, alignment=1))
+    logo_box = Table([[logo_cell]], colWidths=[26 * mm], rowHeights=[26 * mm])
+    logo_box.setStyle(
         TableStyle(
             [
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#eef9fd")),
-                ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#cfeaf4")),
-                ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#dcecf2")),
-                ("FONTNAME", (0, 0), (-1, 0), bold_font),
-                ("FONTNAME", (0, 1), (-1, 1), bold_font),
-                ("FONTSIZE", (0, 0), (-1, 0), 8),
-                ("FONTSIZE", (0, 1), (-1, 1), 16),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#3d4a52")),
-                ("TEXTCOLOR", (0, 1), (-1, 1), colors.HexColor("#151820")),
-                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#4562f0")),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("TOPPADDING", (0, 0), (-1, -1), 6),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
-                ("LEFTPADDING", (0, 0), (-1, -1), 7),
+                ("LEFTPADDING", (0, 0), (-1, -1), 2),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+                ("TOPPADDING", (0, 0), (-1, -1), 2),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
             ]
         )
     )
-    story.extend([metric_table, Spacer(1, 5 * mm)])
+
+    header = Table(
+        [
+            [
+                logo_box,
+                [
+                    Paragraph("ОТЧЕТ ПО МАРАФОНАМ", title_white),
+                    Paragraph("Ежедневная отработка первой части ЕГЭ/ОГЭ", subtitle_white),
+                ],
+            ]
+        ],
+        colWidths=[34 * mm, 135 * mm],
+        rowHeights=[32 * mm],
+    )
+    header.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#4562f0")),
+                ("ALIGN", (0, 0), (0, 0), "CENTER"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("LEFTPADDING", (0, 0), (0, 0), 4 * mm),
+                ("RIGHTPADDING", (0, 0), (0, 0), 2 * mm),
+                ("TOPPADDING", (0, 0), (0, 0), 3 * mm),
+                ("BOTTOMPADDING", (0, 0), (0, 0), 3 * mm),
+                ("LEFTPADDING", (1, 0), (1, 0), 5 * mm),
+                ("RIGHTPADDING", (1, 0), (1, 0), 8 * mm),
+            ]
+        )
+    )
+    story: list[Any] = [header, Spacer(1, 6 * mm)]
+
+    about = Table(
+        [
+            [pdf_paragraph("Что такое марафон", body_bold)],
+            [
+                pdf_paragraph(
+                    "Марафон - это ежедневные 30-минутные подборки заданий первой части ЕГЭ/ОГЭ с "
+                    "автоматической проверкой. Все задания взяты из банка ФИПИ и помогают системно "
+                    "закрыть пробелы и повысить итоговый балл.",
+                    body_style,
+                )
+            ],
+        ],
+        colWidths=[169 * mm],
+    )
+    about.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f2f6ff")),
+                ("LINEBEFORE", (0, 0), (0, -1), 3, colors.HexColor("#4562f0")),
+                ("LEFTPADDING", (0, 0), (-1, -1), 12),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 12),
+                ("TOPPADDING", (0, 0), (-1, 0), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 4),
+                ("TOPPADDING", (0, 1), (-1, 1), 0),
+                ("BOTTOMPADDING", (0, 1), (-1, 1), 12),
+            ]
+        )
+    )
+    story.extend([about, Spacer(1, 6 * mm)])
+
+    check = Table(
+        [[PdfIcon("check"), pdf_paragraph("В формате марафона ученики получают", body_bold)]],
+        colWidths=[9 * mm, 153 * mm],
+        rowHeights=[9 * mm],
+    )
+    check.setStyle(
+        TableStyle(
+            [
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("LEFTPADDING", (0, 0), (0, 0), 0),
+                ("RIGHTPADDING", (0, 0), (0, 0), 0),
+                ("LEFTPADDING", (1, 0), (1, 0), 8),
+            ]
+        )
+    )
+    story.append(check)
+    bullet_text = (
+        "- ежедневные задания с напоминаниями\n"
+        "- еженедельную статистику и рейтинги по группе, предмету и школе\n"
+        "- карту ошибок по итогам прохождения\n"
+        "- при необходимости разбор сложных заданий (по математике ЕГЭ - с видеоразборами)\n"
+        "- возможность задать вопросы преподавателю\n"
+        "- систему мотивации с призами за регулярную работу"
+    )
+    story.extend(
+        [
+            Spacer(1, 4 * mm),
+            pdf_paragraph(bullet_text, body_style),
+            Spacer(1, 2.2 * mm),
+            pdf_paragraph(
+                "Такой формат помогает поддерживать темп подготовки и значительно повышает результат "
+                "по первой части экзамена.",
+                body_style,
+            ),
+            Spacer(1, 5 * mm),
+            pdf_paragraph("Ученик", small_label),
+            pdf_paragraph(student_name, student_name_style),
+            Spacer(1, 4 * mm),
+        ]
+    )
+
+    section = Table(
+        [[PdfIcon("chart"), pdf_paragraph("Статистика по марафонам", section_title)]],
+        colWidths=[9 * mm, 153 * mm],
+        rowHeights=[9 * mm],
+    )
+    section.setStyle(
+        TableStyle(
+            [
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("LEFTPADDING", (0, 0), (0, 0), 0),
+                ("RIGHTPADDING", (0, 0), (0, 0), 0),
+                ("LEFTPADDING", (1, 0), (1, 0), 8),
+            ]
+        )
+    )
+    story.extend([section, Spacer(1, 4 * mm)])
 
     table_data: list[list[Any]] = [
         [
-            "Предмет",
-            "Экзамен",
-            "Группа",
-            "Дней",
-            "Коэфф.",
-            "Качество",
-            "Балл",
-            "Штраф",
-            "Итог",
-            "Место\nв группе",
-            "Место\nв школе",
-            "Преподаватель",
+            pdf_paragraph("Предмет", table_header_style),
+            pdf_paragraph("Дней сделано", table_header_style),
+            pdf_paragraph("Дней всего", table_header_style),
+            pdf_paragraph("Качество", table_header_style),
+            pdf_paragraph("Качество макс", table_header_style),
+            pdf_paragraph("Преподаватель", table_header_style),
         ]
     ]
     for row in sorted_rows:
         subject = SUBJECT_LABELS.get(str(row.get("subject") or ""), row.get("subject") or "")
         table_data.append(
             [
-                pdf_text(subject),
-                pdf_text(row.get("level") or ""),
-                pdf_text(row.get("group") or ""),
-                f"{int(row.get('daysDone') or 0)}/{int(row.get('daysTotal') or 0)}",
-                format_report_number(row.get("coefficient")),
-                format_report_number(row.get("quality")),
-                format_report_number(row.get("baseScore")),
-                format_report_number(row.get("penalty"), 0),
-                format_report_number(row.get("finalScore")),
-                str(int(row.get("groupPlace") or 0)),
-                str(int(row.get("schoolPlace") or 0)),
-                pdf_text(row.get("teacher") or "Без преподавателя"),
+                pdf_paragraph(str(subject).lower(), table_cell_bold),
+                pdf_paragraph(int(row.get("daysDone") or 0), table_cell_style),
+                pdf_paragraph(int(row.get("daysTotal") or 0), table_cell_style),
+                pdf_paragraph(format_report_number(row.get("quality"), 0), table_cell_style),
+                pdf_paragraph("100", table_cell_style),
+                pdf_paragraph(row.get("teacher") or "Без преподавателя", table_cell_style),
             ]
         )
 
-    col_widths = [24 * mm, 15 * mm, 43 * mm, 16 * mm, 18 * mm, 20 * mm, 18 * mm, 16 * mm, 18 * mm, 20 * mm, 20 * mm, 42 * mm]
+    col_widths = [22 * mm, 32 * mm, 28 * mm, 27 * mm, 32 * mm, 28 * mm]
     report_table = Table(table_data, colWidths=col_widths, repeatRows=1)
     report_table.setStyle(
         TableStyle(
             [
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e9f7fc")),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#151820")),
-                ("FONTNAME", (0, 0), (-1, 0), bold_font),
-                ("FONTNAME", (0, 1), (-1, -1), regular_font),
-                ("FONTSIZE", (0, 0), (-1, 0), 7.3),
-                ("FONTSIZE", (0, 1), (-1, -1), 7.2),
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#4562f0")),
                 ("GRID", (0, 0), (-1, -1), 0.45, colors.HexColor("#d9e5ea")),
-                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#fbfdfe")]),
-                ("ALIGN", (3, 1), (10, -1), "RIGHT"),
-                ("ALIGN", (3, 0), (10, 0), "RIGHT"),
+                ("BACKGROUND", (0, 1), (-1, -1), colors.white),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("TOPPADDING", (0, 0), (-1, -1), 5),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                ("TOPPADDING", (0, 0), (-1, -1), 7),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
                 ("LEFTPADDING", (0, 0), (-1, -1), 4),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 4),
             ]
         )
     )
-    story.append(report_table)
+    story.extend([report_table, Spacer(1, 8 * mm)])
+
+    parent_note = Table(
+        [
+            [
+                pdf_paragraph(
+                    "Со своей стороны мы ежедневно отслеживаем участие ребят, напоминаем о заданиях, "
+                    "ведём рейтинги и проводим конкурс с призами для самых активных участников. Но "
+                    "практика показывает, что при поддержке родителей результаты марафона становятся "
+                    "значительно выше.\n\n"
+                    "Будем очень благодарны, если вы сможете уточнять у ребёнка, выполняет ли он "
+                    "задания марафона - такая вовлечённость заметно помогает сохранять регулярность и "
+                    "повышает эффективность подготовки.",
+                    body_style,
+                )
+            ]
+        ],
+        colWidths=[169 * mm],
+    )
+    parent_note.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#fff7ed")),
+                ("BOX", (0, 0), (-1, -1), 0.7, colors.HexColor("#ffbd3e")),
+                ("LEFTPADDING", (0, 0), (-1, -1), 12),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 12),
+                ("TOPPADDING", (0, 0), (-1, -1), 12),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+            ]
+        )
+    )
+    story.append(parent_note)
     document.build(story)
     return buffer.getvalue()
 
