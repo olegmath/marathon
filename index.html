@@ -457,6 +457,51 @@
       flex-wrap: wrap;
     }
 
+    .data-source-control {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      font-family: 'Oswald', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      color: #4AB8E0;
+      text-transform: uppercase;
+    }
+
+    .data-source-toggle {
+      display: flex;
+      gap: 4px;
+      padding: 3px;
+      border-radius: 10px;
+      background: rgba(74,184,224,0.1);
+    }
+
+    .data-source-btn {
+      height: 30px;
+      border: none;
+      border-radius: 7px;
+      padding: 0 12px;
+      background: transparent;
+      color: #3595B8;
+      font-family: 'Oswald', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      font-style: italic;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .data-source-btn.active {
+      background: #4AB8E0;
+      color: white;
+      box-shadow: 0 2px 8px rgba(0,80,120,0.12);
+    }
+
+    .data-source-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
     .period-field {
       display: flex;
       flex-direction: column;
@@ -511,6 +556,14 @@
       color: white;
     }
 
+    .period-apply-btn:disabled,
+    .period-reset-btn:disabled,
+    .cache-clear-btn:disabled,
+    .period-input:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
     .pdf-actions {
       display: flex;
       gap: 10px;
@@ -543,6 +596,11 @@
 
     .pdf-action-btn.telegram {
       background: #2AABEE;
+    }
+
+    .pdf-action-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
     }
 
     .pdf-action-note {
@@ -993,6 +1051,7 @@
 <script>
   const PROXY_URL = 'https://script.google.com/macros/s/AKfycbyRMo1Sqm57vXg85VAtOYPDJ-PscpR1AuAGpcuCQmoT1WMuNeykYXaTpf8UPL5R8WPc_w/exec';
   const SOHOLMS_BACKEND_URL = String(window.SOHOLMS_BACKEND_URL || localStorage.getItem('soholmsBackendUrl') || '').replace(/\/$/, '');
+  const DATA_SOURCE_STORAGE_KEY = 'marathonDataSource';
   let soholmsPeriodFrom = String(window.SOHOLMS_PERIOD_FROM || localStorage.getItem('soholmsPeriodFrom') || '');
   let soholmsPeriodTo = String(window.SOHOLMS_PERIOD_TO || localStorage.getItem('soholmsPeriodTo') || '');
   const defaultTeacherPeriod = getCurrentMonthPeriod();
@@ -1033,6 +1092,28 @@
 
   function hasSoholmsBackend() {
     return SOHOLMS_BACKEND_URL.length > 0;
+  }
+
+  function normalizeDataSource(value) {
+    return value === 'google' || value === 'soholms' ? value : '';
+  }
+
+  function getDefaultDataSource() {
+    return hasSoholmsBackend() ? 'soholms' : 'google';
+  }
+
+  let selectedDataSource = normalizeDataSource(window.MARATHON_DATA_SOURCE || localStorage.getItem(DATA_SOURCE_STORAGE_KEY)) || getDefaultDataSource();
+  if (selectedDataSource === 'soholms' && !hasSoholmsBackend()) {
+    selectedDataSource = 'google';
+  }
+
+  function usesSoholmsSource() {
+    return selectedDataSource === 'soholms' && hasSoholmsBackend();
+  }
+
+  function getDataSourceLabel() {
+    if (selectedDataSource === 'google') return 'Google Sheets';
+    return hasSoholmsBackend() ? 'Soholms' : 'Soholms не настроен';
   }
 
   function getBackendAdminKey() {
@@ -1806,7 +1887,7 @@
   }
 
   function renderPenaltyCell(row) {
-    if (!canManageAdmin() || !hasSoholmsBackend()) {
+    if (!canManageAdmin() || !usesSoholmsSource()) {
       return formatNumber(row.penalty, 2);
     }
 
@@ -1898,22 +1979,33 @@
         : 'период из бэкенда';
     const errors = adminLoadMeta.errors || [];
     const missing = adminLoadMeta.missingConfigNames || [];
-    const sourceLabel = hasSoholmsBackend() ? 'Soholms' : 'Google Sheets';
+    const sourceLabel = getDataSourceLabel();
+    const sourceIsSoholms = usesSoholmsSource();
     const periodInputFrom = canManageAdmin() ? soholmsPeriodFrom : teacherPeriodFrom;
     const periodInputTo = canManageAdmin() ? soholmsPeriodTo : teacherPeriodTo;
+    const sourceControlsHtml = canManageAdmin() ? `
+      <div class="data-source-control">
+        <span>Источник</span>
+        <span class="data-source-toggle">
+          <button class="data-source-btn ${selectedDataSource === 'google' ? 'active' : ''}" type="button" data-data-source="google">Google</button>
+          <button class="data-source-btn ${selectedDataSource === 'soholms' ? 'active' : ''}" type="button" data-data-source="soholms" ${hasSoholmsBackend() ? '' : 'disabled'}>Soholms</button>
+        </span>
+      </div>
+    ` : '';
     const controlsHtml = canChangePeriod() ? `
       <div class="period-controls">
+        ${sourceControlsHtml}
         <label class="period-field">
           С
-          <input class="period-input" id="admin-period-from" type="date" value="${escapeHtml(periodInputFrom)}" ${hasSoholmsBackend() ? '' : 'disabled'}>
+          <input class="period-input" id="admin-period-from" type="date" value="${escapeHtml(periodInputFrom)}" ${sourceIsSoholms ? '' : 'disabled'}>
         </label>
         <label class="period-field">
           По
-          <input class="period-input" id="admin-period-to" type="date" value="${escapeHtml(periodInputTo)}" ${hasSoholmsBackend() ? '' : 'disabled'}>
+          <input class="period-input" id="admin-period-to" type="date" value="${escapeHtml(periodInputTo)}" ${sourceIsSoholms ? '' : 'disabled'}>
         </label>
-        <button class="period-apply-btn" type="button" id="admin-period-apply" ${hasSoholmsBackend() ? '' : 'disabled'}>Применить</button>
-        <button class="period-reset-btn" type="button" id="admin-period-reset" ${hasSoholmsBackend() ? '' : 'disabled'}>Сброс</button>
-        ${canManageAdmin() ? `<button class="cache-clear-btn" type="button" id="admin-cache-clear" ${hasSoholmsBackend() ? '' : 'disabled'}>Очистить кеш</button>` : ''}
+        <button class="period-apply-btn" type="button" id="admin-period-apply" ${sourceIsSoholms ? '' : 'disabled'}>Применить</button>
+        <button class="period-reset-btn" type="button" id="admin-period-reset" ${sourceIsSoholms ? '' : 'disabled'}>Сброс</button>
+        ${canManageAdmin() ? `<button class="cache-clear-btn" type="button" id="admin-cache-clear" ${sourceIsSoholms ? '' : 'disabled'}>Очистить кеш</button>` : ''}
       </div>
     ` : '';
 
@@ -2525,7 +2617,7 @@
   }
 
   async function sendTelegramReport(studentName = '') {
-    if (!canManageAdmin() || !hasSoholmsBackend() || adminLoading) return;
+    if (!canManageAdmin() || !usesSoholmsSource() || adminLoading) return;
 
     adminLoading = true;
     adminError = '';
@@ -2567,6 +2659,10 @@
 
     const studentOptions = groupedRowsByStudent(allStudentRows).map(([studentName]) => studentName);
     if (pdfStudent && !studentOptions.includes(pdfStudent)) pdfStudent = '';
+    const telegramAvailable = usesSoholmsSource();
+    const telegramNote = telegramAvailable
+      ? 'PDF-кнопки открывают печатную версию. Telegram отправляет готовый PDF-файл через бота.'
+      : 'PDF-кнопки открывают печатную версию. Telegram доступен только при источнике Soholms.';
 
     return `
       <div class="details-panel">
@@ -2579,9 +2675,9 @@
         <div class="pdf-actions">
           <button class="pdf-action-btn" type="button" id="pdf-one-student" ${pdfStudent ? '' : 'disabled'}>PDF по ученику</button>
           <button class="pdf-action-btn secondary" type="button" id="pdf-all-students">PDF по всем ученикам</button>
-          <button class="pdf-action-btn telegram" type="button" id="telegram-one-student" ${pdfStudent ? '' : 'disabled'}>Telegram PDF по ученику</button>
-          <button class="pdf-action-btn telegram" type="button" id="telegram-all-students">Telegram PDF всем</button>
-          <span class="pdf-action-note">PDF-кнопки открывают печатную версию. Telegram отправляет готовый PDF-файл через бота.</span>
+          <button class="pdf-action-btn telegram" type="button" id="telegram-one-student" ${pdfStudent && telegramAvailable ? '' : 'disabled'}>Telegram PDF по ученику</button>
+          <button class="pdf-action-btn telegram" type="button" id="telegram-all-students" ${telegramAvailable ? '' : 'disabled'}>Telegram PDF всем</button>
+          <span class="pdf-action-note">${telegramNote}</span>
         </div>
       </div>
     `;
@@ -2656,8 +2752,36 @@
     };
   }
 
+  async function switchDataSource(source) {
+    if (!canManageAdmin() || adminLoading || dataLoading) return;
+
+    const normalizedSource = normalizeDataSource(source);
+    if (!normalizedSource || normalizedSource === selectedDataSource) return;
+
+    if (normalizedSource === 'soholms' && !hasSoholmsBackend()) {
+      adminError = 'Soholms backend не настроен';
+      render();
+      return;
+    }
+
+    selectedDataSource = normalizedSource;
+    localStorage.setItem(DATA_SOURCE_STORAGE_KEY, selectedDataSource);
+    appData = null;
+    teacherData = null;
+    allStudentRows = [];
+    globalNullScoreStudents = [];
+    resetAdminLoadMeta();
+    adminError = '';
+    render();
+
+    await loadData();
+    if (adminToken) {
+      await loadAdminData();
+    }
+  }
+
   function applyAdminPeriod() {
-    if (!canChangePeriod() || !hasSoholmsBackend()) return;
+    if (!canChangePeriod() || !usesSoholmsSource()) return;
 
     const from = document.getElementById('admin-period-from')?.value || '';
     const to = document.getElementById('admin-period-to')?.value || '';
@@ -2697,7 +2821,7 @@
   }
 
   function resetAdminPeriod() {
-    if (!canChangePeriod() || !hasSoholmsBackend()) return;
+    if (!canChangePeriod() || !usesSoholmsSource()) return;
 
     if (adminRole === 'teacher') {
       const currentMonth = getCurrentMonthPeriod();
@@ -2717,7 +2841,7 @@
   }
 
   async function clearBackendCacheAndReload() {
-    if (!canManageAdmin() || !hasSoholmsBackend() || adminLoading) return;
+    if (!canManageAdmin() || !usesSoholmsSource() || adminLoading) return;
 
     adminLoading = true;
     adminError = '';
@@ -2754,7 +2878,7 @@
   }
 
   async function savePenaltyOverride(rowIndex, rawValue, options = {}) {
-    if (!canManageAdmin() || !hasSoholmsBackend()) return;
+    if (!canManageAdmin() || !usesSoholmsSource()) return;
 
     const row = allStudentRows[Number(rowIndex)];
     if (!row) return;
@@ -3085,6 +3209,12 @@
         return;
       }
 
+      const dataSource = e.target.dataset.dataSource;
+      if (dataSource) {
+        switchDataSource(dataSource);
+        return;
+      }
+
       if (e.target.id === 'pdf-one-student') {
         if (!canManageAdmin()) return;
         openPdfReport(pdfStudent);
@@ -3199,7 +3329,7 @@
 
     try {
       const response = await fetch(
-        hasSoholmsBackend()
+        usesSoholmsSource()
           ? buildSoholmsRatingsUrl(false)
           : `${PROXY_URL}?mode=admin&token=${encodeURIComponent(adminToken)}&_t=${Date.now()}`
       );
@@ -3226,7 +3356,7 @@
         errors: [],
         missingConfigNames: [],
       };
-      if (!hasSoholmsBackend()) {
+      if (!usesSoholmsSource()) {
         adminToken = '';
         adminRole = '';
         sessionStorage.removeItem('adminToken');
@@ -3244,7 +3374,7 @@
     if (dataLoading) return;
     dataLoading = true;
     try {
-      if (hasSoholmsBackend()) {
+      if (usesSoholmsSource()) {
         const response = await fetch(buildSoholmsRatingsUrl(true));
         const data = await response.json();
 
