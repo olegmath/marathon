@@ -242,16 +242,9 @@ def clean_authorization_header(value: str) -> str:
     return token
 
 
-def authorization_header_value(value: str) -> str:
-    token = clean_authorization_header(value)
-    if token and not token.lower().startswith("bearer ") and token.startswith("eyJ"):
-        return f"Bearer {token}"
-    return token
-
-
 def get_authorization_header(kind: str = "api") -> str:
     specific_name = "SOHOLMS_EXCEL_TOKEN" if kind == "excel" else "SOHOLMS_API_TOKEN"
-    token = authorization_header_value(os.getenv(specific_name, "")) or authorization_header_value(os.getenv("SOHOLMS_TOKEN", ""))
+    token = clean_authorization_header(os.getenv(specific_name, "")) or clean_authorization_header(os.getenv("SOHOLMS_TOKEN", ""))
     if not token:
         raise BackendError(
             f"{specific_name} or SOHOLMS_TOKEN is not configured",
