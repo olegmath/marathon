@@ -796,6 +796,22 @@ def parse_attendance_xlsx(content: bytes, group: GroupInfo) -> list[dict[str, An
             day_key_orders[day_key] = raw_day_order or len(group_day_keys)
         return day_key, day_key_orders[day_key]
 
+    def has_assignment_submission(assignment_status: Any, assignment_score: Any, submitted_at: Any) -> bool:
+        return (
+            bool(normalize_text(assignment_status))
+            or assignment_score not in (None, "")
+            or isinstance(submitted_at, (date, datetime))
+        )
+
+    def record_submission_penalty(day: dict[str, Any], submitted_at: Any) -> None:
+        lesson_late_days = late_penalty(day.get("lessonDate"), submitted_at)
+        late_by_lesson = day["item"].setdefault("_lateDaysByLesson", {})
+        lesson_key = day["dayOrder"]
+        previous = late_by_lesson.get(lesson_key)
+        if previous is None or lesson_late_days < previous:
+            late_by_lesson[lesson_key] = lesson_late_days
+            day["dailyScore"]["lateDays"] = lesson_late_days
+
     for row in worksheet.iter_rows(min_row=4, values_only=True):
         student_id = row_value(row, columns["student_id"])
         name = row_value(row, columns["name"])
@@ -815,24 +831,12 @@ def parse_attendance_xlsx(content: bytes, group: GroupInfo) -> list[dict[str, An
         is_scored_day = score is not None and is_potential_day
 
         if not name:
-            if current_day and (normalize_text(assignment_status) or assignment_score not in (None, "")):
-                lesson_late_days = late_penalty(current_day.get("lessonDate"), submitted_at)
-                late_by_lesson = current_day["item"].setdefault("_lateDaysByLesson", {})
-                lesson_key = current_day["dayOrder"]
-                previous = late_by_lesson.get(lesson_key)
-                if previous is None or lesson_late_days < previous:
-                    late_by_lesson[lesson_key] = lesson_late_days
-                current_day["dailyScore"]["lateDays"] = lesson_late_days
+            if current_day and has_assignment_submission(assignment_status, assignment_score, submitted_at):
+                record_submission_penalty(current_day, submitted_at)
             continue
 
-        if current_day and not is_day_lesson(lesson) and (normalize_text(assignment_status) or assignment_score not in (None, "")):
-            lesson_late_days = late_penalty(current_day.get("lessonDate"), submitted_at)
-            late_by_lesson = current_day["item"].setdefault("_lateDaysByLesson", {})
-            lesson_key = current_day["dayOrder"]
-            previous = late_by_lesson.get(lesson_key)
-            if previous is None or lesson_late_days < previous:
-                late_by_lesson[lesson_key] = lesson_late_days
-                current_day["dailyScore"]["lateDays"] = lesson_late_days
+        if current_day and not is_day_lesson(lesson) and has_assignment_submission(assignment_status, assignment_score, submitted_at):
+            record_submission_penalty(current_day, submitted_at)
             continue
 
         if not discipline_matches_group(discipline, group):
@@ -876,6 +880,8 @@ def parse_attendance_xlsx(content: bytes, group: GroupInfo) -> list[dict[str, An
             "lessonDate": lesson_date,
             "dailyScore": daily_score,
         }
+        if has_assignment_submission(assignment_status, assignment_score, submitted_at):
+            record_submission_penalty(current_day, submitted_at)
 
     rows: list[dict[str, Any]] = []
     group_days_total = len(group_day_keys)
