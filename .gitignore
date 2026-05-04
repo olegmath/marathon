@@ -1,5 +1,6 @@
 .env
 backend/.env
+backend/app_settings.json
 backend/telegram_chats.json
 .DS_Store
 backend/.DS_Store

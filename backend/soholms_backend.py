@@ -63,8 +63,13 @@ DEFAULT_CONCURRENCY = int(os.getenv("SOHOLMS_CONCURRENCY", "4"))
 MAX_GROUPS_PER_REQUEST = int(os.getenv("SOHOLMS_MAX_GROUPS", "80"))
 DEADLINE_SHIFT_DAYS = int(os.getenv("SOHOLMS_DEADLINE_SHIFT_DAYS", "1"))
 DEFAULT_PERIOD_FROM = os.getenv("SOHOLMS_DEFAULT_PERIOD_FROM", "2026-04-01")
+DEFAULT_DATA_SOURCE = os.getenv("MARATHON_DATA_SOURCE", "soholms").strip().lower()
 DEFAULT_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "groups.config.json")
 BACKEND_ADMIN_KEY = os.getenv("BACKEND_ADMIN_KEY", "").strip()
+APP_SETTINGS_PATH = os.getenv(
+    "APP_SETTINGS_PATH",
+    os.path.join(os.path.dirname(__file__), "app_settings.json"),
+)
 PENALTY_OVERRIDES_PATH = os.getenv(
     "PENALTY_OVERRIDES_PATH",
     os.path.join(os.path.dirname(__file__), "penalty_overrides.json"),
@@ -222,6 +227,50 @@ def token_fingerprint(name: str) -> dict[str, Any]:
         "startsWithBearer": stripped.lower().startswith("bearer "),
         "preview": f"{stripped[:10]}...{stripped[-6:]}" if len(stripped) > 20 else "",
     }
+
+
+def normalize_data_source(value: Any) -> str:
+    source = normalize_text(value).lower()
+    return source if source in {"google", "soholms"} else ""
+
+
+def default_data_source() -> str:
+    return normalize_data_source(DEFAULT_DATA_SOURCE) or "soholms"
+
+
+def load_app_settings() -> dict[str, Any]:
+    settings = {"dataSource": default_data_source()}
+    if not os.path.exists(APP_SETTINGS_PATH):
+        return settings
+    try:
+        with open(APP_SETTINGS_PATH, "r", encoding="utf-8") as file:
+            stored = json.load(file)
+    except (OSError, json.JSONDecodeError):
+        return settings
+    if not isinstance(stored, dict):
+        return settings
+    data_source = normalize_data_source(stored.get("dataSource"))
+    if data_source:
+        settings["dataSource"] = data_source
+    return settings
+
+
+def save_app_settings(settings: dict[str, Any]) -> dict[str, Any]:
+    data_source = normalize_data_source(settings.get("dataSource"))
+    if not data_source:
+        raise BackendError("dataSource must be google or soholms", HTTPStatus.BAD_REQUEST)
+
+    payload = {
+        "dataSource": data_source,
+        "updatedAt": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+    }
+    directory = os.path.dirname(APP_SETTINGS_PATH)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    with open(APP_SETTINGS_PATH, "w", encoding="utf-8") as file:
+        json.dump(payload, file, ensure_ascii=False, indent=2)
+        file.write("\n")
+    return payload
 
 
 def request_json(method: str, path: str, **kwargs) -> Any:
@@ -1866,6 +1915,12 @@ class Handler(BaseHTTPRequestHandler):
                 body = self.read_json_body()
                 return self.send_json(save_penalty_override(body))
 
+            if parsed.path == "/api/settings":
+                self.require_admin(query)
+                body = self.read_json_body()
+                settings = save_app_settings(body)
+                return self.send_json({"ok": True, **settings})
+
             self.send_json({"ok": False, "error": "Not found"}, HTTPStatus.NOT_FOUND)
         except BackendError as error:
             self.send_json({"ok": False, "error": str(error)}, error.status)
@@ -1894,6 +1949,9 @@ class Handler(BaseHTTPRequestHandler):
                 self.require_admin(query)
                 clear_cache()
                 return self.send_json({"ok": True, "cacheItems": len(_CACHE)})
+
+            if parsed.path == "/api/settings":
+                return self.send_json({"ok": True, **load_app_settings()})
 
             if parsed.path == "/api/debug/xlsx":
                 self.require_admin(query)

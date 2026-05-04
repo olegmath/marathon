@@ -1122,6 +1122,48 @@
     return String(window.BACKEND_ADMIN_KEY || localStorage.getItem('backendAdminKey') || '');
   }
 
+  function applyDataSource(source) {
+    const normalizedSource = normalizeDataSource(source);
+    if (!normalizedSource) return false;
+    if (normalizedSource === 'soholms' && !hasSoholmsBackend()) return false;
+
+    selectedDataSource = normalizedSource;
+    localStorage.setItem(DATA_SOURCE_STORAGE_KEY, selectedDataSource);
+    return true;
+  }
+
+  async function loadDataSourceSettings() {
+    if (!hasSoholmsBackend()) return;
+
+    try {
+      const response = await fetch(`${SOHOLMS_BACKEND_URL}/api/settings?_t=${Date.now()}`);
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || 'Не удалось загрузить настройки');
+      }
+      applyDataSource(data.dataSource);
+    } catch (error) {
+      console.warn('Не удалось загрузить источник данных с backend:', error.message || error);
+    }
+  }
+
+  async function saveDataSourceSettings(source) {
+    const adminKey = getBackendAdminKey();
+    const response = await fetch(`${SOHOLMS_BACKEND_URL}/api/settings?_t=${Date.now()}`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...(adminKey ? { 'x-admin-key': adminKey } : {}),
+      },
+      body: JSON.stringify({ dataSource: source }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) {
+      throw new Error(data.error || 'Не удалось сохранить источник данных');
+    }
+    return data;
+  }
+
   function formatLocalDate(date) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -2766,25 +2808,41 @@
     const normalizedSource = normalizeDataSource(source);
     if (!normalizedSource || normalizedSource === selectedDataSource) return;
 
+    if (!hasSoholmsBackend()) {
+      adminError = 'Backend настроек не подключён';
+      render();
+      return;
+    }
+
     if (normalizedSource === 'soholms' && !hasSoholmsBackend()) {
       adminError = 'Soholms backend не настроен';
       render();
       return;
     }
 
-    selectedDataSource = normalizedSource;
-    localStorage.setItem(DATA_SOURCE_STORAGE_KEY, selectedDataSource);
-    appData = null;
-    teacherData = null;
-    allStudentRows = [];
-    globalNullScoreStudents = [];
-    resetAdminLoadMeta();
+    adminLoading = true;
     adminError = '';
     render();
 
-    await loadData();
-    if (adminToken) {
-      await loadAdminData();
+    try {
+      const settings = await saveDataSourceSettings(normalizedSource);
+      applyDataSource(settings.dataSource);
+      appData = null;
+      teacherData = null;
+      allStudentRows = [];
+      globalNullScoreStudents = [];
+      resetAdminLoadMeta();
+      adminLoading = false;
+      render();
+
+      await loadData();
+      if (adminToken) {
+        await loadAdminData();
+      }
+    } catch (error) {
+      adminError = error.message || 'Не удалось сохранить источник данных';
+      adminLoading = false;
+      render();
     }
   }
 
@@ -3532,8 +3590,13 @@
     if (!AUTO_REFRESH_MS || AUTO_REFRESH_MS < 60000) return;
     window.setInterval(() => {
       if (document.hidden) return;
-      loadData({ silent: true });
+      refreshData({ silent: true });
     }, AUTO_REFRESH_MS);
+  }
+
+  async function refreshData(options = {}) {
+    await loadDataSourceSettings();
+    await loadData(options);
   }
 
   function checkLogoBrowser() {
@@ -3547,16 +3610,19 @@
     img.src = 'logoplanka.png';
   }
 
-  // Init
-  displayLastUpdateTime();
-  checkLogoBrowser();
-  loadData();
-  startAutoRefresh();
+  async function initApp() {
+    displayLastUpdateTime();
+    checkLogoBrowser();
+    await refreshData();
+    startAutoRefresh();
+  }
+
+  initApp();
 
   // Обработчик кнопки обновить
   document.getElementById('refresh-btn').addEventListener('click', () => {
     document.getElementById('refresh-btn').classList.add('loading');
-    loadData();
+    refreshData();
   });
 </script>
 
