@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Марафон Рейтинг</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
     * {
@@ -917,6 +918,20 @@
       opacity: 0.5;
     }
 
+    .state-loading .rating-column {
+      opacity: 0.72;
+    }
+
+    .state-loading .empty-line {
+      animation: loading-pulse 1.2s ease-in-out infinite;
+      background: rgba(74,184,224,0.14);
+    }
+
+    @keyframes loading-pulse {
+      0%, 100% { opacity: 0.35; }
+      50% { opacity: 0.95; }
+    }
+
     /* Responsive */
     @media (max-width: 1024px) {
       .columns-container {
@@ -1033,7 +1048,7 @@
     </div>
     <div class="title-section">
       <div class="title-heading">
-        <img src="logoplanka.png" alt="Лого" class="logo" id="logo" style="display: none;">
+        <img src="logoplanka.png" alt="Лого" class="logo" id="logo" decoding="async" fetchpriority="high" style="display: none;">
         <div class="main-title">РЕЙТИНГ</div>
       </div>
       <div class="subtitle"><span id="subject-label">Физика</span> | <span id="exam-label">ОГЭ</span></div>
@@ -1064,6 +1079,8 @@
   const SOHOLMS_ORIGINS = String(window.SOHOLMS_ORIGINS || localStorage.getItem('soholmsOrigins') || '');
   const SOHOLMS_LIMIT = String(window.SOHOLMS_LIMIT || localStorage.getItem('soholmsLimit') || '');
   const AUTO_REFRESH_MS = Number(window.AUTO_REFRESH_MS || localStorage.getItem('autoRefreshMs') || 15 * 60 * 1000);
+  const PUBLIC_RATINGS_CACHE_PREFIX = 'marathonPublicRatingsCache:v2';
+  const PUBLIC_RATINGS_CACHE_MAX_AGE_MS = Number(window.PUBLIC_RATINGS_CACHE_MAX_AGE_MS || 6 * 60 * 60 * 1000);
 
   const SUBJECTS = [
     { key: 'математика', label: 'Математика', levels: ['ЕГЭ', 'ОГЭ'] },
@@ -1136,7 +1153,7 @@
     if (!hasSoholmsBackend()) return;
 
     try {
-      const response = await fetch(`${SOHOLMS_BACKEND_URL}/api/settings?_t=${Date.now()}`);
+      const response = await fetch(`${SOHOLMS_BACKEND_URL}/api/settings`);
       const data = await response.json();
       if (!response.ok || !data.ok) {
         throw new Error(data.error || 'Не удалось загрузить настройки');
@@ -1198,7 +1215,8 @@
     };
   }
 
-  function buildSoholmsRatingsUrl(publicOnly = false) {
+  function buildSoholmsRatingsUrl(publicOnly = false, options = {}) {
+    const cacheBust = options.cacheBust !== false;
     const params = new URLSearchParams();
     const period = getRequestPeriod(publicOnly);
     if (period.from) params.set('periodFrom', period.from);
@@ -1208,7 +1226,7 @@
     if (SOHOLMS_ORIGINS) params.set('origins', SOHOLMS_ORIGINS);
     if (SOHOLMS_LIMIT) params.set('limit', SOHOLMS_LIMIT);
     if (publicOnly) params.set('public', '1');
-    params.set('_t', String(Date.now()));
+    if (cacheBust) params.set('_t', String(Date.now()));
     return `${SOHOLMS_BACKEND_URL}/api/ratings?${params.toString()}`;
   }
 
@@ -1625,6 +1643,61 @@
     }
 
     return grouped;
+  }
+
+  function getPublicRatingsCacheKey() {
+    const period = getRequestPeriod(true);
+    return [
+      PUBLIC_RATINGS_CACHE_PREFIX,
+      selectedDataSource,
+      period.from || '',
+      period.to || '',
+      SOHOLMS_GROUP_IDS,
+      SOHOLMS_SUBJECTS,
+      SOHOLMS_ORIGINS,
+      SOHOLMS_LIMIT,
+    ].join('|');
+  }
+
+  function applyPublicStudents(students, options = {}) {
+    const normalizedStudents = parseApiRows(students);
+    appData = groupAndSort(normalizedStudents);
+    teacherData = groupTeacherRatings(normalizedStudents);
+    if (!options.silent || currentView !== 'details') {
+      render();
+    }
+  }
+
+  function readPublicRatingsCache() {
+    try {
+      const raw = localStorage.getItem(getPublicRatingsCacheKey());
+      if (!raw) return null;
+      const cached = JSON.parse(raw);
+      if (!cached || !Array.isArray(cached.students)) return null;
+      if (Date.now() - Number(cached.savedAt || 0) > PUBLIC_RATINGS_CACHE_MAX_AGE_MS) return null;
+      return cached;
+    } catch (error) {
+      console.warn('Не удалось прочитать кеш рейтинга:', error.message || error);
+      return null;
+    }
+  }
+
+  function writePublicRatingsCache(students) {
+    try {
+      localStorage.setItem(getPublicRatingsCacheKey(), JSON.stringify({
+        savedAt: Date.now(),
+        students,
+      }));
+    } catch (error) {
+      console.warn('Не удалось сохранить кеш рейтинга:', error.message || error);
+    }
+  }
+
+  function hydratePublicRatingsFromCache() {
+    const cached = readPublicRatingsCache();
+    if (!cached) return false;
+    applyPublicStudents(cached.students);
+    return true;
   }
 
   function getCurrentTeacherNames() {
@@ -2802,6 +2875,48 @@
     };
   }
 
+  function renderLoadingShell() {
+    document.body.classList.add('state-loading');
+
+    document.getElementById('subject-tabs').innerHTML = `
+      ${SUBJECTS.map(s => `
+        <button class="subject-btn ${currentSubject === s.key ? 'active' : ''}" data-subject="${s.key}">
+          ${s.label}
+        </button>
+      `).join('')}
+      <button class="subject-btn" data-view="details">Таблица</button>
+    `;
+    document.getElementById('subject-tabs').style.display = 'flex';
+
+    const currentSubjectConfig = SUBJECTS.find(s => s.key === currentSubject);
+    const availableLevels = currentSubjectConfig?.levels || [];
+    document.getElementById('exam-toggle').innerHTML = availableLevels.map(e => `
+      <button class="exam-btn ${currentExam === e ? 'active' : ''}" data-exam="${e}">
+        ${e}
+      </button>
+    `).join('');
+    document.getElementById('exam-toggle').style.display = 'flex';
+
+    document.getElementById('scope-toggle').innerHTML = SCOPES.map(scope => `
+      <button class="scope-btn ${currentScope === scope.key ? 'active' : ''}" data-scope="${scope.key}">
+        ${scope.label}
+      </button>
+    `).join('');
+    document.querySelector('.rating-controls').style.display = 'flex';
+    document.getElementById('teacher-filter').innerHTML = '';
+
+    const subjectLabel = SUBJECTS.find(s => s.key === currentSubject)?.label || '';
+    document.querySelector('.main-title').textContent = 'РЕЙТИНГ';
+    document.getElementById('subject-label').textContent = subjectLabel;
+    document.getElementById('exam-label').textContent = currentExam;
+
+    document.getElementById('columns-container').innerHTML = `
+      ${renderRatingColumn('legends', [])}
+      ${renderRatingColumn('champs', [])}
+      ${renderRatingColumn('starters', [])}
+    `;
+  }
+
   async function switchDataSource(source) {
     if (!canManageAdmin() || adminLoading || dataLoading) return;
 
@@ -3020,6 +3135,7 @@
 
   function render() {
     if (!appData) return;
+    document.body.classList.remove('state-loading');
     if (currentScope === 'teacher') {
       normalizeTeacherSelection();
     }
@@ -3437,11 +3553,12 @@
 
   async function loadData(options = {}) {
     const silent = Boolean(options.silent);
+    const force = Boolean(options.force);
     if (dataLoading) return;
     dataLoading = true;
     try {
       if (usesSoholmsSource()) {
-        const response = await fetch(buildSoholmsRatingsUrl(true));
+        const response = await fetch(buildSoholmsRatingsUrl(true, { cacheBust: force }));
         const data = await response.json();
 
         if (!response.ok || !data.ok || !Array.isArray(data.rows)) {
@@ -3453,17 +3570,14 @@
         }
 
         const allStudents = parseApiRows(data.rows);
+        writePublicRatingsCache(allStudents);
         if (allStudents.length === 0 && Array.isArray(data.errors) && data.errors.length > 0) {
           throw new Error(`Soholms вернул 0 учеников. Первая ошибка: ${data.errors[0].error || 'неизвестно'}`);
         }
 
-        appData = groupAndSort(allStudents);
-        teacherData = groupTeacherRatings(allStudents);
+        applyPublicStudents(allStudents, { silent });
         console.log('Загружено студентов из Soholms:', allStudents.length);
 
-        if (!silent || currentView !== 'details') {
-          render();
-        }
         if (!window.listenersInitialized) {
           initEventListeners();
           window.listenersInitialized = true;
@@ -3478,7 +3592,7 @@
 
       for (const subject of SUBJECTS) {
         for (const level of subject.levels) {
-          const url = buildApiUrl(subject.key, level) + `&_t=${Date.now()}`;
+          const url = buildApiUrl(subject.key, level) + (force ? `&_t=${Date.now()}` : '');
           fetchPromises.push(
             fetch(url)
               .then(response => {
@@ -3529,6 +3643,7 @@
 
       appData = groupAndSort(allStudents);
       teacherData = groupTeacherRatings(allStudents);
+      writePublicRatingsCache(allStudents);
       console.log('Загружено студентов:', allStudents.length);
       console.log('По предметам:', Object.keys(appData || {}).map(k => `${k}: ${Object.keys(appData[k]).length} уровней`));
 
@@ -3595,25 +3710,55 @@
   }
 
   async function refreshData(options = {}) {
-    await loadDataSourceSettings();
+    const previousDataSource = selectedDataSource;
+    const settingsPromise = loadDataSourceSettings();
     await loadData(options);
+    await settingsPromise;
+
+    if (selectedDataSource !== previousDataSource) {
+      appData = null;
+      teacherData = null;
+      if (!hydratePublicRatingsFromCache()) {
+        renderLoadingShell();
+      }
+      await loadData({ ...options, force: true, silent: false });
+    }
   }
 
   function checkLogoBrowser() {
-    const img = new Image();
-    img.onload = () => {
-      document.getElementById('logo').style.display = 'block';
+    const logo = document.getElementById('logo');
+    if (!logo) return;
+
+    const showLogo = () => {
+      logo.style.display = 'block';
     };
-    img.onerror = () => {
+    const hideMissingLogo = () => {
       console.log('Логотип не найден (logoplanka.png)');
+      logo.style.display = 'none';
     };
-    img.src = 'logoplanka.png';
+
+    if (logo.complete) {
+      if (logo.naturalWidth > 0) showLogo();
+      else hideMissingLogo();
+      return;
+    }
+
+    logo.addEventListener('load', showLogo, { once: true });
+    logo.addEventListener('error', hideMissingLogo, { once: true });
   }
 
   async function initApp() {
     displayLastUpdateTime();
     checkLogoBrowser();
-    await refreshData();
+    const hasCachedData = hydratePublicRatingsFromCache();
+    if (!hasCachedData) {
+      renderLoadingShell();
+    }
+    if (!window.listenersInitialized) {
+      initEventListeners();
+      window.listenersInitialized = true;
+    }
+    await refreshData({ silent: hasCachedData });
     startAutoRefresh();
   }
 
@@ -3622,7 +3767,7 @@
   // Обработчик кнопки обновить
   document.getElementById('refresh-btn').addEventListener('click', () => {
     document.getElementById('refresh-btn').classList.add('loading');
-    refreshData();
+    refreshData({ force: true });
   });
 </script>
 

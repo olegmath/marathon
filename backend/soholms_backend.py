@@ -8,6 +8,7 @@ current frontend rating calculations.
 
 from __future__ import annotations
 
+import gzip
 import io
 import json
 import os
@@ -1951,7 +1952,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json({"ok": True, "cacheItems": len(_CACHE)})
 
             if parsed.path == "/api/settings":
-                return self.send_json({"ok": True, **load_app_settings()})
+                return self.send_json({"ok": True, **load_app_settings()}, cache_seconds=30)
 
             if parsed.path == "/api/debug/xlsx":
                 self.require_admin(query)
@@ -1998,9 +1999,11 @@ class Handler(BaseHTTPRequestHandler):
 
             if parsed.path == "/api/ratings":
                 payload = resolve_ratings_payload(query)
+                cache_seconds = 0
                 if query.get("public") == "1":
                     payload = strip_for_public(payload)
-                return self.send_json(payload)
+                    cache_seconds = 60
+                return self.send_json(payload, cache_seconds=cache_seconds)
 
             self.send_json({"ok": False, "error": "Not found"}, HTTPStatus.NOT_FOUND)
         except BackendError as error:
@@ -2032,11 +2035,21 @@ class Handler(BaseHTTPRequestHandler):
             raise BackendError("Invalid JSON body", HTTPStatus.BAD_REQUEST)
         return data if isinstance(data, dict) else {}
 
-    def send_json(self, payload: Any, status: int = HTTPStatus.OK):
+    def send_json(self, payload: Any, status: int = HTTPStatus.OK, cache_seconds: int = 0):
         body = json_bytes(payload)
+        should_gzip = "gzip" in self.headers.get("Accept-Encoding", "").lower() and len(body) > 1024
+        if should_gzip:
+            body = gzip.compress(body)
+
         self.send_response(status)
         self.send_header("content-type", "application/json; charset=utf-8")
+        if should_gzip:
+            self.send_header("content-encoding", "gzip")
         self.send_header("content-length", str(len(body)))
+        if cache_seconds > 0 and status == HTTPStatus.OK:
+            self.send_header("cache-control", f"public, max-age={cache_seconds}, stale-while-revalidate={DEFAULT_CACHE_SECONDS}")
+        else:
+            self.send_header("cache-control", "no-store")
         self.send_cors_headers()
         self.end_headers()
         self.wfile.write(body)
