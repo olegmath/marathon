@@ -71,6 +71,11 @@ APP_SETTINGS_PATH = os.getenv(
     "APP_SETTINGS_PATH",
     os.path.join(os.path.dirname(__file__), "app_settings.json"),
 )
+PUBLIC_RATINGS_SNAPSHOT_PATH = os.getenv(
+    "PUBLIC_RATINGS_SNAPSHOT_PATH",
+    os.path.join(os.path.dirname(__file__), "public_ratings_snapshot.json"),
+)
+PUBLIC_RATINGS_REFRESH_SECONDS = int(os.getenv("PUBLIC_RATINGS_REFRESH_SECONDS", str(24 * 60 * 60)))
 PENALTY_OVERRIDES_PATH = os.getenv(
     "PENALTY_OVERRIDES_PATH",
     os.path.join(os.path.dirname(__file__), "penalty_overrides.json"),
@@ -118,6 +123,8 @@ MONTHS_RU = {
 _CACHE: dict[str, tuple[float, Any]] = {}
 _PDF_FONT_NAMES: tuple[str, str] | None = None
 _PENALTY_OVERRIDES_LOCK = threading.Lock()
+_PUBLIC_RATINGS_SNAPSHOT_LOCK = threading.Lock()
+_PUBLIC_RATINGS_REFRESH_LOCK = threading.Lock()
 
 
 class BackendError(Exception):
@@ -1215,6 +1222,129 @@ def strip_for_public(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+PUBLIC_RATINGS_QUERY_KEYS = (
+    "periodFrom",
+    "periodTo",
+    "groupIds",
+    "subjects",
+    "includeVirtual",
+    "origins",
+    "limit",
+)
+
+
+def normalize_public_ratings_query(query: dict[str, str] | None = None) -> dict[str, str]:
+    query = query or {}
+    return {
+        key: str(query.get(key, "")).strip()
+        for key in PUBLIC_RATINGS_QUERY_KEYS
+        if str(query.get(key, "")).strip()
+    }
+
+
+def utc_timestamp() -> str:
+    return datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+
+
+def snapshot_next_refresh_at(saved_at_epoch: float) -> str:
+    return datetime.utcfromtimestamp(saved_at_epoch + PUBLIC_RATINGS_REFRESH_SECONDS).replace(microsecond=0).isoformat() + "Z"
+
+
+def read_public_ratings_snapshot_file() -> dict[str, Any] | None:
+    if not os.path.exists(PUBLIC_RATINGS_SNAPSHOT_PATH):
+        return None
+
+    with _PUBLIC_RATINGS_SNAPSHOT_LOCK:
+        try:
+            with open(PUBLIC_RATINGS_SNAPSHOT_PATH, "r", encoding="utf-8") as file:
+                snapshot = json.load(file)
+        except (OSError, json.JSONDecodeError):
+            return None
+
+    return snapshot if isinstance(snapshot, dict) else None
+
+
+def write_public_ratings_snapshot_file(snapshot: dict[str, Any]) -> None:
+    directory = os.path.dirname(PUBLIC_RATINGS_SNAPSHOT_PATH)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    temp_path = f"{PUBLIC_RATINGS_SNAPSHOT_PATH}.tmp"
+
+    with _PUBLIC_RATINGS_SNAPSHOT_LOCK:
+        with open(temp_path, "w", encoding="utf-8") as file:
+            json.dump(snapshot, file, ensure_ascii=False, separators=(",", ":"))
+        os.replace(temp_path, PUBLIC_RATINGS_SNAPSHOT_PATH)
+
+
+def add_public_snapshot_meta(payload: dict[str, Any], snapshot: dict[str, Any]) -> dict[str, Any]:
+    saved_at_epoch = float(snapshot.get("savedAtEpoch") or 0)
+    return {
+        **copy.deepcopy(payload),
+        "snapshot": {
+            "updatedAt": snapshot.get("savedAt", ""),
+            "nextRefreshAt": snapshot_next_refresh_at(saved_at_epoch) if saved_at_epoch else "",
+            "refreshSeconds": PUBLIC_RATINGS_REFRESH_SECONDS,
+            "source": "snapshot",
+        },
+    }
+
+
+def read_public_ratings_snapshot(query: dict[str, str] | None = None) -> dict[str, Any] | None:
+    snapshot = read_public_ratings_snapshot_file()
+    if not snapshot:
+        return None
+    if snapshot.get("query") != normalize_public_ratings_query(query):
+        return None
+
+    payload = snapshot.get("payload")
+    if not isinstance(payload, dict):
+        return None
+    return add_public_snapshot_meta(payload, snapshot)
+
+
+def refresh_public_ratings_snapshot(query: dict[str, str] | None = None) -> dict[str, Any]:
+    normalized_query = normalize_public_ratings_query(query)
+    with _PUBLIC_RATINGS_REFRESH_LOCK:
+        payload = strip_for_public(resolve_ratings_payload(normalized_query))
+        saved_at_epoch = time.time()
+        snapshot = {
+            "version": 1,
+            "query": normalized_query,
+            "savedAt": utc_timestamp(),
+            "savedAtEpoch": saved_at_epoch,
+            "payload": payload,
+        }
+        write_public_ratings_snapshot_file(snapshot)
+        return add_public_snapshot_meta(payload, snapshot)
+
+
+def public_ratings_snapshot_is_stale(snapshot: dict[str, Any] | None) -> bool:
+    if not snapshot:
+        return True
+    if snapshot.get("query") != normalize_public_ratings_query({}):
+        return True
+    saved_at_epoch = float(snapshot.get("savedAtEpoch") or 0)
+    return not saved_at_epoch or time.time() - saved_at_epoch >= PUBLIC_RATINGS_REFRESH_SECONDS
+
+
+def public_ratings_snapshot_scheduler() -> None:
+    while True:
+        try:
+            if public_ratings_snapshot_is_stale(read_public_ratings_snapshot_file()):
+                refresh_public_ratings_snapshot({})
+        except Exception as error:
+            sys.stderr.write(f"Public ratings snapshot refresh failed: {error}\n")
+
+        time.sleep(max(60, min(PUBLIC_RATINGS_REFRESH_SECONDS, 60 * 60)))
+
+
+def start_public_ratings_snapshot_scheduler() -> None:
+    if PUBLIC_RATINGS_REFRESH_SECONDS <= 0:
+        return
+    thread = threading.Thread(target=public_ratings_snapshot_scheduler, daemon=True)
+    thread.start()
+
+
 def format_report_number(value: Any, digits: int = 2) -> str:
     return f"{float(value or 0):.{digits}f}".replace(".", ",")
 
@@ -1997,13 +2127,21 @@ class Handler(BaseHTTPRequestHandler):
                     "missingConfigCandidates": missing_candidates,
                 })
 
+            if parsed.path == "/api/ratings/refresh":
+                return self.send_json(refresh_public_ratings_snapshot(query))
+
             if parsed.path == "/api/ratings":
-                payload = resolve_ratings_payload(query)
-                cache_seconds = 0
                 if query.get("public") == "1":
-                    payload = strip_for_public(payload)
-                    cache_seconds = 60
-                return self.send_json(payload, cache_seconds=cache_seconds)
+                    payload = (
+                        refresh_public_ratings_snapshot(query)
+                        if query.get("refresh") == "1"
+                        else read_public_ratings_snapshot(query)
+                    )
+                    if not payload:
+                        payload = refresh_public_ratings_snapshot(query)
+                    return self.send_json(payload, cache_seconds=60)
+
+                return self.send_json(resolve_ratings_payload(query))
 
             self.send_json({"ok": False, "error": "Not found"}, HTTPStatus.NOT_FOUND)
         except BackendError as error:
@@ -2061,6 +2199,7 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     host = os.getenv("HOST", "127.0.0.1")
     port = int(os.getenv("PORT", "8787"))
+    start_public_ratings_snapshot_scheduler()
     server = ThreadingHTTPServer((host, port), Handler)
     print(f"Soholms backend listening on http://{host}:{port}", flush=True)
     server.serve_forever()

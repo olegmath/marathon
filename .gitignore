@@ -1,6 +1,7 @@
 .env
 backend/.env
 backend/app_settings.json
+backend/public_ratings_snapshot.json
 backend/telegram_chats.json
 .DS_Store
 backend/.DS_Store

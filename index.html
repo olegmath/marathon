@@ -1078,7 +1078,7 @@
   const SOHOLMS_SUBJECTS = String(window.SOHOLMS_SUBJECTS || localStorage.getItem('soholmsSubjects') || '');
   const SOHOLMS_ORIGINS = String(window.SOHOLMS_ORIGINS || localStorage.getItem('soholmsOrigins') || '');
   const SOHOLMS_LIMIT = String(window.SOHOLMS_LIMIT || localStorage.getItem('soholmsLimit') || '');
-  const AUTO_REFRESH_MS = Number(window.AUTO_REFRESH_MS || localStorage.getItem('autoRefreshMs') || 15 * 60 * 1000);
+  const AUTO_REFRESH_MS = Number(window.AUTO_REFRESH_MS || localStorage.getItem('autoRefreshMs') || 24 * 60 * 60 * 1000);
   const PUBLIC_RATINGS_CACHE_PREFIX = 'marathonPublicRatingsCache:v2';
   const PUBLIC_RATINGS_CACHE_MAX_AGE_MS = Number(window.PUBLIC_RATINGS_CACHE_MAX_AGE_MS || 6 * 60 * 60 * 1000);
 
@@ -1217,6 +1217,7 @@
 
   function buildSoholmsRatingsUrl(publicOnly = false, options = {}) {
     const cacheBust = options.cacheBust !== false;
+    const refresh = Boolean(options.refresh);
     const params = new URLSearchParams();
     const period = getRequestPeriod(publicOnly);
     if (period.from) params.set('periodFrom', period.from);
@@ -1226,6 +1227,7 @@
     if (SOHOLMS_ORIGINS) params.set('origins', SOHOLMS_ORIGINS);
     if (SOHOLMS_LIMIT) params.set('limit', SOHOLMS_LIMIT);
     if (publicOnly) params.set('public', '1');
+    if (publicOnly && refresh) params.set('refresh', '1');
     if (cacheBust) params.set('_t', String(Date.now()));
     return `${SOHOLMS_BACKEND_URL}/api/ratings?${params.toString()}`;
   }
@@ -3558,7 +3560,7 @@
     dataLoading = true;
     try {
       if (usesSoholmsSource()) {
-        const response = await fetch(buildSoholmsRatingsUrl(true, { cacheBust: force }));
+        const response = await fetch(buildSoholmsRatingsUrl(true, { cacheBust: force, refresh: force }));
         const data = await response.json();
 
         if (!response.ok || !data.ok || !Array.isArray(data.rows)) {
