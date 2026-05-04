@@ -13,6 +13,7 @@ import io
 import json
 import os
 import re
+import base64
 import copy
 import sys
 import threading
@@ -59,6 +60,7 @@ def load_env_file(path: str) -> None:
 load_env_file(os.path.join(os.path.dirname(__file__), ".env"))
 
 API_BASE = os.getenv("SOHOLMS_API_BASE", "https://api.soholms.com").rstrip("/")
+SOHOLMS_ORG = os.getenv("SOHOLMS_ORG", "943671").strip()
 DEFAULT_CACHE_SECONDS = int(os.getenv("SOHOLMS_CACHE_SECONDS", "900"))
 DEFAULT_CONCURRENCY = int(os.getenv("SOHOLMS_CONCURRENCY", "4"))
 MAX_GROUPS_PER_REQUEST = int(os.getenv("SOHOLMS_MAX_GROUPS", "80"))
@@ -85,6 +87,60 @@ TELEGRAM_API_BASE = os.getenv("TELEGRAM_API_BASE", "https://api.telegram.org").r
 
 GROUP_TREE_PATH = "/api/v1/learning_group/get_tree"
 ATTENDANCE_PATH = "/master/api/learning/attendance-sheet/excel/data"
+GRAPHQL_PATH = "/master/graphql"
+
+DEFAULT_ATTEMPT_DISCIPLINE_IDS = tuple(
+    int(part)
+    for part in os.getenv(
+        "SOHOLMS_ATTEMPT_DISCIPLINE_IDS",
+        "49949,49950,49947,52837,49948,49957,49956,49954,49955,49952,49951,49953",
+    ).split(",")
+    if part.strip()
+)
+FIRST_ATTEMPTS_ENABLED = os.getenv("SOHOLMS_FIRST_ATTEMPTS_ENABLED", "1").strip().lower() not in {"0", "false", "no", "off"}
+
+DISCIPLINE_HOMEWORKS_QUERY = """
+query AcademicDisciplineHomeworkIds_Query($id: ID!) {
+  node(id: $id) {
+    __typename
+    ... on AcademicDiscipline {
+      uid
+      treeContentFlat {
+        nodes {
+          data {
+            lessonContentItem {
+              academicHomeworkId
+            }
+          }
+        }
+      }
+    }
+  }
+}
+""".strip()
+
+HOMEWORK_ATTEMPTS_QUERY = """
+query AcademicHomeworkResultsStore_Query($id: ID!, $learningGroupIds: [Int!]) {
+  node(id: $id) {
+    __typename
+    ... on AcademicHomework {
+      uid
+      academicDisciplineId
+      learningDisciplineHomeworks(learningGroupIds: $learningGroupIds) {
+        uid
+        deadlineAt
+        learningDiscipline {
+          masterClientId
+        }
+        results {
+          status
+          statusChangedAt
+        }
+      }
+    }
+  }
+}
+""".strip()
 
 SUBJECT_LABELS = {
     "математика": "Математика",
@@ -300,6 +356,142 @@ def request_json(method: str, path: str, **kwargs) -> Any:
             if attempt < 2:
                 time.sleep(1.5 * (attempt + 1))
     raise BackendError(f"Soholms API request failed: {last_error}", HTTPStatus.BAD_GATEWAY)
+
+
+def to_graphql_gid(type_name: str, uid: int | str) -> str:
+    raw = f"{type_name}:{uid}".encode("utf-8")
+    return base64.b64encode(raw).decode("ascii")
+
+
+def request_graphql(query: str, variables: dict[str, Any], query_name: str) -> dict[str, Any]:
+    payload = {
+        "query": query,
+        "variables": variables,
+    }
+    data = request_json(
+        "POST",
+        GRAPHQL_PATH,
+        headers={
+            **soholms_headers(),
+            "content-type": "application/json",
+            "x-procraft-query": query_name,
+            **({"x-procraft-org": SOHOLMS_ORG} if SOHOLMS_ORG else {}),
+        },
+        json=payload,
+    )
+    errors = data.get("errors") if isinstance(data, dict) else None
+    if errors:
+        raise BackendError(f"Soholms GraphQL {query_name} error: {json.dumps(errors, ensure_ascii=False)[:500]}")
+    return data
+
+
+def parse_soholms_datetime(value: Any) -> datetime | None:
+    text = normalize_text(value)
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def dedupe_ints(values: list[Any]) -> list[int]:
+    seen: set[int] = set()
+    result: list[int] = []
+    for value in values:
+        try:
+            number = int(value)
+        except (TypeError, ValueError):
+            continue
+        if number in seen:
+            continue
+        seen.add(number)
+        result.append(number)
+    return result
+
+
+def fetch_discipline_homework_ids(academic_discipline_id: int) -> list[int]:
+    def load():
+        data = request_graphql(
+            DISCIPLINE_HOMEWORKS_QUERY,
+            {"id": to_graphql_gid("AcademicDiscipline", academic_discipline_id)},
+            "AcademicDisciplineHomeworkIds_Query",
+        )
+        node = (data.get("data") or {}).get("node") or {}
+        ids: list[Any] = []
+        for item in ((node.get("treeContentFlat") or {}).get("nodes") or []):
+            lesson_item = ((item.get("data") or {}).get("lessonContentItem") or {})
+            ids.append(lesson_item.get("academicHomeworkId"))
+        return dedupe_ints(ids)
+
+    return cached(f"discipline_homeworks:{academic_discipline_id}", DEFAULT_CACHE_SECONDS, load)
+
+
+def fetch_homework_first_attempts(academic_homework_id: int) -> list[dict[str, Any]]:
+    data = request_graphql(
+        HOMEWORK_ATTEMPTS_QUERY,
+        {
+            "id": to_graphql_gid("AcademicHomework", academic_homework_id),
+            "learningGroupIds": [],
+        },
+        "AcademicHomeworkResultsStore_Query",
+    )
+    node = (data.get("data") or {}).get("node") or {}
+    rows: list[dict[str, Any]] = []
+    for homework in node.get("learningDisciplineHomeworks") or []:
+        master_client_id = ((homework.get("learningDiscipline") or {}).get("masterClientId"))
+        deadline_at = parse_soholms_datetime(homework.get("deadlineAt"))
+        results = [
+            result
+            for result in homework.get("results", [])
+            if parse_soholms_datetime(result.get("statusChangedAt"))
+        ]
+        if not master_client_id or not deadline_at or not results:
+            continue
+        first_result = min(results, key=lambda result: parse_soholms_datetime(result.get("statusChangedAt")) or datetime.max)
+        first_attempt_at = parse_soholms_datetime(first_result.get("statusChangedAt"))
+        if not first_attempt_at:
+            continue
+        rows.append(
+            {
+                "academicHomeworkId": academic_homework_id,
+                "academicDisciplineId": node.get("academicDisciplineId"),
+                "masterClientId": int(master_client_id),
+                "deadlineAt": deadline_at,
+                "firstAttemptAt": first_attempt_at,
+            }
+        )
+    return rows
+
+
+def build_first_attempt_index(period_from: str, period_to: str) -> dict[tuple[str, str], datetime]:
+    if not FIRST_ATTEMPTS_ENABLED:
+        return {}
+
+    def load():
+        period_start = datetime.fromisoformat(period_from).date() if period_from else None
+        period_end = datetime.fromisoformat(period_to).date() if period_to else None
+        homework_ids: list[int] = []
+        for discipline_id in DEFAULT_ATTEMPT_DISCIPLINE_IDS:
+            homework_ids.extend(fetch_discipline_homework_ids(discipline_id))
+        homework_ids = dedupe_ints(homework_ids)
+
+        index: dict[tuple[str, str], datetime] = {}
+        for homework_id in homework_ids:
+            for row in fetch_homework_first_attempts(homework_id):
+                deadline_day = row["deadlineAt"].date()
+                if period_start and deadline_day < period_start:
+                    continue
+                if period_end and deadline_day > period_end:
+                    continue
+                key = (str(row["masterClientId"]), deadline_day.isoformat())
+                previous = index.get(key)
+                if previous is None or row["firstAttemptAt"] < previous:
+                    index[key] = row["firstAttemptAt"]
+        return index
+
+    cache_key = f"first_attempt_index:{period_from}:{period_to}:{DEFAULT_ATTEMPT_DISCIPLINE_IDS}"
+    return cached(cache_key, DEFAULT_CACHE_SECONDS, load)
 
 
 def fetch_group_tree() -> list[dict[str, Any]]:
@@ -820,7 +1012,11 @@ def late_penalty(lesson_date: Any, submitted_at: Any) -> int:
     return 1 if late_days(lesson_date, submitted_at) > 0 else 0
 
 
-def parse_attendance_xlsx(content: bytes, group: GroupInfo) -> list[dict[str, Any]]:
+def parse_attendance_xlsx(
+    content: bytes,
+    group: GroupInfo,
+    first_attempt_index: dict[tuple[str, str], datetime] | None = None,
+) -> list[dict[str, Any]]:
     workbook = load_workbook(io.BytesIO(content), data_only=True, read_only=True)
     worksheet = workbook.active
     headers = [cell.value for cell in next(worksheet.iter_rows(min_row=3, max_row=3))]
@@ -861,14 +1057,31 @@ def parse_attendance_xlsx(content: bytes, group: GroupInfo) -> list[dict[str, An
             or isinstance(submitted_at, (date, datetime))
         )
 
+    def student_key(value: Any) -> str:
+        return str(int(value)) if isinstance(value, (int, float)) else normalize_text(value)
+
+    def first_attempt_for_day(day: dict[str, Any]) -> datetime | None:
+        if not first_attempt_index:
+            return None
+        lesson_date = day.get("lessonDate")
+        if not isinstance(lesson_date, (date, datetime)):
+            return None
+        due_key = iso_date(lesson_date, shift_days=DEADLINE_SHIFT_DAYS)
+        return first_attempt_index.get((student_key(day.get("studentId")), due_key))
+
     def record_submission_penalty(day: dict[str, Any], submitted_at: Any) -> None:
-        lesson_late_days = late_penalty(day.get("lessonDate"), submitted_at)
+        effective_submitted_at = first_attempt_for_day(day) or submitted_at
+        lesson_late_days = late_penalty(day.get("lessonDate"), effective_submitted_at)
         late_by_lesson = day["item"].setdefault("_lateDaysByLesson", {})
         lesson_key = day["dayOrder"]
         previous = late_by_lesson.get(lesson_key)
         if previous is None or lesson_late_days < previous:
             late_by_lesson[lesson_key] = lesson_late_days
             day["dailyScore"]["lateDays"] = lesson_late_days
+            if isinstance(effective_submitted_at, datetime):
+                day["dailyScore"]["submittedAt"] = effective_submitted_at.isoformat()
+                if effective_submitted_at is not submitted_at:
+                    day["dailyScore"]["firstAttemptAt"] = effective_submitted_at.isoformat()
 
     for row in worksheet.iter_rows(min_row=4, values_only=True):
         student_id = row_value(row, columns["student_id"])
@@ -934,6 +1147,7 @@ def parse_attendance_xlsx(content: bytes, group: GroupInfo) -> list[dict[str, An
         item["dailyScores"].append(daily_score)
         current_day = {
             "item": item,
+            "studentId": student_id,
             "dayOrder": day_order,
             "lessonDate": lesson_date,
             "dailyScore": daily_score,
@@ -1899,10 +2113,16 @@ def load_ratings(
 
     rows: list[dict[str, Any]] = []
     errors: list[dict[str, Any]] = []
+    first_attempt_index: dict[tuple[str, str], datetime] = {}
+
+    try:
+        first_attempt_index = build_first_attempt_index(period_from, period_to)
+    except Exception as error:
+        errors.append({"source": "firstAttempts", "error": str(error)})
 
     def load_group(group: GroupInfo):
         content = fetch_attendance_xlsx(group.id, period_from, period_to)
-        return group, parse_attendance_xlsx(content, group)
+        return group, parse_attendance_xlsx(content, group, first_attempt_index)
 
     with ThreadPoolExecutor(max_workers=max(1, DEFAULT_CONCURRENCY)) as executor:
         futures = {executor.submit(load_group, group): group for group in groups}
@@ -1922,6 +2142,10 @@ def load_ratings(
         "groups": [group.__dict__ for group in groups],
         "rows": rows,
         "errors": errors,
+        "firstAttempts": {
+            "enabled": FIRST_ATTEMPTS_ENABLED,
+            "loaded": len(first_attempt_index),
+        },
     }
 
 
