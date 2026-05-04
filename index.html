@@ -986,10 +986,24 @@
     return String(window.BACKEND_ADMIN_KEY || localStorage.getItem('backendAdminKey') || '');
   }
 
+  function getRequestPeriod(publicOnly) {
+    if (!publicOnly && adminRole === 'teacher') {
+      return {
+        from: String(window.SOHOLMS_PERIOD_FROM || ''),
+        to: String(window.SOHOLMS_PERIOD_TO || ''),
+      };
+    }
+    return {
+      from: soholmsPeriodFrom,
+      to: soholmsPeriodTo,
+    };
+  }
+
   function buildSoholmsRatingsUrl(publicOnly = false) {
     const params = new URLSearchParams();
-    if (soholmsPeriodFrom) params.set('periodFrom', soholmsPeriodFrom);
-    if (soholmsPeriodTo) params.set('periodTo', soholmsPeriodTo);
+    const period = getRequestPeriod(publicOnly);
+    if (period.from) params.set('periodFrom', period.from);
+    if (period.to) params.set('periodTo', period.to);
     if (SOHOLMS_GROUP_IDS) params.set('groupIds', SOHOLMS_GROUP_IDS);
     if (SOHOLMS_SUBJECTS) params.set('subjects', SOHOLMS_SUBJECTS);
     if (SOHOLMS_ORIGINS) params.set('origins', SOHOLMS_ORIGINS);
@@ -1032,6 +1046,7 @@
   let dailyProgressSortDirection = 'asc';
   let pdfStudent = '';
   let adminToken = sessionStorage.getItem('adminToken') || '';
+  let adminRole = sessionStorage.getItem('adminRole') || (adminToken ? 'admin' : '');
   let adminLoading = false;
   let adminError = '';
   let dataLoading = false;
@@ -1043,6 +1058,10 @@
     missingConfigNames: [],
   };
   let globalNullScoreStudents = []; // Для отслеживания студентов с null в cells[10]
+
+  function canManageAdmin() {
+    return adminRole === 'admin';
+  }
 
   // SVG Icons
   const FlameIcon = () => `
@@ -1685,8 +1704,10 @@
       { key: 'details', label: 'Детали' },
       { key: 'teacherRating', label: 'Рейтинг преподов' },
       { key: 'dailyProgress', label: 'По дням' },
-      { key: 'pdfReports', label: 'PDF' },
     ];
+    if (canManageAdmin()) {
+      sections.push({ key: 'pdfReports', label: 'PDF' });
+    }
 
     return `
       <div class="admin-panel-header">
@@ -1703,30 +1724,34 @@
   }
 
   function renderAdminPeriodPanel() {
+    const requestPeriod = getRequestPeriod(false);
     const periodLabel = adminLoadMeta.period?.from && adminLoadMeta.period?.to
       ? `${adminLoadMeta.period.from} — ${adminLoadMeta.period.to}`
-      : soholmsPeriodFrom || soholmsPeriodTo
-        ? `${soholmsPeriodFrom || '...'} — ${soholmsPeriodTo || '...'}`
+      : requestPeriod.from || requestPeriod.to
+        ? `${requestPeriod.from || '...'} — ${requestPeriod.to || '...'}`
         : 'период из бэкенда';
     const errors = adminLoadMeta.errors || [];
     const missing = adminLoadMeta.missingConfigNames || [];
     const sourceLabel = hasSoholmsBackend() ? 'Soholms' : 'Google Sheets';
+    const controlsHtml = canManageAdmin() ? `
+      <div class="period-controls">
+        <label class="period-field">
+          С
+          <input class="period-input" id="admin-period-from" type="date" value="${escapeHtml(soholmsPeriodFrom)}" ${hasSoholmsBackend() ? '' : 'disabled'}>
+        </label>
+        <label class="period-field">
+          По
+          <input class="period-input" id="admin-period-to" type="date" value="${escapeHtml(soholmsPeriodTo)}" ${hasSoholmsBackend() ? '' : 'disabled'}>
+        </label>
+        <button class="period-apply-btn" type="button" id="admin-period-apply" ${hasSoholmsBackend() ? '' : 'disabled'}>Применить</button>
+        <button class="period-reset-btn" type="button" id="admin-period-reset" ${hasSoholmsBackend() ? '' : 'disabled'}>Сброс</button>
+        <button class="cache-clear-btn" type="button" id="admin-cache-clear" ${hasSoholmsBackend() ? '' : 'disabled'}>Очистить кеш</button>
+      </div>
+    ` : '';
 
     return `
       <div class="admin-period-panel">
-        <div class="period-controls">
-          <label class="period-field">
-            С
-            <input class="period-input" id="admin-period-from" type="date" value="${escapeHtml(soholmsPeriodFrom)}" ${hasSoholmsBackend() ? '' : 'disabled'}>
-          </label>
-          <label class="period-field">
-            По
-            <input class="period-input" id="admin-period-to" type="date" value="${escapeHtml(soholmsPeriodTo)}" ${hasSoholmsBackend() ? '' : 'disabled'}>
-          </label>
-          <button class="period-apply-btn" type="button" id="admin-period-apply" ${hasSoholmsBackend() ? '' : 'disabled'}>Применить</button>
-          <button class="period-reset-btn" type="button" id="admin-period-reset" ${hasSoholmsBackend() ? '' : 'disabled'}>Сброс</button>
-          <button class="cache-clear-btn" type="button" id="admin-cache-clear" ${hasSoholmsBackend() ? '' : 'disabled'}>Очистить кеш</button>
-        </div>
+        ${controlsHtml}
         <div class="admin-load-summary">
           <span class="admin-load-pill">${escapeHtml(sourceLabel)}</span>
           <span class="admin-load-pill">${escapeHtml(periodLabel)}</span>
@@ -1764,7 +1789,7 @@
   function renderAdminLogin() {
     return `
       <div class="admin-login">
-        <div class="admin-login-title">Админ панель</div>
+        <div class="admin-login-title">Доступ к таблице</div>
         <form class="admin-login-form" id="admin-login-form">
           <input class="admin-password-input" id="admin-password-input" type="password" placeholder="Пароль" autocomplete="current-password">
           <button class="admin-login-btn" type="submit">Войти</button>
@@ -1779,6 +1804,10 @@
       return renderAdminLogin();
     }
 
+    if (adminSection === 'pdfReports' && !canManageAdmin()) {
+      adminSection = 'details';
+    }
+
     if (adminLoading) {
       return '<div class="details-table-empty">Загружаем админские данные...</div>';
     }
@@ -1786,7 +1815,7 @@
     if (adminError && allStudentRows.length === 0) {
       return `
         <div class="admin-login">
-          <div class="admin-login-title">Админ панель</div>
+          <div class="admin-login-title">Доступ к таблице</div>
           <div class="admin-login-error" style="display:block;">${escapeHtml(adminError)}</div>
           <button class="admin-login-btn" type="button" id="admin-logout-btn" style="margin-top:12px;">Войти заново</button>
         </div>
@@ -2301,6 +2330,8 @@
   }
 
   function openPdfReport(studentName = '') {
+    if (!canManageAdmin()) return;
+
     const studentGroups = studentName
       ? groupedRowsByStudent(allStudentRows).filter(([name]) => name === studentName)
       : groupedRowsByStudent(allStudentRows);
@@ -2324,7 +2355,7 @@
   }
 
   async function sendTelegramReport(studentName = '') {
-    if (!hasSoholmsBackend() || adminLoading) return;
+    if (!canManageAdmin() || !hasSoholmsBackend() || adminLoading) return;
 
     adminLoading = true;
     adminError = '';
@@ -2359,6 +2390,11 @@
   }
 
   function renderPdfReportsView() {
+    if (!canManageAdmin()) {
+      adminSection = 'details';
+      return renderDetailsView();
+    }
+
     const studentOptions = groupedRowsByStudent(allStudentRows).map(([studentName]) => studentName);
     if (pdfStudent && !studentOptions.includes(pdfStudent)) pdfStudent = '';
 
@@ -2441,7 +2477,7 @@
   }
 
   function applyAdminPeriod() {
-    if (!hasSoholmsBackend()) return;
+    if (!canManageAdmin() || !hasSoholmsBackend()) return;
 
     const from = document.getElementById('admin-period-from')?.value || '';
     const to = document.getElementById('admin-period-to')?.value || '';
@@ -2462,14 +2498,14 @@
   }
 
   function resetAdminPeriod() {
-    if (!hasSoholmsBackend()) return;
+    if (!canManageAdmin() || !hasSoholmsBackend()) return;
     localStorage.removeItem('soholmsPeriodFrom');
     localStorage.removeItem('soholmsPeriodTo');
     location.reload();
   }
 
   async function clearBackendCacheAndReload() {
-    if (!hasSoholmsBackend() || adminLoading) return;
+    if (!canManageAdmin() || !hasSoholmsBackend() || adminLoading) return;
 
     adminLoading = true;
     adminError = '';
@@ -2518,7 +2554,7 @@
         ${s.label}
       </button>
     `).join('')}
-      <button class="subject-btn ${currentView === 'details' ? 'active' : ''}" data-view="details">Админ</button>
+      <button class="subject-btn ${currentView === 'details' ? 'active' : ''}" data-view="details">Таблица</button>
     `;
     document.getElementById('subject-tabs').innerHTML = subjectTabsHtml;
     document.getElementById('subject-tabs').style.display = 'flex';
@@ -2554,17 +2590,25 @@
     document.getElementById('teacher-filter').innerHTML = teacherFilterHtml;
 
     // Update title
+    if (adminSection === 'pdfReports' && !canManageAdmin()) {
+      adminSection = 'details';
+    }
+
     const adminTitle = adminSection === 'teacherRating'
       ? 'Рейтинг преподов'
       : adminSection === 'dailyProgress'
         ? 'Процент по дням'
-        : 'Детальная статистика';
+        : adminSection === 'pdfReports'
+          ? 'PDF'
+          : 'Детальная статистика';
     const adminSubtitle = adminSection === 'teacherRating'
       ? 'Средние по группам'
       : adminSection === 'dailyProgress'
         ? 'Решение по датам'
-        : 'Для преподавателей';
-    document.querySelector('.main-title').textContent = currentView === 'details' ? 'АДМИН' : 'РЕЙТИНГ';
+        : adminSection === 'pdfReports'
+          ? 'Отчёты'
+          : 'Для преподавателей';
+    document.querySelector('.main-title').textContent = currentView === 'details' ? (canManageAdmin() ? 'АДМИН' : 'ТАБЛИЦА') : 'РЕЙТИНГ';
     const subjectLabel = SUBJECTS.find(s => s.key === currentSubject)?.label || '';
     document.getElementById('subject-label').textContent = currentView === 'details' ? adminTitle : subjectLabel;
     const teacherLabel = currentScope === 'teacher' && currentTeacher ? ` | ${currentTeacher}` : '';
@@ -2710,6 +2754,7 @@
     document.getElementById('columns-container').addEventListener('click', (e) => {
       if (e.target.id === 'admin-logout-btn') {
         adminToken = '';
+        adminRole = '';
         adminError = '';
         allStudentRows = [];
         adminLoadMeta = {
@@ -2720,47 +2765,56 @@
           missingConfigNames: [],
         };
         sessionStorage.removeItem('adminToken');
+        sessionStorage.removeItem('adminRole');
         render();
         return;
       }
 
       if (e.target.id === 'admin-period-apply') {
+        if (!canManageAdmin()) return;
         applyAdminPeriod();
         return;
       }
 
       if (e.target.id === 'admin-period-reset') {
+        if (!canManageAdmin()) return;
         resetAdminPeriod();
         return;
       }
 
       if (e.target.id === 'admin-cache-clear') {
+        if (!canManageAdmin()) return;
         clearBackendCacheAndReload();
         return;
       }
 
       if (e.target.id === 'pdf-one-student') {
+        if (!canManageAdmin()) return;
         openPdfReport(pdfStudent);
         return;
       }
 
       if (e.target.id === 'pdf-all-students') {
+        if (!canManageAdmin()) return;
         openPdfReport('');
         return;
       }
 
       if (e.target.id === 'telegram-one-student') {
+        if (!canManageAdmin()) return;
         sendTelegramReport(pdfStudent);
         return;
       }
 
       if (e.target.id === 'telegram-all-students') {
+        if (!canManageAdmin()) return;
         sendTelegramReport('');
         return;
       }
 
       const adminSectionKey = e.target.dataset.adminSection;
       if (adminSectionKey) {
+        if (adminSectionKey === 'pdfReports' && !canManageAdmin()) return;
         adminSection = adminSectionKey;
         render();
         return;
@@ -2819,12 +2873,19 @@
       }
 
       adminToken = data.token;
+      adminRole = data.role === 'teacher' ? 'teacher' : 'admin';
+      if (!canManageAdmin() && adminSection === 'pdfReports') {
+        adminSection = 'details';
+      }
       sessionStorage.setItem('adminToken', adminToken);
+      sessionStorage.setItem('adminRole', adminRole);
       adminLoading = false;
       await loadAdminData();
     } catch (error) {
       adminToken = '';
+      adminRole = '';
       sessionStorage.removeItem('adminToken');
+      sessionStorage.removeItem('adminRole');
       adminError = error.message || 'Не удалось войти';
     } finally {
       adminLoading = false;
@@ -2870,7 +2931,9 @@
       };
       if (!hasSoholmsBackend()) {
         adminToken = '';
+        adminRole = '';
         sessionStorage.removeItem('adminToken');
+        sessionStorage.removeItem('adminRole');
       }
       adminError = error.message || 'Не удалось загрузить админские данные';
     } finally {

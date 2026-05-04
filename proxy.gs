@@ -1,5 +1,6 @@
 const SHEET_ID = '1pd_vlN7azfbwGcZUauwUk5d_378mIlQHTWZN_PtntIU';
 const ADMIN_PASSWORD_PROPERTY = 'ADMIN_PASSWORD';
+const TEACHER_PASSWORD_PROPERTY = 'TEACHER_PASSWORD';
 const TOKEN_TTL_SECONDS = 6 * 60 * 60;
 
 const SUBJECTS = [
@@ -33,18 +34,26 @@ function doGet(e) {
 function handleLogin(params) {
   const password = params.password || '';
   const adminPassword = PropertiesService.getScriptProperties().getProperty(ADMIN_PASSWORD_PROPERTY);
+  const teacherPassword = PropertiesService.getScriptProperties().getProperty(TEACHER_PASSWORD_PROPERTY);
 
   if (!adminPassword) {
     throw new Error(`Script property ${ADMIN_PASSWORD_PROPERTY} is not configured`);
   }
 
-  if (password !== adminPassword) {
+  let role = '';
+  if (password === adminPassword) {
+    role = 'admin';
+  } else if (teacherPassword && password === teacherPassword) {
+    role = 'teacher';
+  }
+
+  if (!role) {
     return jsonResponse({ ok: false, error: 'unauthorized' });
   }
 
   const token = Utilities.getUuid();
-  CacheService.getScriptCache().put(getTokenKey(token), '1', TOKEN_TTL_SECONDS);
-  return jsonResponse({ ok: true, token, expiresIn: TOKEN_TTL_SECONDS });
+  CacheService.getScriptCache().put(getTokenKey(token), role, TOKEN_TTL_SECONDS);
+  return jsonResponse({ ok: true, token, role, expiresIn: TOKEN_TTL_SECONDS });
 }
 
 function handleAdmin(params) {
@@ -83,10 +92,12 @@ function requireToken(token) {
     throw new Error('missing token');
   }
 
-  const valid = CacheService.getScriptCache().get(getTokenKey(token)) === '1';
-  if (!valid) {
+  const role = CacheService.getScriptCache().get(getTokenKey(token));
+  if (!role) {
     throw new Error('unauthorized');
   }
+
+  return role === '1' ? 'admin' : role;
 }
 
 function getTokenKey(token) {
