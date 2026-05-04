@@ -1052,8 +1052,10 @@
   const PROXY_URL = 'https://script.google.com/macros/s/AKfycbyRMo1Sqm57vXg85VAtOYPDJ-PscpR1AuAGpcuCQmoT1WMuNeykYXaTpf8UPL5R8WPc_w/exec';
   const SOHOLMS_BACKEND_URL = String(window.SOHOLMS_BACKEND_URL || localStorage.getItem('soholmsBackendUrl') || '').replace(/\/$/, '');
   const DATA_SOURCE_STORAGE_KEY = 'marathonDataSource';
-  let soholmsPeriodFrom = String(window.SOHOLMS_PERIOD_FROM || localStorage.getItem('soholmsPeriodFrom') || '');
-  let soholmsPeriodTo = String(window.SOHOLMS_PERIOD_TO || localStorage.getItem('soholmsPeriodTo') || '');
+  const CONFIG_SOHOLMS_PERIOD_FROM = String(window.SOHOLMS_PERIOD_FROM || '');
+  const CONFIG_SOHOLMS_PERIOD_TO = String(window.SOHOLMS_PERIOD_TO || '');
+  let soholmsPeriodFrom = String(CONFIG_SOHOLMS_PERIOD_FROM || localStorage.getItem('soholmsPeriodFrom') || '');
+  let soholmsPeriodTo = String(CONFIG_SOHOLMS_PERIOD_TO || localStorage.getItem('soholmsPeriodTo') || '');
   const defaultTeacherPeriod = getCurrentMonthPeriod();
   let teacherPeriodFrom = String(window.SOHOLMS_PERIOD_FROM || sessionStorage.getItem('teacherPeriodFrom') || defaultTeacherPeriod.from);
   let teacherPeriodTo = String(window.SOHOLMS_PERIOD_TO || sessionStorage.getItem('teacherPeriodTo') || defaultTeacherPeriod.to);
@@ -1136,6 +1138,12 @@
   }
 
   function getRequestPeriod(publicOnly) {
+    if (publicOnly) {
+      return {
+        from: CONFIG_SOHOLMS_PERIOD_FROM,
+        to: CONFIG_SOHOLMS_PERIOD_TO,
+      };
+    }
     if (!publicOnly && adminRole === 'teacher') {
       return {
         from: teacherPeriodFrom,

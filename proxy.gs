@@ -145,7 +145,7 @@ function parseRows(gvizJson, subject, level, includeDetails) {
 
   const result = [];
   const headerCells = (table.rows[0] && table.rows[0].c) || [];
-  const dailyColumns = includeDetails ? getDailyColumns(headerCells) : [];
+  const dailyColumns = getDailyColumns(headerCells);
 
   for (let rowIdx = 1; rowIdx < table.rows.length; rowIdx++) {
     const cells = table.rows[rowIdx].c || [];
@@ -155,39 +155,61 @@ function parseRows(gvizJson, subject, level, includeDetails) {
       continue;
     }
 
+    const dailyScores = dailyColumns
+      .filter((column) => hasCellValue(cells[column.index]))
+      .map((column) => ({
+        dateKey: column.dateKey,
+        dateLabel: column.dateLabel,
+        dateOrder: column.dateOrder,
+        score: getCellNumber(cells[column.index]),
+      }));
+    const calculated = calculateProgressFromDailyScores(dailyScores, dailyColumns.length);
+    const score = getCellNumber(cells[10]) || calculated.finalScore;
+
     const row = {
       subject,
       level,
       name: String(name).trim(),
       teacher: getCellString(cells[13]) || 'Без преподавателя',
-      score: getCellNumber(cells[10]),
+      score,
     };
 
     if (includeDetails) {
       row.group = getCellString(cells[1]);
-      row.daysDone = getCellNumber(cells[3]);
-      row.daysTotal = getCellNumber(cells[4]);
-      row.coefficient = getCellNumber(cells[5]);
-      row.quality = getCellNumber(cells[6]);
-      row.baseScore = getCellNumber(cells[8]);
+      row.daysDone = getCellNumber(cells[3]) || calculated.daysDone;
+      row.daysTotal = getCellNumber(cells[4]) || calculated.daysTotal;
+      row.coefficient = getCellNumber(cells[5]) || calculated.coefficient;
+      row.quality = getCellNumber(cells[6]) || calculated.quality;
+      row.baseScore = getCellNumber(cells[8]) || calculated.baseScore;
       row.penalty = getCellNumber(cells[9]);
-      row.finalScore = getCellNumber(cells[10]);
+      row.finalScore = score;
       row.groupPlace = getCellNumber(cells[11]);
       row.schoolPlace = getCellNumber(cells[12]);
-      row.dailyScores = dailyColumns
-        .filter((column) => hasCellValue(cells[column.index]))
-        .map((column) => ({
-          dateKey: column.dateKey,
-          dateLabel: column.dateLabel,
-          dateOrder: column.dateOrder,
-          score: getCellNumber(cells[column.index]),
-        }));
+      row.dailyScores = dailyScores;
     }
 
     result.push(row);
   }
 
   return result;
+}
+
+function calculateProgressFromDailyScores(dailyScores, dayCount) {
+  const scores = dailyScores.map((item) => Number(item.score) || 0).filter((score) => score > 0);
+  const daysTotal = Number(dayCount) || 0;
+  const daysDone = scores.length;
+  const quality = scores.length === 0 ? 0 : scores.reduce((sum, score) => sum + score, 0) / scores.length;
+  const coefficient = daysTotal === 0 ? 0 : daysDone / daysTotal;
+  const baseScore = coefficient * quality;
+
+  return {
+    daysDone,
+    daysTotal,
+    coefficient,
+    quality,
+    baseScore,
+    finalScore: baseScore,
+  };
 }
 
 function getDailyColumns(headerCells) {

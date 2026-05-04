@@ -62,6 +62,7 @@ DEFAULT_CACHE_SECONDS = int(os.getenv("SOHOLMS_CACHE_SECONDS", "900"))
 DEFAULT_CONCURRENCY = int(os.getenv("SOHOLMS_CONCURRENCY", "4"))
 MAX_GROUPS_PER_REQUEST = int(os.getenv("SOHOLMS_MAX_GROUPS", "80"))
 DEADLINE_SHIFT_DAYS = int(os.getenv("SOHOLMS_DEADLINE_SHIFT_DAYS", "1"))
+DEFAULT_PERIOD_FROM = os.getenv("SOHOLMS_DEFAULT_PERIOD_FROM", "2026-04-01")
 DEFAULT_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "groups.config.json")
 BACKEND_ADMIN_KEY = os.getenv("BACKEND_ADMIN_KEY", "").strip()
 PENALTY_OVERRIDES_PATH = os.getenv(
@@ -1745,11 +1746,11 @@ def load_ratings(
 
 
 def resolve_ratings_payload(query: dict[str, str]) -> dict[str, Any]:
-    default_from, default_to = current_month_range()
+    default_from, default_to = current_marathon_period()
     config = load_group_config()
     configured_ids, missing_names, missing_candidates = resolve_config_group_ids(fetch_group_tree(), config)
     period_from = query.get("periodFrom") or os.getenv("SOHOLMS_PERIOD_FROM") or config.get("periodFrom") or default_from
-    period_to = query.get("periodTo") or os.getenv("SOHOLMS_PERIOD_TO") or config.get("periodTo") or default_to
+    period_to = query.get("periodTo") or default_to
     group_ids = parse_int_set(query.get("groupIds", "")) or configured_ids or None
     subjects = parse_str_set(query.get("subjects", ""))
     include_virtual = query.get("includeVirtual") == "1" or bool(config.get("includeVirtual"))
@@ -1823,6 +1824,10 @@ def current_month_range() -> tuple[str, str]:
     return start.isoformat(), end.isoformat()
 
 
+def current_marathon_period() -> tuple[str, str]:
+    return DEFAULT_PERIOD_FROM, date.today().isoformat()
+
+
 def json_bytes(payload: Any) -> bytes:
     return json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
 
@@ -1893,8 +1898,9 @@ class Handler(BaseHTTPRequestHandler):
             if parsed.path == "/api/debug/xlsx":
                 self.require_admin(query)
                 group_id_value = query.get("groupId", "")
-                period_from = query.get("periodFrom") or os.getenv("SOHOLMS_PERIOD_FROM") or load_group_config().get("periodFrom") or current_month_range()[0]
-                period_to = query.get("periodTo") or os.getenv("SOHOLMS_PERIOD_TO") or load_group_config().get("periodTo") or current_month_range()[1]
+                default_from, default_to = current_marathon_period()
+                period_from = query.get("periodFrom") or os.getenv("SOHOLMS_PERIOD_FROM") or load_group_config().get("periodFrom") or default_from
+                period_to = query.get("periodTo") or default_to
                 try:
                     group_id = int(group_id_value)
                 except ValueError:
