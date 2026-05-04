@@ -12,7 +12,9 @@ import io
 import json
 import os
 import re
+import copy
 import sys
+import threading
 import time
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -62,6 +64,10 @@ MAX_GROUPS_PER_REQUEST = int(os.getenv("SOHOLMS_MAX_GROUPS", "80"))
 DEADLINE_SHIFT_DAYS = int(os.getenv("SOHOLMS_DEADLINE_SHIFT_DAYS", "1"))
 DEFAULT_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "groups.config.json")
 BACKEND_ADMIN_KEY = os.getenv("BACKEND_ADMIN_KEY", "").strip()
+PENALTY_OVERRIDES_PATH = os.getenv(
+    "PENALTY_OVERRIDES_PATH",
+    os.path.join(os.path.dirname(__file__), "penalty_overrides.json"),
+)
 DEFAULT_TELEGRAM_CHAT_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "telegram_chats.json")
 TELEGRAM_API_BASE = os.getenv("TELEGRAM_API_BASE", "https://api.telegram.org").rstrip("/")
 
@@ -104,6 +110,7 @@ MONTHS_RU = {
 
 _CACHE: dict[str, tuple[float, Any]] = {}
 _PDF_FONT_NAMES: tuple[str, str] | None = None
+_PENALTY_OVERRIDES_LOCK = threading.Lock()
 
 
 class BackendError(Exception):
@@ -293,6 +300,28 @@ def telegram_chat_ids_from_item(item: dict[str, Any]) -> list[str]:
     return chat_ids
 
 
+def telegram_parents_from_item(item: dict[str, Any]) -> list[str]:
+    raw_parents = item.get("parents")
+    if raw_parents is None:
+        raw_parents = item.get("parent")
+    if raw_parents is None:
+        raw_parents = item.get("parentName")
+    if raw_parents is None:
+        raw_parents = item.get("parent_name")
+    if not isinstance(raw_parents, list):
+        raw_parents = [raw_parents]
+
+    parents: list[str] = []
+    seen: set[str] = set()
+    for raw_parent in raw_parents:
+        parent = normalize_text(raw_parent)
+        if not parent or parent in seen:
+            continue
+        seen.add(parent)
+        parents.append(parent)
+    return parents
+
+
 def load_split_env_json(prefix: str) -> str:
     direct_value = os.getenv(prefix, "").strip()
     if direct_value:
@@ -307,7 +336,7 @@ def load_split_env_json(prefix: str) -> str:
     return "".join(parts).strip()
 
 
-def load_telegram_chats() -> dict[str, list[str]]:
+def load_telegram_config_items() -> list[dict[str, Any]]:
     path = os.getenv("TELEGRAM_CHAT_CONFIG", DEFAULT_TELEGRAM_CHAT_CONFIG_PATH)
     raw_json = load_split_env_json("TELEGRAM_CHATS_JSON")
     if raw_json:
@@ -326,18 +355,31 @@ def load_telegram_chats() -> dict[str, list[str]]:
         items = [{"name": name, "chatId": chat_id} for name, chat_id in raw.items()]
     else:
         raise BackendError("Unexpected TELEGRAM_CHAT_CONFIG format", HTTPStatus.INTERNAL_SERVER_ERROR)
+    return [item for item in items if isinstance(item, dict) and item.get("enabled") is not False]
 
-    chats: dict[str, list[str]] = {}
-    for item in items:
-        if not isinstance(item, dict) or item.get("enabled") is False:
-            continue
+
+def load_telegram_chat_targets() -> dict[str, dict[str, Any]]:
+    targets: dict[str, dict[str, Any]] = {}
+    for item in load_telegram_config_items():
         name = normalize_text(item.get("name"))
         chat_ids = telegram_chat_ids_from_item(item)
-        if name and chat_ids:
-            current = chats.setdefault(normalize_group_name(name), [])
-            for chat_id in chat_ids:
-                if chat_id not in current:
-                    current.append(chat_id)
+        if not name or not chat_ids:
+            continue
+        key = normalize_group_name(name)
+        target = targets.setdefault(key, {"name": name, "chatIds": [], "parents": []})
+        for parent in telegram_parents_from_item(item):
+            if parent not in target["parents"]:
+                target["parents"].append(parent)
+        for chat_id in chat_ids:
+            if chat_id not in target["chatIds"]:
+                target["chatIds"].append(chat_id)
+    return targets
+
+
+def load_telegram_chats() -> dict[str, list[str]]:
+    chats: dict[str, list[str]] = {}
+    for key, target in load_telegram_chat_targets().items():
+        chats[key] = list(target.get("chatIds") or [])
     return chats
 
 
@@ -965,6 +1007,137 @@ def add_places(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return rows
 
 
+def student_row_identity(row: dict[str, Any]) -> str:
+    parts = [
+        row.get("subject", ""),
+        row.get("level", ""),
+        row.get("group", ""),
+        row.get("name", ""),
+        row.get("teacher", ""),
+    ]
+    return "\x1f".join(normalize_text(part).casefold() for part in parts)
+
+
+def penalty_override_key(period: dict[str, Any], row: dict[str, Any]) -> str:
+    period_from = normalize_text(period.get("from"))
+    period_to = normalize_text(period.get("to"))
+    return "\x1f".join([period_from, period_to, student_row_identity(row)])
+
+
+def load_penalty_overrides() -> dict[str, dict[str, Any]]:
+    if not os.path.exists(PENALTY_OVERRIDES_PATH):
+        return {}
+    with open(PENALTY_OVERRIDES_PATH, "r", encoding="utf-8") as file:
+        data = json.load(file)
+    overrides = data.get("overrides", data) if isinstance(data, dict) else {}
+    return overrides if isinstance(overrides, dict) else {}
+
+
+def write_penalty_overrides(overrides: dict[str, dict[str, Any]]) -> None:
+    directory = os.path.dirname(PENALTY_OVERRIDES_PATH)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    temp_path = f"{PENALTY_OVERRIDES_PATH}.tmp"
+    with open(temp_path, "w", encoding="utf-8") as file:
+        json.dump({"overrides": overrides}, file, ensure_ascii=False, indent=2, sort_keys=True)
+        file.write("\n")
+    os.replace(temp_path, PENALTY_OVERRIDES_PATH)
+
+
+def parse_penalty_value(value: Any, field_name: str = "penalty") -> float:
+    try:
+        penalty = float(str(value).replace(",", "."))
+    except (TypeError, ValueError):
+        raise BackendError(f"{field_name} must be a number", HTTPStatus.BAD_REQUEST)
+    if penalty < 0:
+        raise BackendError(f"{field_name} must be non-negative", HTTPStatus.BAD_REQUEST)
+    if penalty > 1000:
+        raise BackendError(f"{field_name} is too large", HTTPStatus.BAD_REQUEST)
+    return penalty
+
+
+def apply_penalty_overrides(payload: dict[str, Any]) -> dict[str, Any]:
+    rows = payload.get("rows", [])
+    if not isinstance(rows, list):
+        return payload
+
+    period = payload.get("period", {})
+    if not isinstance(period, dict):
+        period = {}
+
+    with _PENALTY_OVERRIDES_LOCK:
+        overrides = load_penalty_overrides()
+
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+
+        key = penalty_override_key(period, row)
+        auto_penalty = float(row.get("penalty") or 0)
+        row["overrideKey"] = key
+        row["autoPenalty"] = auto_penalty
+        row["penaltyOverridden"] = False
+
+        override = overrides.get(key)
+        if isinstance(override, dict) and "penalty" in override:
+            penalty = parse_penalty_value(override.get("penalty"))
+            row["penalty"] = penalty
+            row["penaltyOverridden"] = True
+            final_score = max(0.0, float(row.get("baseScore") or 0) - penalty)
+            row["finalScore"] = final_score
+            row["score"] = final_score
+
+    add_places(rows)
+    return payload
+
+
+def save_penalty_override(body: dict[str, Any]) -> dict[str, Any]:
+    row = {
+        "subject": body.get("subject", ""),
+        "level": body.get("level", ""),
+        "group": body.get("group", ""),
+        "name": body.get("name", ""),
+        "teacher": body.get("teacher", ""),
+    }
+    period = {
+        "from": body.get("periodFrom", ""),
+        "to": body.get("periodTo", ""),
+    }
+
+    if not normalize_text(row["name"]):
+        raise BackendError("name is required", HTTPStatus.BAD_REQUEST)
+    if not normalize_text(period["from"]) or not normalize_text(period["to"]):
+        raise BackendError("periodFrom and periodTo are required", HTTPStatus.BAD_REQUEST)
+
+    penalty = parse_penalty_value(body.get("penalty"))
+    auto_penalty = parse_penalty_value(body.get("autoPenalty", penalty), "autoPenalty")
+    key = penalty_override_key(period, row)
+    now = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+
+    with _PENALTY_OVERRIDES_LOCK:
+        overrides = load_penalty_overrides()
+        if abs(penalty - auto_penalty) < 0.000001:
+            overrides.pop(key, None)
+            overridden = False
+        else:
+            overrides[key] = {
+                "penalty": penalty,
+                "updatedAt": now,
+                "row": row,
+                "period": period,
+            }
+            overridden = True
+        write_penalty_overrides(overrides)
+
+    return {
+        "ok": True,
+        "overrideKey": key,
+        "penalty": penalty,
+        "autoPenalty": auto_penalty,
+        "penaltyOverridden": overridden,
+    }
+
+
 def public_row(row: dict[str, Any]) -> dict[str, Any]:
     return {
         "subject": row.get("subject", ""),
@@ -1461,7 +1634,7 @@ def send_telegram_reports(
     *,
     send_pdf: bool = False,
 ) -> dict[str, Any]:
-    chats = load_telegram_chats()
+    chat_targets = load_telegram_chat_targets()
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
         name = normalize_text(row.get("name"))
@@ -1472,12 +1645,16 @@ def send_telegram_reports(
 
     sent: list[dict[str, Any]] = []
     missing: list[str] = []
+    missing_details: list[dict[str, Any]] = []
     errors: list[dict[str, Any]] = []
 
     for name in sorted(grouped):
-        chat_ids = chats.get(normalize_group_name(name)) or []
+        target = chat_targets.get(normalize_group_name(name)) or {}
+        chat_ids = target.get("chatIds") or []
+        parents = target.get("parents") or []
         if not chat_ids:
             missing.append(name)
+            missing_details.append({"name": name, "reason": "no_chat_id"})
             continue
         pdf_bytes: bytes | None = None
         text = ""
@@ -1492,16 +1669,24 @@ def send_telegram_reports(
                     if not text:
                         text = build_student_telegram_report(name, grouped[name], period)
                     result = send_telegram_message(chat_id, text)
-                sent.append({"name": name, "chatId": chat_id, "messageId": result.get("result", {}).get("message_id")})
+                sent.append(
+                    {
+                        "name": name,
+                        "parents": parents,
+                        "chatId": chat_id,
+                        "messageId": result.get("result", {}).get("message_id"),
+                    }
+                )
                 time.sleep(0.05)
             except Exception as error:
-                errors.append({"name": name, "chatId": chat_id, "error": str(error)})
+                errors.append({"name": name, "parents": parents, "chatId": chat_id, "error": str(error)})
 
     return {
         "ok": len(errors) == 0,
         "format": "pdf" if send_pdf else "text",
         "sent": sent,
         "missing": missing,
+        "missingDetails": missing_details,
         "errors": errors,
     }
 
@@ -1565,11 +1750,12 @@ def resolve_ratings_payload(query: dict[str, str]) -> dict[str, Any]:
     origins = parse_origin_set(query.get("origins", ""))
     limit = parse_limit(query.get("limit", ""))
     cache_key = f"ratings:{period_from}:{period_to}:{group_ids}:{subjects}:{include_virtual}:{origins}:{limit}"
-    payload = cached(
+    payload = copy.deepcopy(cached(
         cache_key,
         DEFAULT_CACHE_SECONDS,
         lambda: load_ratings(period_from, period_to, group_ids, subjects, include_virtual, origins, limit),
-    )
+    ))
+    payload = apply_penalty_overrides(payload)
     if missing_names:
         payload = {
             **payload,
@@ -1663,6 +1849,11 @@ class Handler(BaseHTTPRequestHandler):
                     send_pdf=bool(isinstance(body, dict) and body.get("format") == "pdf"),
                 )
                 return self.send_json(result, HTTPStatus.OK if result.get("ok") else HTTPStatus.BAD_GATEWAY)
+
+            if parsed.path == "/api/penalty-override":
+                self.require_admin(query)
+                body = self.read_json_body()
+                return self.send_json(save_penalty_override(body))
 
             self.send_json({"ok": False, "error": "Not found"}, HTTPStatus.NOT_FOUND)
         except BackendError as error:

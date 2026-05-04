@@ -646,6 +646,56 @@
       background: rgba(74,184,224,0.06);
     }
 
+    .penalty-cell {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+      min-width: 94px;
+    }
+
+    .penalty-input {
+      width: 64px;
+      height: 28px;
+      border: 1px solid rgba(74,184,224,0.28);
+      border-radius: 8px;
+      background: white;
+      color: #1a1a1a;
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      text-align: right;
+      padding: 0 7px;
+      outline: none;
+    }
+
+    .penalty-input:focus {
+      border-color: #4AB8E0;
+      box-shadow: 0 0 0 2px rgba(74,184,224,0.14);
+    }
+
+    .penalty-input.overridden {
+      border-color: #D33E5F;
+      background: rgba(211,62,95,0.06);
+    }
+
+    .penalty-reset-btn {
+      width: 28px;
+      height: 28px;
+      border: none;
+      border-radius: 8px;
+      background: rgba(74,184,224,0.12);
+      color: #3595B8;
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .penalty-reset-btn:hover {
+      background: rgba(74,184,224,0.22);
+    }
+
     .details-table-empty {
       background: white;
       border-radius: 16px;
@@ -945,6 +995,9 @@
   const SOHOLMS_BACKEND_URL = String(window.SOHOLMS_BACKEND_URL || localStorage.getItem('soholmsBackendUrl') || '').replace(/\/$/, '');
   let soholmsPeriodFrom = String(window.SOHOLMS_PERIOD_FROM || localStorage.getItem('soholmsPeriodFrom') || '');
   let soholmsPeriodTo = String(window.SOHOLMS_PERIOD_TO || localStorage.getItem('soholmsPeriodTo') || '');
+  const defaultTeacherPeriod = getCurrentMonthPeriod();
+  let teacherPeriodFrom = String(window.SOHOLMS_PERIOD_FROM || sessionStorage.getItem('teacherPeriodFrom') || defaultTeacherPeriod.from);
+  let teacherPeriodTo = String(window.SOHOLMS_PERIOD_TO || sessionStorage.getItem('teacherPeriodTo') || defaultTeacherPeriod.to);
   const SOHOLMS_GROUP_IDS = String(window.SOHOLMS_GROUP_IDS || localStorage.getItem('soholmsGroupIds') || '');
   const SOHOLMS_SUBJECTS = String(window.SOHOLMS_SUBJECTS || localStorage.getItem('soholmsSubjects') || '');
   const SOHOLMS_ORIGINS = String(window.SOHOLMS_ORIGINS || localStorage.getItem('soholmsOrigins') || '');
@@ -986,11 +1039,26 @@
     return String(window.BACKEND_ADMIN_KEY || localStorage.getItem('backendAdminKey') || '');
   }
 
+  function formatLocalDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  function getCurrentMonthPeriod() {
+    const now = new Date();
+    return {
+      from: formatLocalDate(new Date(now.getFullYear(), now.getMonth(), 1)),
+      to: formatLocalDate(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
+    };
+  }
+
   function getRequestPeriod(publicOnly) {
     if (!publicOnly && adminRole === 'teacher') {
       return {
-        from: String(window.SOHOLMS_PERIOD_FROM || ''),
-        to: String(window.SOHOLMS_PERIOD_TO || ''),
+        from: teacherPeriodFrom,
+        to: teacherPeriodTo,
       };
     }
     return {
@@ -1050,6 +1118,7 @@
   let adminLoading = false;
   let adminError = '';
   let dataLoading = false;
+  const penaltySavingRows = new Set();
   let adminLoadMeta = {
     period: null,
     groupCount: 0,
@@ -1061,6 +1130,10 @@
 
   function canManageAdmin() {
     return adminRole === 'admin';
+  }
+
+  function canChangePeriod() {
+    return adminRole === 'admin' || adminRole === 'teacher';
   }
 
   // SVG Icons
@@ -1152,24 +1225,29 @@
   }
 
   function parseApiRows(rows) {
-    const parsedRows = rows.map((row) => {
+    const parsedRows = rows.map((row, index) => {
       const finalScore = Number(row.finalScore ?? row.score) || 0;
       const schoolPlace = Number(row.schoolPlace) || 0;
       return {
-      ...row,
-      score: finalScore,
-      finalScore,
-      groupPlace: Number(row.groupPlace) || 0,
-      schoolPlace,
-      place: schoolPlace,
-      status: getScoreStatus(finalScore),
-      dailyScores: Array.isArray(row.dailyScores)
-        ? row.dailyScores.map((item) => ({
-          ...item,
-          score: Number(item.score) || 0,
-          dateOrder: Number(item.dateOrder) || 0,
-        }))
-        : [],
+        ...row,
+        localRowId: `${row.overrideKey || ''}::${index}`,
+        penalty: Number(row.penalty) || 0,
+        autoPenalty: Number(row.autoPenalty ?? row.penalty) || 0,
+        penaltyOverridden: Boolean(row.penaltyOverridden),
+        score: finalScore,
+        finalScore,
+        baseScore: Number(row.baseScore) || 0,
+        groupPlace: Number(row.groupPlace) || 0,
+        schoolPlace,
+        place: schoolPlace,
+        status: getScoreStatus(finalScore),
+        dailyScores: Array.isArray(row.dailyScores)
+          ? row.dailyScores.map((item) => ({
+            ...item,
+            score: Number(item.score) || 0,
+            dateOrder: Number(item.dateOrder) || 0,
+          }))
+          : [],
       };
     });
 
@@ -1676,6 +1754,94 @@
     return rows.reduce((sum, row) => sum + Number(row[key] || 0), 0) / rows.length;
   }
 
+  function formatPenaltyInput(value) {
+    const number = Number(value) || 0;
+    return Number.isInteger(number) ? String(number) : String(Number(number.toFixed(2)));
+  }
+
+  function parsePenaltyInput(value) {
+    const normalized = String(value || '').trim().replace(',', '.');
+    const penalty = Number(normalized);
+    if (!Number.isFinite(penalty) || penalty < 0) {
+      throw new Error('Штраф должен быть неотрицательным числом');
+    }
+    return penalty;
+  }
+
+  function recalculateDetailScores() {
+    for (const row of allStudentRows) {
+      const finalScore = Math.max(0, Number(row.baseScore || 0) - Number(row.penalty || 0));
+      row.finalScore = finalScore;
+      row.score = finalScore;
+      row.status = getScoreStatus(finalScore);
+    }
+
+    const groupedBySchool = new Map();
+    const groupedByGroup = new Map();
+    for (const row of allStudentRows) {
+      const schoolKey = `${row.subject}||${row.level}`;
+      const groupKey = `${schoolKey}||${row.group}`;
+      if (!groupedBySchool.has(schoolKey)) groupedBySchool.set(schoolKey, []);
+      if (!groupedByGroup.has(groupKey)) groupedByGroup.set(groupKey, []);
+      groupedBySchool.get(schoolKey).push(row);
+      groupedByGroup.get(groupKey).push(row);
+    }
+
+    const applyPlaces = (rows, key) => {
+      const sorted = [...rows].sort((a, b) => b.finalScore - a.finalScore);
+      let place = 0;
+      let previousScore = null;
+      for (const row of sorted) {
+        if (row.finalScore !== previousScore) {
+          place++;
+          previousScore = row.finalScore;
+        }
+        row[key] = place;
+      }
+    };
+
+    for (const rows of groupedBySchool.values()) applyPlaces(rows, 'schoolPlace');
+    for (const rows of groupedByGroup.values()) applyPlaces(rows, 'groupPlace');
+    for (const row of allStudentRows) row.place = row.schoolPlace;
+  }
+
+  function renderPenaltyCell(row) {
+    if (!canManageAdmin() || !hasSoholmsBackend()) {
+      return formatNumber(row.penalty, 2);
+    }
+
+    const rowIndex = allStudentRows.indexOf(row);
+    const isSaving = penaltySavingRows.has(row.localRowId);
+    const autoPenalty = formatNumber(row.autoPenalty ?? row.penalty, 2);
+    const title = row.penaltyOverridden
+      ? `Ручной штраф. Авто: ${autoPenalty}`
+      : `Автоштраф: ${autoPenalty}`;
+
+    return `
+      <div class="penalty-cell">
+        <input
+          class="penalty-input ${row.penaltyOverridden ? 'overridden' : ''}"
+          type="number"
+          min="0"
+          step="1"
+          value="${escapeHtml(formatPenaltyInput(row.penalty))}"
+          title="${escapeHtml(title)}"
+          data-penalty-index="${rowIndex}"
+          ${isSaving ? 'disabled' : ''}
+        >
+        ${row.penaltyOverridden ? `
+          <button
+            class="penalty-reset-btn"
+            type="button"
+            title="Сбросить до автоштрафа: ${escapeHtml(autoPenalty)}"
+            data-penalty-reset-index="${rowIndex}"
+            ${isSaving ? 'disabled' : ''}
+          >×</button>
+        ` : ''}
+      </div>
+    `;
+  }
+
   function renderDetailSelect(id, label, value, options, allLabel, labelMap = null) {
     return `
       <label class="details-filter">
@@ -1733,19 +1899,21 @@
     const errors = adminLoadMeta.errors || [];
     const missing = adminLoadMeta.missingConfigNames || [];
     const sourceLabel = hasSoholmsBackend() ? 'Soholms' : 'Google Sheets';
-    const controlsHtml = canManageAdmin() ? `
+    const periodInputFrom = canManageAdmin() ? soholmsPeriodFrom : teacherPeriodFrom;
+    const periodInputTo = canManageAdmin() ? soholmsPeriodTo : teacherPeriodTo;
+    const controlsHtml = canChangePeriod() ? `
       <div class="period-controls">
         <label class="period-field">
           С
-          <input class="period-input" id="admin-period-from" type="date" value="${escapeHtml(soholmsPeriodFrom)}" ${hasSoholmsBackend() ? '' : 'disabled'}>
+          <input class="period-input" id="admin-period-from" type="date" value="${escapeHtml(periodInputFrom)}" ${hasSoholmsBackend() ? '' : 'disabled'}>
         </label>
         <label class="period-field">
           По
-          <input class="period-input" id="admin-period-to" type="date" value="${escapeHtml(soholmsPeriodTo)}" ${hasSoholmsBackend() ? '' : 'disabled'}>
+          <input class="period-input" id="admin-period-to" type="date" value="${escapeHtml(periodInputTo)}" ${hasSoholmsBackend() ? '' : 'disabled'}>
         </label>
         <button class="period-apply-btn" type="button" id="admin-period-apply" ${hasSoholmsBackend() ? '' : 'disabled'}>Применить</button>
         <button class="period-reset-btn" type="button" id="admin-period-reset" ${hasSoholmsBackend() ? '' : 'disabled'}>Сброс</button>
-        <button class="cache-clear-btn" type="button" id="admin-cache-clear" ${hasSoholmsBackend() ? '' : 'disabled'}>Очистить кеш</button>
+        ${canManageAdmin() ? `<button class="cache-clear-btn" type="button" id="admin-cache-clear" ${hasSoholmsBackend() ? '' : 'disabled'}>Очистить кеш</button>` : ''}
       </div>
     ` : '';
 
@@ -1775,7 +1943,7 @@
       return `<div>${escapeHtml(group)}: ${escapeHtml(error.error || 'ошибка загрузки')}</div>`;
     }).join('');
     const missingRows = missing.map((name) => `<div>${escapeHtml(name)}</div>`).join('');
-    const isSuccessMessage = statusMessage.startsWith('Telegram PDF:') || statusMessage.startsWith('Кеш очищен');
+    const isSuccessMessage = statusMessage.startsWith('Telegram PDF:') || statusMessage.startsWith('Кеш очищен') || statusMessage.startsWith('Штраф');
 
     return `
       <div class="details-table-empty" style="text-align:left;">
@@ -1884,7 +2052,9 @@
               <tr>
                 ${columns.map((column) => {
                   const rawValue = row[column.key];
-                  const value = column.numeric
+                  const value = column.key === 'penalty'
+                    ? renderPenaltyCell(row)
+                    : column.numeric
                     ? formatNumber(rawValue, column.digits ?? 2)
                     : escapeHtml(rawValue || '');
                   return `<td class="${column.numeric ? 'numeric' : ''}">${value}</td>`;
@@ -2476,11 +2646,40 @@
     `;
   }
 
+  function resetAdminLoadMeta() {
+    adminLoadMeta = {
+      period: null,
+      groupCount: 0,
+      rowCount: 0,
+      errors: [],
+      missingConfigNames: [],
+    };
+  }
+
   function applyAdminPeriod() {
-    if (!canManageAdmin() || !hasSoholmsBackend()) return;
+    if (!canChangePeriod() || !hasSoholmsBackend()) return;
 
     const from = document.getElementById('admin-period-from')?.value || '';
     const to = document.getElementById('admin-period-to')?.value || '';
+
+    if (adminRole === 'teacher') {
+      teacherPeriodFrom = from;
+      teacherPeriodTo = to;
+      if (from) {
+        sessionStorage.setItem('teacherPeriodFrom', from);
+      } else {
+        sessionStorage.removeItem('teacherPeriodFrom');
+      }
+      if (to) {
+        sessionStorage.setItem('teacherPeriodTo', to);
+      } else {
+        sessionStorage.removeItem('teacherPeriodTo');
+      }
+      allStudentRows = [];
+      resetAdminLoadMeta();
+      loadAdminData();
+      return;
+    }
 
     if (from) {
       localStorage.setItem('soholmsPeriodFrom', from);
@@ -2498,7 +2697,20 @@
   }
 
   function resetAdminPeriod() {
-    if (!canManageAdmin() || !hasSoholmsBackend()) return;
+    if (!canChangePeriod() || !hasSoholmsBackend()) return;
+
+    if (adminRole === 'teacher') {
+      const currentMonth = getCurrentMonthPeriod();
+      teacherPeriodFrom = String(window.SOHOLMS_PERIOD_FROM || currentMonth.from);
+      teacherPeriodTo = String(window.SOHOLMS_PERIOD_TO || currentMonth.to);
+      sessionStorage.removeItem('teacherPeriodFrom');
+      sessionStorage.removeItem('teacherPeriodTo');
+      allStudentRows = [];
+      resetAdminLoadMeta();
+      loadAdminData();
+      return;
+    }
+
     localStorage.removeItem('soholmsPeriodFrom');
     localStorage.removeItem('soholmsPeriodTo');
     location.reload();
@@ -2537,6 +2749,81 @@
       adminError = error.message || 'Не удалось очистить кеш';
     } finally {
       adminLoading = false;
+      render();
+    }
+  }
+
+  async function savePenaltyOverride(rowIndex, rawValue, options = {}) {
+    if (!canManageAdmin() || !hasSoholmsBackend()) return;
+
+    const row = allStudentRows[Number(rowIndex)];
+    if (!row) return;
+
+    let penalty;
+    try {
+      penalty = options.reset ? Number(row.autoPenalty ?? row.penalty) || 0 : parsePenaltyInput(rawValue);
+    } catch (error) {
+      adminError = error.message;
+      render();
+      return;
+    }
+
+    const previous = {
+      penalty: row.penalty,
+      finalScore: row.finalScore,
+      score: row.score,
+      penaltyOverridden: row.penaltyOverridden,
+      autoPenalty: row.autoPenalty,
+    };
+    const rowSavingKey = row.localRowId;
+    penaltySavingRows.add(rowSavingKey);
+    adminError = '';
+    row.penalty = penalty;
+    row.penaltyOverridden = Math.abs(penalty - Number(row.autoPenalty ?? penalty)) >= 0.000001;
+    recalculateDetailScores();
+    render();
+
+    try {
+      const period = adminLoadMeta.period || getRequestPeriod(false);
+      const adminKey = getBackendAdminKey();
+      const response = await fetch(`${SOHOLMS_BACKEND_URL}/api/penalty-override`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          ...(adminKey ? { 'x-admin-key': adminKey } : {}),
+        },
+        body: JSON.stringify({
+          periodFrom: period.from || '',
+          periodTo: period.to || '',
+          subject: row.subject || '',
+          level: row.level || '',
+          group: row.group || '',
+          name: row.name || '',
+          teacher: row.teacher || '',
+          penalty,
+          autoPenalty: Number(row.autoPenalty ?? previous.autoPenalty ?? penalty) || 0,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || 'Не удалось сохранить штраф');
+      }
+
+      row.penalty = Number(data.penalty) || 0;
+      row.autoPenalty = Number(data.autoPenalty ?? row.autoPenalty ?? row.penalty) || 0;
+      row.penaltyOverridden = Boolean(data.penaltyOverridden);
+      adminError = row.penaltyOverridden ? 'Штраф сохранён' : 'Штраф сброшен до авторасчёта';
+      recalculateDetailScores();
+    } catch (error) {
+      row.penalty = previous.penalty;
+      row.finalScore = previous.finalScore;
+      row.score = previous.score;
+      row.penaltyOverridden = previous.penaltyOverridden;
+      row.autoPenalty = previous.autoPenalty;
+      recalculateDetailScores();
+      adminError = error.message || 'Не удалось сохранить штраф';
+    } finally {
+      penaltySavingRows.delete(rowSavingKey);
       render();
     }
   }
@@ -2691,6 +2978,11 @@
     });
 
     document.getElementById('columns-container').addEventListener('change', (e) => {
+      if (e.target.dataset.penaltyIndex !== undefined) {
+        savePenaltyOverride(e.target.dataset.penaltyIndex, e.target.value);
+        return;
+      }
+
       const filter = e.target.dataset.detailFilter;
       if (!filter) return;
 
@@ -2752,6 +3044,11 @@
     });
 
     document.getElementById('columns-container').addEventListener('click', (e) => {
+      if (e.target.dataset.penaltyResetIndex !== undefined) {
+        savePenaltyOverride(e.target.dataset.penaltyResetIndex, '', { reset: true });
+        return;
+      }
+
       if (e.target.id === 'admin-logout-btn') {
         adminToken = '';
         adminRole = '';
@@ -2771,13 +3068,13 @@
       }
 
       if (e.target.id === 'admin-period-apply') {
-        if (!canManageAdmin()) return;
+        if (!canChangePeriod()) return;
         applyAdminPeriod();
         return;
       }
 
       if (e.target.id === 'admin-period-reset') {
-        if (!canManageAdmin()) return;
+        if (!canChangePeriod()) return;
         resetAdminPeriod();
         return;
       }
