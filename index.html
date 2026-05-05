@@ -3374,17 +3374,17 @@
     const schoolGroups = getSchoolGroups();
     const teacherFilterHtml = currentScope === 'teacher' ? `
       <select class="teacher-select" id="teacher-select" ${teacherNames.length === 0 ? 'disabled' : ''}>
+        <option value="">Выберите преподавателя</option>
         ${teacherNames.map((name, index) => `
           <option value="${index}" ${currentTeacher === name ? 'selected' : ''}>${escapeHtml(name)}</option>
         `).join('')}
       </select>
-      ${teacherGroups.length > 0 ? `
-        <select class="teacher-group-select" id="teacher-group-select">
-          ${teacherGroups.map((group, index) => `
-            <option value="${index}" ${currentTeacherGroup === group ? 'selected' : ''}>${escapeHtml(group)}</option>
-          `).join('')}
-        </select>
-      ` : ''}
+      <select class="teacher-group-select" id="teacher-group-select" ${teacherGroups.length === 0 ? 'disabled' : ''}>
+        <option value="">Все группы</option>
+        ${teacherGroups.map((group, index) => `
+          <option value="${index}" ${currentTeacherGroup === group ? 'selected' : ''}>${escapeHtml(group)}</option>
+        `).join('')}
+      </select>
     ` : currentScope === 'school' && schoolGroups.length > 0 ? `
       <select class="group-select" id="group-select">
         <option value="">Все группы</option>
@@ -3498,14 +3498,23 @@
 
     document.getElementById('teacher-filter').addEventListener('change', (e) => {
       if (e.target.classList.contains('teacher-select')) {
-        const teacherNames = getCurrentTeacherNames();
-        currentTeacher = teacherNames[Number(e.target.value)] || '';
-        currentTeacherGroup = '';
+        if (e.target.value === '') {
+          currentTeacher = '';
+          currentTeacherGroup = '';
+        } else {
+          const teacherNames = getCurrentTeacherNames();
+          currentTeacher = teacherNames[Number(e.target.value)] || '';
+          currentTeacherGroup = '';
+        }
         render();
       }
       if (e.target.classList.contains('teacher-group-select')) {
-        const teacherGroups = getCurrentTeacherGroups();
-        currentTeacherGroup = teacherGroups[Number(e.target.value)] || '';
+        if (e.target.value === '') {
+          currentTeacherGroup = '';
+        } else {
+          const teacherGroups = getCurrentTeacherGroups();
+          currentTeacherGroup = teacherGroups[Number(e.target.value)] || '';
+        }
         render();
       }
       if (e.target.classList.contains('group-select')) {
