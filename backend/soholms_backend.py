@@ -111,6 +111,27 @@ query AcademicDisciplineHomeworkIds_Query($id: ID!) {
             lessonContentItem {
               academicHomeworkId
             }
+            interactiveLesson {
+              uid
+            }
+          }
+        }
+      }
+    }
+  }
+}
+""".strip()
+
+INTERACTIVE_LESSON_HOMEWORKS_QUERY = """
+query InteractiveLessonHomeworkIds_Query($id: ID!) {
+  node(id: $id) {
+    __typename
+    ... on InteractiveLesson {
+      uid
+      content {
+        items {
+          homework {
+            academicHomeworkId
           }
         }
       }
@@ -125,6 +146,7 @@ query AcademicHomeworkResultsStore_Query($id: ID!, $learningGroupIds: [Int!]) {
     __typename
     ... on AcademicHomework {
       uid
+      kind
       academicDisciplineId
       learningDisciplineHomeworks(learningGroupIds: $learningGroupIds) {
         uid
@@ -438,6 +460,28 @@ def dedupe_ints(values: list[Any]) -> list[int]:
     return result
 
 
+def fetch_interactive_lesson_homework_ids(interactive_lesson_id: int) -> list[int]:
+    try:
+        lesson_id = int(interactive_lesson_id)
+    except (TypeError, ValueError):
+        return []
+
+    def load():
+        data = request_graphql(
+            INTERACTIVE_LESSON_HOMEWORKS_QUERY,
+            {"id": to_graphql_gid("InteractiveLesson", lesson_id)},
+            "InteractiveLessonHomeworkIds_Query",
+        )
+        node = (data.get("data") or {}).get("node") or {}
+        ids: list[Any] = []
+        for content_item in (((node.get("content") or {}).get("items")) or []):
+            homework = content_item.get("homework") or {}
+            ids.append(homework.get("academicHomeworkId"))
+        return dedupe_ints(ids)
+
+    return cached(f"interactive_lesson_homeworks:{lesson_id}", DEFAULT_CACHE_SECONDS, load)
+
+
 def fetch_discipline_homework_ids(academic_discipline_id: int) -> list[int]:
     def load():
         data = request_graphql(
@@ -448,8 +492,11 @@ def fetch_discipline_homework_ids(academic_discipline_id: int) -> list[int]:
         node = (data.get("data") or {}).get("node") or {}
         ids: list[Any] = []
         for item in ((node.get("treeContentFlat") or {}).get("nodes") or []):
-            lesson_item = ((item.get("data") or {}).get("lessonContentItem") or {})
+            data_item = item.get("data") or {}
+            lesson_item = data_item.get("lessonContentItem") or {}
             ids.append(lesson_item.get("academicHomeworkId"))
+            interactive_lesson = data_item.get("interactiveLesson") or {}
+            ids.extend(fetch_interactive_lesson_homework_ids(interactive_lesson.get("uid")))
         return dedupe_ints(ids)
 
     return cached(f"discipline_homeworks:{academic_discipline_id}", DEFAULT_CACHE_SECONDS, load)
@@ -1182,9 +1229,9 @@ def parse_attendance_xlsx(
             current_day = None
             continue
 
-        student_key = str(int(student_id)) if isinstance(student_id, (int, float)) else normalize_text(name)
+        row_student_key = str(int(student_id)) if isinstance(student_id, (int, float)) else normalize_text(name)
         item = students.setdefault(
-            student_key,
+            row_student_key,
             {
                 "subject": group.subject if group.subject != "без предмета" else infer_subject(discipline or xlsx_group or group.name),
                 "level": infer_level(discipline) or infer_level(group.name),
