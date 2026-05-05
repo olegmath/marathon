@@ -170,6 +170,28 @@
       background: white;
     }
 
+    .teacher-group-select {
+      min-width: 220px;
+      max-width: 320px;
+      height: 36px;
+      padding: 0 36px 0 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.45);
+      background: rgba(255,255,255,0.25);
+      color: white;
+      font-family: 'Oswald', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      font-style: italic;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .teacher-group-select option {
+      color: #1a1a1a;
+      background: white;
+    }
+
     .title-section {
       text-align: right;
       line-height: 1;
@@ -1032,7 +1054,8 @@
         flex-direction: column;
       }
 
-      .teacher-select {
+      .teacher-select,
+      .teacher-group-select {
         width: 100%;
         max-width: none;
       }
@@ -1286,6 +1309,7 @@
   let currentView = 'rating';
   let currentScope = 'school';
   let currentTeacher = '';
+  let currentTeacherGroup = '';
   let detailSubject = '';
   let detailExam = '';
   let detailTeacher = '';
@@ -1667,20 +1691,39 @@
 
       const teacher = student.teacher || 'Без преподавателя';
       if (!grouped[key][student.level][teacher]) {
-        grouped[key][student.level][teacher] = [];
+        grouped[key][student.level][teacher] = {};
       }
-      grouped[key][student.level][teacher].push(student);
+
+      const group = student.group || 'Без группы';
+      if (!grouped[key][student.level][teacher][group]) {
+        grouped[key][student.level][teacher][group] = [];
+      }
+      grouped[key][student.level][teacher][group].push(student);
     }
 
     for (const subjectKey in grouped) {
       for (const level in grouped[subjectKey]) {
         for (const teacher in grouped[subjectKey][level]) {
-          const ranked = createRankedStudents(grouped[subjectKey][level][teacher]);
+          const teacherGroups = grouped[subjectKey][level][teacher];
+          const allStudents = Object.values(teacherGroups).flat();
+          const ranked = createRankedStudents(allStudents);
+
           grouped[subjectKey][level][teacher] = {
+            _allGroups: Object.keys(teacherGroups).sort((a, b) => a.localeCompare(b, 'ru')),
+            _groupStudents: {},
             legends: ranked.filter((s) => s.status === 'legends'),
             champs: ranked.filter((s) => s.status === 'champs'),
             starters: ranked.filter((s) => s.status === 'starters'),
           };
+
+          for (const group in teacherGroups) {
+            const groupRanked = createRankedStudents(teacherGroups[group]);
+            grouped[subjectKey][level][teacher]._groupStudents[group] = {
+              legends: groupRanked.filter((s) => s.status === 'legends'),
+              champs: groupRanked.filter((s) => s.status === 'champs'),
+              starters: groupRanked.filter((s) => s.status === 'starters'),
+            };
+          }
         }
       }
     }
@@ -1749,10 +1792,20 @@
     return Object.keys(teachers).sort((a, b) => a.localeCompare(b, 'ru'));
   }
 
+  function getCurrentTeacherGroups() {
+    const teacherGroups = teacherData?.[currentSubject]?.[currentExam]?.[currentTeacher];
+    if (!teacherGroups) return [];
+    return Object.keys(teacherGroups).sort((a, b) => a.localeCompare(b, 'ru'));
+  }
+
   function normalizeTeacherSelection() {
     const names = getCurrentTeacherNames();
     if (!names.includes(currentTeacher)) {
       currentTeacher = names[0] || '';
+    }
+    const groups = getCurrentTeacherGroups();
+    if (!groups.includes(currentTeacherGroup)) {
+      currentTeacherGroup = groups[0] || '';
     }
   }
 
@@ -3250,12 +3303,20 @@
     document.querySelector('.rating-controls').style.display = currentView === 'rating' ? 'flex' : 'none';
 
     const teacherNames = getCurrentTeacherNames();
+    const teacherGroups = getCurrentTeacherGroups();
     const teacherFilterHtml = currentScope === 'teacher' ? `
       <select class="teacher-select" id="teacher-select" ${teacherNames.length === 0 ? 'disabled' : ''}>
         ${teacherNames.map((name, index) => `
           <option value="${index}" ${currentTeacher === name ? 'selected' : ''}>${escapeHtml(name)}</option>
         `).join('')}
       </select>
+      ${teacherGroups.length > 0 ? `
+        <select class="teacher-group-select" id="teacher-group-select">
+          ${teacherGroups.map((group, index) => `
+            <option value="${index}" ${currentTeacherGroup === group ? 'selected' : ''}>${escapeHtml(group)}</option>
+          `).join('')}
+        </select>
+      ` : ''}
     ` : '';
     document.getElementById('teacher-filter').innerHTML = teacherFilterHtml;
 
@@ -3291,13 +3352,19 @@
     }
 
     // Get data
-    const levelData = currentScope === 'teacher'
+    const baseData = currentScope === 'teacher'
       ? teacherData?.[currentSubject]?.[currentExam]?.[currentTeacher]
       : appData[currentSubject]?.[currentExam];
-    if (!levelData) {
+    if (!baseData) {
       document.getElementById('columns-container').innerHTML = '<p>Нет данных</p>';
       return;
     }
+
+    const levelData = currentScope === 'teacher' && currentTeacherGroup && baseData._groupStudents?.[currentTeacherGroup]
+      ? baseData._groupStudents[currentTeacherGroup]
+      : currentScope === 'teacher'
+        ? { legends: baseData.legends, champs: baseData.champs, starters: baseData.starters }
+        : baseData;
 
     // Render columns
     const placeLabel = currentScope === 'teacher' ? 'У ПРЕПОД.' : 'В ШКОЛЕ';
@@ -3356,6 +3423,12 @@
       if (e.target.classList.contains('teacher-select')) {
         const teacherNames = getCurrentTeacherNames();
         currentTeacher = teacherNames[Number(e.target.value)] || '';
+        currentTeacherGroup = '';
+        render();
+      }
+      if (e.target.classList.contains('teacher-group-select')) {
+        const teacherGroups = getCurrentTeacherGroups();
+        currentTeacherGroup = teacherGroups[Number(e.target.value)] || '';
         render();
       }
     });
