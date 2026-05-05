@@ -1793,9 +1793,9 @@
   }
 
   function getCurrentTeacherGroups() {
-    const teacherGroups = teacherData?.[currentSubject]?.[currentExam]?.[currentTeacher];
-    if (!teacherGroups) return [];
-    return Object.keys(teacherGroups).sort((a, b) => a.localeCompare(b, 'ru'));
+    const teacherData_ = teacherData?.[currentSubject]?.[currentExam]?.[currentTeacher];
+    if (!teacherData_ || !teacherData_._allGroups) return [];
+    return teacherData_._allGroups;
   }
 
   function normalizeTeacherSelection() {
