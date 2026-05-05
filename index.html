@@ -1862,16 +1862,29 @@
   }
 
   function getCurrentTeacherGroups() {
-    if (!currentTeacher) return [];
+    if (!currentTeacher) {
+      console.log('❌ getCurrentTeacherGroups: currentTeacher не установлен');
+      return [];
+    }
 
     const teacherData_ = teacherData?.[currentSubject]?.[currentExam]?.[currentTeacher];
-    if (!teacherData_) return [];
+    if (!teacherData_) {
+      console.log('❌ getCurrentTeacherGroups: нет данных для', {currentSubject, currentExam, currentTeacher});
+      return [];
+    }
 
     // Берём все группы студентов этого преподавателя (ключи _groupStudents)
-    const groups = Object.keys(teacherData_._groupStudents || {});
+    const allGroups = Object.keys(teacherData_._groupStudents || {});
+    console.log('📋 getCurrentTeacherGroups:', {
+      currentTeacher,
+      allGroups,
+      groupStudents: teacherData_._groupStudents
+    });
 
     // Только реальные группы (не пусто и не "Без группы")
-    return groups.filter(g => g && g !== 'Без группы');
+    const filtered = allGroups.filter(g => g && g !== 'Без группы');
+    console.log('  ✓ после фильтра:', filtered);
+    return filtered;
   }
 
   function getSchoolGroups() {
