@@ -1201,6 +1201,8 @@ def parse_attendance_xlsx(
                 if first_attempt_at:
                     day["dailyScore"]["firstAttemptAt"] = effective_submitted_at.isoformat()
 
+    all_students_metadata: dict[str, dict[str, Any]] = {}
+
     for row in worksheet.iter_rows(min_row=4, values_only=True):
         student_id = row_value(row, columns["student_id"])
         name = row_value(row, columns["name"])
@@ -1232,24 +1234,28 @@ def parse_attendance_xlsx(
             current_day = None
             continue
 
+        row_student_key = str(int(student_id)) if isinstance(student_id, (int, float)) else normalize_text(name)
+        all_students_metadata[row_student_key] = {
+            "subject": group.subject if group.subject != "без предмета" else infer_subject(discipline or xlsx_group or group.name),
+            "level": infer_level(discipline) or infer_level(group.name),
+            "group": normalize_text(xlsx_group) or group.name,
+            "name": normalize_text(name),
+            "teacher": group.teacher,
+        }
+
         day_key = ""
         day_order = 0
         if is_potential_day:
             day_key, day_order = register_group_day(lesson, lesson_date)
 
-        if not name or not is_scored_day:
+        if not is_scored_day:
             current_day = None
             continue
 
-        row_student_key = str(int(student_id)) if isinstance(student_id, (int, float)) else normalize_text(name)
         item = students.setdefault(
             row_student_key,
             {
-                "subject": group.subject if group.subject != "без предмета" else infer_subject(discipline or xlsx_group or group.name),
-                "level": infer_level(discipline) or infer_level(group.name),
-                "group": normalize_text(xlsx_group) or group.name,
-                "name": normalize_text(name),
-                "teacher": group.teacher,
+                **all_students_metadata[row_student_key],
                 "dailyScores": [],
                 "_lateDaysByLesson": {},
             },
@@ -1272,6 +1278,14 @@ def parse_attendance_xlsx(
         }
         if has_assignment_submission(assignment_status, assignment_score, submitted_at):
             record_submission_penalty(current_day, submitted_at)
+
+    for row_student_key, metadata in all_students_metadata.items():
+        if row_student_key not in students:
+            students[row_student_key] = {
+                **metadata,
+                "dailyScores": [],
+                "_lateDaysByLesson": {},
+            }
 
     rows: list[dict[str, Any]] = []
     group_days_total = len(group_day_keys)
