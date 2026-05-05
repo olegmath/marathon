@@ -127,6 +127,7 @@ python3 check_ratings.py
 SOHOLMS_TOKEN             общий Authorization header value, если один токен работает везде
 SOHOLMS_API_TOKEN         Authorization для get_tree, если токены разные
 SOHOLMS_EXCEL_TOKEN       Authorization для XLSX-экспорта, если токены разные
+SOHOLMS_GRAPHQL_TOKEN     Authorization для GraphQL первых попыток; если пусто, берется SOHOLMS_EXCEL_TOKEN
 SOHOLMS_GROUP_CONFIG      путь к JSON-файлу со списком групп, по умолчанию backend/groups.config.json
 PORT                      порт, по умолчанию 8787
 HOST                      хост, по умолчанию 127.0.0.1

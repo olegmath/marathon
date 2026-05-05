@@ -243,11 +243,21 @@ def clean_authorization_header(value: str) -> str:
 
 
 def get_authorization_header(kind: str = "api") -> str:
-    specific_name = "SOHOLMS_EXCEL_TOKEN" if kind == "excel" else "SOHOLMS_API_TOKEN"
-    token = clean_authorization_header(os.getenv(specific_name, "")) or clean_authorization_header(os.getenv("SOHOLMS_TOKEN", ""))
+    if kind == "excel":
+        names = ("SOHOLMS_EXCEL_TOKEN", "SOHOLMS_TOKEN")
+    elif kind == "graphql":
+        names = ("SOHOLMS_GRAPHQL_TOKEN", "SOHOLMS_EXCEL_TOKEN", "SOHOLMS_TOKEN")
+    else:
+        names = ("SOHOLMS_API_TOKEN", "SOHOLMS_TOKEN")
+
+    token = ""
+    for name in names:
+        token = clean_authorization_header(os.getenv(name, ""))
+        if token:
+            break
     if not token:
         raise BackendError(
-            f"{specific_name} or SOHOLMS_TOKEN is not configured",
+            f"{' or '.join(names)} is not configured",
             HTTPStatus.INTERNAL_SERVER_ERROR,
         )
     return token
@@ -372,7 +382,7 @@ def request_graphql(query: str, variables: dict[str, Any], query_name: str) -> d
         "POST",
         GRAPHQL_PATH,
         headers={
-            **soholms_headers(),
+            **soholms_headers(kind="graphql"),
             "content-type": "application/json",
             "x-procraft-query": query_name,
             **({"x-procraft-org": SOHOLMS_ORG} if SOHOLMS_ORG else {}),
