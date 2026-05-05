@@ -1653,6 +1653,10 @@
       });
     }
 
+    // Debug groups
+    const uniqueGroups = [...new Set(students.map(s => s.group))].filter(g => g);
+    console.log(`📚 Группы в данных (${subject} ${level}):`, uniqueGroups);
+
     const result = createRankedStudents(students);
 
     // Возвращаем и студентов И информацию о null values

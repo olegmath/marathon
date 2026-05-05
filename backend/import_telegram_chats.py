@@ -14,6 +14,7 @@ from openpyxl import load_workbook
 
 
 DEFAULT_OUTPUT = Path(__file__).with_name("telegram_chats.json")
+DEFAULT_CHUNK_SIZE = 7000
 
 
 def normalize_text(value: Any) -> str:
@@ -112,6 +113,8 @@ def main() -> None:
     parser.add_argument("xlsx", type=Path, help="Path to XLSX file")
     parser.add_argument("--sheet", default="Все", help="Sheet name, default: Все")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT, help=f"Output JSON, default: {DEFAULT_OUTPUT}")
+    parser.add_argument("--print-env", action="store_true", help="Print TELEGRAM_CHATS_JSON_PART_N variables for Railway")
+    parser.add_argument("--chunk-size", type=int, default=DEFAULT_CHUNK_SIZE, help=f"Chunk size for --print-env, default: {DEFAULT_CHUNK_SIZE}")
     args = parser.parse_args()
 
     config = build_chat_config(args.xlsx, args.sheet)
@@ -122,6 +125,14 @@ def main() -> None:
     print(f"students total: {meta['studentsTotal']}")
     print(f"students with chat: {meta['studentsWithChat']}")
     print(f"students without chat: {meta['studentsWithoutChat']}")
+
+    if args.print_env:
+        compact = json.dumps({"students": config["students"]}, ensure_ascii=False, separators=(",", ":"))
+        print()
+        print(f"# Add these Railway Variables, do not commit them to GitHub. JSON length: {len(compact)}")
+        for index, start in enumerate(range(0, len(compact), args.chunk_size), start=1):
+            chunk = compact[start:start + args.chunk_size]
+            print(f"TELEGRAM_CHATS_JSON_PART_{index}={chunk}")
 
 
 if __name__ == "__main__":

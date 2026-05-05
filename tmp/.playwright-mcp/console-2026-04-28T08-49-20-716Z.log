@@ -33,3 +33,117 @@
 === физика ОГЭ === @ http://localhost:8000/:570
 [    8753ms] [LOG] Загружено студентов: 364 @ http://localhost:8000/:842
 [    8753ms] [LOG] По предметам: [математика: 2 уровней, информатика: 2 уровней, русский язык: 2 уровней, обществознание: 2 уровней, история: 1 уровней, физика: 2 уровней] @ http://localhost:8000/:843
+[  617183ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8000/favicon.ico:0
+[  617525ms] [LOG] 
+=== математика ЕГЭ === @ http://localhost:8000/:570
+[  617526ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  617526ms] [LOG] ❌ Перец Иван (строка 20): cells[10]= null @ http://localhost:8000/:579
+[  617527ms] [LOG] 
+=== математика ОГЭ === @ http://localhost:8000/:570
+[  617527ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  617527ms] [LOG] 
+=== информатика ЕГЭ === @ http://localhost:8000/:570
+[  617528ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  617528ms] [LOG] 
+=== информатика ОГЭ === @ http://localhost:8000/:570
+[  617528ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  617528ms] [LOG] 
+=== русский язык ЕГЭ === @ http://localhost:8000/:570
+[  617528ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  617528ms] [LOG] ❌ Лапшин Михаил (строка 4): cells[10]= null @ http://localhost:8000/:579
+[  617529ms] [LOG] 
+=== русский язык ОГЭ === @ http://localhost:8000/:570
+[  617529ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  617529ms] [LOG] 
+=== обществознание ЕГЭ === @ http://localhost:8000/:570
+[  617529ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  617529ms] [LOG] 
+=== обществознание ОГЭ === @ http://localhost:8000/:570
+[  617529ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  617529ms] [LOG] 
+=== история ЕГЭ === @ http://localhost:8000/:570
+[  617529ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  617529ms] [LOG] 
+=== физика ЕГЭ === @ http://localhost:8000/:570
+[  617529ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  617530ms] [LOG] 
+=== физика ОГЭ === @ http://localhost:8000/:570
+[  617530ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  617530ms] [LOG] Загружено студентов: 364 @ http://localhost:8000/:840
+[  617530ms] [LOG] По предметам: [математика: 2 уровней, информатика: 2 уровней, русский язык: 2 уровней, обществознание: 2 уровней, история: 1 уровней, физика: 2 уровней] @ http://localhost:8000/:841
+[  622408ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8000/favicon.ico:0
+[  622902ms] [LOG] 
+=== математика ЕГЭ === @ http://localhost:8000/:570
+[  622902ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  622903ms] [LOG] ❌ Перец Иван (строка 20): cells[10]= null @ http://localhost:8000/:579
+[  622903ms] [LOG] 
+=== математика ОГЭ === @ http://localhost:8000/:570
+[  622904ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  622904ms] [LOG] 
+=== информатика ЕГЭ === @ http://localhost:8000/:570
+[  622904ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  622904ms] [LOG] 
+=== информатика ОГЭ === @ http://localhost:8000/:570
+[  622904ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  622905ms] [LOG] 
+=== русский язык ЕГЭ === @ http://localhost:8000/:570
+[  622905ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  622905ms] [LOG] ❌ Лапшин Михаил (строка 4): cells[10]= null @ http://localhost:8000/:579
+[  622905ms] [LOG] 
+=== русский язык ОГЭ === @ http://localhost:8000/:570
+[  622905ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  622906ms] [LOG] 
+=== обществознание ЕГЭ === @ http://localhost:8000/:570
+[  622906ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  622906ms] [LOG] 
+=== обществознание ОГЭ === @ http://localhost:8000/:570
+[  622906ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  622906ms] [LOG] 
+=== история ЕГЭ === @ http://localhost:8000/:570
+[  622906ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  622906ms] [LOG] 
+=== физика ЕГЭ === @ http://localhost:8000/:570
+[  622906ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  622906ms] [LOG] 
+=== физика ОГЭ === @ http://localhost:8000/:570
+[  622907ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  622907ms] [LOG] Загружено студентов: 364 @ http://localhost:8000/:840
+[  622907ms] [LOG] По предметам: [математика: 2 уровней, информатика: 2 уровней, русский язык: 2 уровней, обществознание: 2 уровней, история: 1 уровней, физика: 2 уровней] @ http://localhost:8000/:841
+[  639385ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8000/favicon.ico:0
+[  639706ms] [LOG] 
+=== математика ЕГЭ === @ http://localhost:8000/:570
+[  639706ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  639706ms] [LOG] ❌ Перец Иван (строка 20): cells[10]= null @ http://localhost:8000/:579
+[  639707ms] [LOG] 
+=== математика ОГЭ === @ http://localhost:8000/:570
+[  639707ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  639707ms] [LOG] 
+=== информатика ЕГЭ === @ http://localhost:8000/:570
+[  639708ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  639708ms] [LOG] 
+=== информатика ОГЭ === @ http://localhost:8000/:570
+[  639708ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  639708ms] [LOG] 
+=== русский язык ЕГЭ === @ http://localhost:8000/:570
+[  639708ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  639708ms] [LOG] ❌ Лапшин Михаил (строка 4): cells[10]= null @ http://localhost:8000/:579
+[  639709ms] [LOG] 
+=== русский язык ОГЭ === @ http://localhost:8000/:570
+[  639709ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  639709ms] [LOG] 
+=== обществознание ЕГЭ === @ http://localhost:8000/:570
+[  639709ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  639709ms] [LOG] 
+=== обществознание ОГЭ === @ http://localhost:8000/:570
+[  639709ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  639709ms] [LOG] 
+=== история ЕГЭ === @ http://localhost:8000/:570
+[  639709ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  639710ms] [LOG] 
+=== физика ЕГЭ === @ http://localhost:8000/:570
+[  639710ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  639710ms] [LOG] 
+=== физика ОГЭ === @ http://localhost:8000/:570
+[  639710ms] [LOG] ❌ Ученик (строка 0): cells[10]= null @ http://localhost:8000/:579
+[  639710ms] [LOG] Загружено студентов: 364 @ http://localhost:8000/:840
+[  639711ms] [LOG] По предметам: [математика: 2 уровней, информатика: 2 уровней, русский язык: 2 уровней, обществознание: 2 уровней, история: 1 уровней, физика: 2 уровней] @ http://localhost:8000/:841
