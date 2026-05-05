@@ -1853,7 +1853,8 @@
   function getCurrentTeacherGroups() {
     const teacherData_ = teacherData?.[currentSubject]?.[currentExam]?.[currentTeacher];
     if (!teacherData_ || !teacherData_._allGroups) return [];
-    return teacherData_._allGroups;
+    // Filter out empty strings and 'Без группы' - show only actual named groups
+    return teacherData_._allGroups.filter(g => g && g !== 'Без группы');
   }
 
   function getSchoolGroups() {
@@ -3376,26 +3377,7 @@
     document.querySelector('.rating-controls').style.display = currentView === 'rating' ? 'flex' : 'none';
 
     const teacherNames = getCurrentTeacherNames();
-    // Get teacher groups from raw student data (like admin panel does)
-    const teacherGroupRows = currentTeacher && allStudentRows
-      ? allStudentRows.filter(row =>
-          row.teacher === currentTeacher &&
-          row.subject === currentSubject &&
-          row.level === currentExam
-        )
-      : [];
-    const teacherGroups = uniqueSorted(teacherGroupRows.map(row => row.group)).filter(g => g);
-
-    // Debug
-    console.log(`🔍 Teacher selector debug:
-      currentTeacher: '${currentTeacher}'
-      currentSubject: '${currentSubject}'
-      currentExam: '${currentExam}'
-      allStudentRows.length: ${allStudentRows?.length || 0}
-      teacherGroupRows.length: ${teacherGroupRows.length}
-      teacherGroups: ${JSON.stringify(teacherGroups)}
-    `);
-
+    const teacherGroups = getCurrentTeacherGroups();
     const schoolGroups = getSchoolGroups();
     const teacherFilterHtml = currentScope === 'teacher' ? `
       <select class="teacher-select" id="teacher-select" ${teacherNames.length === 0 ? 'disabled' : ''}>
