@@ -3376,7 +3376,15 @@
     document.querySelector('.rating-controls').style.display = currentView === 'rating' ? 'flex' : 'none';
 
     const teacherNames = getCurrentTeacherNames();
-    const teacherGroups = getCurrentTeacherGroups();
+    // Get teacher groups from raw student data (like admin panel does)
+    const teacherGroupRows = currentTeacher && allStudentRows
+      ? allStudentRows.filter(row =>
+          row.teacher === currentTeacher &&
+          row.subject === currentSubject &&
+          row.level === currentExam
+        )
+      : [];
+    const teacherGroups = uniqueSorted(teacherGroupRows.map(row => row.group)).filter(g => g);
     const schoolGroups = getSchoolGroups();
     const teacherFilterHtml = currentScope === 'teacher' ? `
       <select class="teacher-select" id="teacher-select" ${teacherNames.length === 0 ? 'disabled' : ''}>
