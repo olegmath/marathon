@@ -63,6 +63,7 @@ API_BASE = os.getenv("SOHOLMS_API_BASE", "https://api.soholms.com").rstrip("/")
 SOHOLMS_ORG = os.getenv("SOHOLMS_ORG", "943671").strip()
 DEFAULT_CACHE_SECONDS = int(os.getenv("SOHOLMS_CACHE_SECONDS", "900"))
 DEFAULT_CONCURRENCY = int(os.getenv("SOHOLMS_CONCURRENCY", "4"))
+ATTEMPT_CONCURRENCY = int(os.getenv("SOHOLMS_ATTEMPT_CONCURRENCY", str(DEFAULT_CONCURRENCY * 2)))
 MAX_GROUPS_PER_REQUEST = int(os.getenv("SOHOLMS_MAX_GROUPS", "80"))
 DEADLINE_SHIFT_DAYS = int(os.getenv("SOHOLMS_DEADLINE_SHIFT_DAYS", "1"))
 DEFAULT_PERIOD_FROM = os.getenv("SOHOLMS_DEFAULT_PERIOD_FROM", "2026-04-01")
@@ -503,43 +504,45 @@ def fetch_discipline_homework_ids(academic_discipline_id: int) -> list[int]:
 
 
 def fetch_homework_first_attempts(academic_homework_id: int) -> list[dict[str, Any]]:
-    data = request_graphql(
-        HOMEWORK_ATTEMPTS_QUERY,
-        {
-            "id": to_graphql_gid("AcademicHomework", academic_homework_id),
-            "learningGroupIds": [],
-        },
-        "AcademicHomeworkResultsStore_Query",
-    )
-    node = (data.get("data") or {}).get("node") or {}
-    rows: list[dict[str, Any]] = []
-    for homework in node.get("learningDisciplineHomeworks") or []:
-        learning_discipline = homework.get("learningDiscipline") or {}
-        master_client_id = learning_discipline.get("masterClientId")
-        student_name = soholms_human_name(learning_discipline.get("human") or {})
-        deadline_at = parse_soholms_datetime(homework.get("deadlineAt"))
-        results = [
-            result
-            for result in homework.get("results", [])
-            if parse_soholms_datetime(result.get("statusChangedAt"))
-        ]
-        if not master_client_id or not deadline_at or not results:
-            continue
-        first_result = min(results, key=lambda result: parse_soholms_datetime(result.get("statusChangedAt")) or datetime.max)
-        first_attempt_at = parse_soholms_datetime(first_result.get("statusChangedAt"))
-        if not first_attempt_at:
-            continue
-        rows.append(
+    def load():
+        data = request_graphql(
+            HOMEWORK_ATTEMPTS_QUERY,
             {
-                "academicHomeworkId": academic_homework_id,
-                "academicDisciplineId": node.get("academicDisciplineId"),
-                "masterClientId": int(master_client_id),
-                "studentName": student_name,
-                "deadlineAt": deadline_at,
-                "firstAttemptAt": first_attempt_at,
-            }
+                "id": to_graphql_gid("AcademicHomework", academic_homework_id),
+                "learningGroupIds": [],
+            },
+            "AcademicHomeworkResultsStore_Query",
         )
-    return rows
+        node = (data.get("data") or {}).get("node") or {}
+        rows: list[dict[str, Any]] = []
+        for homework in node.get("learningDisciplineHomeworks") or []:
+            learning_discipline = homework.get("learningDiscipline") or {}
+            master_client_id = learning_discipline.get("masterClientId")
+            student_name = soholms_human_name(learning_discipline.get("human") or {})
+            deadline_at = parse_soholms_datetime(homework.get("deadlineAt"))
+            results = [
+                result
+                for result in homework.get("results", [])
+                if parse_soholms_datetime(result.get("statusChangedAt"))
+            ]
+            if not master_client_id or not deadline_at or not results:
+                continue
+            first_result = min(results, key=lambda result: parse_soholms_datetime(result.get("statusChangedAt")) or datetime.max)
+            first_attempt_at = parse_soholms_datetime(first_result.get("statusChangedAt"))
+            if not first_attempt_at:
+                continue
+            rows.append(
+                {
+                    "academicHomeworkId": academic_homework_id,
+                    "academicDisciplineId": node.get("academicDisciplineId"),
+                    "masterClientId": int(master_client_id),
+                    "studentName": student_name,
+                    "deadlineAt": deadline_at,
+                    "firstAttemptAt": first_attempt_at,
+                }
+            )
+        return rows
+    return cached(f"homework_first_attempts:{academic_homework_id}", DEFAULT_CACHE_SECONDS, load)
 
 
 def build_first_attempt_index(period_from: str, period_to: str) -> dict[tuple[str, str], datetime]:
@@ -547,29 +550,38 @@ def build_first_attempt_index(period_from: str, period_to: str) -> dict[tuple[st
         return {}
 
     def load():
+        t_total = time.time()
         period_start = datetime.fromisoformat(period_from).date() if period_from else None
         period_end = datetime.fromisoformat(period_to).date() if period_to else None
-        homework_ids: list[int] = []
-        for discipline_id in DEFAULT_ATTEMPT_DISCIPLINE_IDS:
-            homework_ids.extend(fetch_discipline_homework_ids(discipline_id))
-        homework_ids = dedupe_ints(homework_ids)
 
+        t0 = time.time()
+        with ThreadPoolExecutor(max_workers=DEFAULT_CONCURRENCY) as executor:
+            results = list(executor.map(fetch_discipline_homework_ids, DEFAULT_ATTEMPT_DISCIPLINE_IDS))
+        homework_ids = dedupe_ints(id_ for ids in results for id_ in ids)
+        t_disciplines = time.time() - t0
+
+        t1 = time.time()
         index: dict[tuple[str, str], datetime] = {}
-        for homework_id in homework_ids:
-            for row in fetch_homework_first_attempts(homework_id):
-                deadline_day = row["deadlineAt"].date()
-                if period_start and deadline_day < period_start:
-                    continue
-                if period_end and deadline_day > period_end:
-                    continue
-                keys = [(f"id:{row['masterClientId']}", deadline_day.isoformat())]
-                student_name = normalize_person_key(row.get("studentName"))
-                if student_name:
-                    keys.append((f"name:{student_name}", deadline_day.isoformat()))
-                for key in keys:
-                    previous = index.get(key)
-                    if previous is None or row["firstAttemptAt"] < previous:
-                        index[key] = row["firstAttemptAt"]
+        with ThreadPoolExecutor(max_workers=ATTEMPT_CONCURRENCY) as executor:
+            futures = {executor.submit(fetch_homework_first_attempts, hw_id): hw_id for hw_id in homework_ids}
+            for future in as_completed(futures):
+                for row in future.result():
+                    deadline_day = row["deadlineAt"].date()
+                    if period_start and deadline_day < period_start:
+                        continue
+                    if period_end and deadline_day > period_end:
+                        continue
+                    keys = [(f"id:{row['masterClientId']}", deadline_day.isoformat())]
+                    student_name = normalize_person_key(row.get("studentName"))
+                    if student_name:
+                        keys.append((f"name:{student_name}", deadline_day.isoformat()))
+                    for key in keys:
+                        previous = index.get(key)
+                        if previous is None or row["firstAttemptAt"] < previous:
+                            index[key] = row["firstAttemptAt"]
+        t_homeworks = time.time() - t1
+
+        print(f"[timings] build_first_attempt_index: disciplines={t_disciplines:.2f}s homeworks={t_homeworks:.2f}s total={time.time()-t_total:.2f}s n_homeworks={len(homework_ids)}", flush=True, file=sys.stderr)
         return index
 
     cache_key = f"first_attempt_index:{period_from}:{period_to}:{DEFAULT_ATTEMPT_DISCIPLINE_IDS}"
@@ -2207,6 +2219,8 @@ def load_ratings(
     origins: set[str] | None,
     limit: int | None,
 ) -> dict[str, Any]:
+    t_start = time.time()
+
     groups = selected_groups(
         group_ids=group_ids,
         subjects=subjects,
@@ -2222,15 +2236,18 @@ def load_ratings(
     first_attempt_index: dict[tuple[str, str], datetime] = {}
     first_attempt_stats: dict[str, int] = {"lookups": 0, "matched": 0, "applied": 0, "reducedPenalty": 0}
 
+    t0 = time.time()
     try:
         first_attempt_index = build_first_attempt_index(period_from, period_to)
     except Exception as error:
         errors.append({"source": "firstAttempts", "error": str(error)})
+    t_first_attempts_ms = int((time.time() - t0) * 1000)
 
     def load_group(group: GroupInfo):
         content = fetch_attendance_xlsx(group.id, period_from, period_to)
         return group, parse_attendance_xlsx(content, group, first_attempt_index, first_attempt_stats)
 
+    t1 = time.time()
     with ThreadPoolExecutor(max_workers=max(1, DEFAULT_CONCURRENCY)) as executor:
         futures = {executor.submit(load_group, group): group for group in groups}
         for future in as_completed(futures):
@@ -2240,8 +2257,12 @@ def load_ratings(
                 rows.extend(group_rows)
             except Exception as error:
                 errors.append({"groupId": group.id, "group": group.name, "error": str(error)})
+    t_xlsx_ms = int((time.time() - t1) * 1000)
 
     add_places(rows)
+
+    t_total_ms = int((time.time() - t_start) * 1000)
+    print(f"[timings] load_ratings: first_attempts={t_first_attempts_ms}ms xlsx={t_xlsx_ms}ms groups={len(groups)} total={t_total_ms}ms", flush=True, file=sys.stderr)
 
     return {
         "ok": True,
@@ -2253,6 +2274,11 @@ def load_ratings(
             "enabled": FIRST_ATTEMPTS_ENABLED,
             "loaded": len(first_attempt_index),
             **first_attempt_stats,
+        },
+        "timings": {
+            "firstAttemptsMs": t_first_attempts_ms,
+            "xlsxMs": t_xlsx_ms,
+            "totalMs": t_total_ms,
         },
     }
 
