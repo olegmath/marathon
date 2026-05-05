@@ -3385,6 +3385,17 @@
         )
       : [];
     const teacherGroups = uniqueSorted(teacherGroupRows.map(row => row.group)).filter(g => g);
+
+    // Debug
+    console.log(`🔍 Teacher selector debug:
+      currentTeacher: '${currentTeacher}'
+      currentSubject: '${currentSubject}'
+      currentExam: '${currentExam}'
+      allStudentRows.length: ${allStudentRows?.length || 0}
+      teacherGroupRows.length: ${teacherGroupRows.length}
+      teacherGroups: ${JSON.stringify(teacherGroups)}
+    `);
+
     const schoolGroups = getSchoolGroups();
     const teacherFilterHtml = currentScope === 'teacher' ? `
       <select class="teacher-select" id="teacher-select" ${teacherNames.length === 0 ? 'disabled' : ''}>
