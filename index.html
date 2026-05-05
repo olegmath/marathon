@@ -3465,6 +3465,7 @@
         const newSubject = e.target.dataset.subject;
         if (currentSubject !== newSubject) {
           currentSubject = newSubject;
+          currentTeacherGroup = '';
           // When switching subjects, select first available level
           const subjectConfig = SUBJECTS.find(s => s.key === currentSubject);
           if (subjectConfig && !subjectConfig.levels.includes(currentExam)) {
@@ -3481,6 +3482,7 @@
         const newExam = e.target.dataset.exam;
         if (currentExam !== newExam) {
           currentExam = newExam;
+          currentTeacherGroup = '';
           render();
         }
       }
