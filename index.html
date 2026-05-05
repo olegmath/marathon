@@ -1957,6 +1957,28 @@
       });
   }
 
+  function buildStudentDailyProgressRows(rows) {
+    const days = [];
+
+    for (const row of rows) {
+      for (const dailyScore of row.dailyScores || []) {
+        days.push({
+          subject: row.subject,
+          subjectLabel: getSubjectLabel(row.subject),
+          level: row.level,
+          dateLabel: dailyScore.dateLabel,
+          dateOrder: Number(dailyScore.dateOrder) || 0,
+          averageScore: Number(dailyScore.score) || 0,
+          filledCount: 1,
+          studentCount: 1,
+          filledPercent: 100,
+        });
+      }
+    }
+
+    return days;
+  }
+
   function sortDetailRows(rows) {
     const direction = detailSortDirection === 'asc' ? 1 : -1;
     return [...rows].sort((a, b) => {
@@ -2429,10 +2451,17 @@
     const teacherOptions = uniqueSorted(getDailyProgressBaseRows().map((row) => row.teacher));
     const studentOptions = uniqueSorted(getDailyProgressBaseRows().map((row) => row.name));
     const rows = getCurrentDailyProgressRows();
-    const progressRows = buildDailyProgressRows(rows);
+    const progressRows = dailyProgressStudent
+      ? buildStudentDailyProgressRows(rows)
+      : buildDailyProgressRows(rows);
     const sortedRows = sortDailyProgressRows(progressRows);
 
-    const columns = [
+    const columns = dailyProgressStudent ? [
+      { key: 'dateLabel', sortKey: 'dateOrder', label: 'Дата' },
+      { key: 'subjectLabel', sortKey: 'subjectLabel', label: 'Предмет' },
+      { key: 'level', sortKey: 'level', label: 'Экзамен' },
+      { key: 'averageScore', sortKey: 'averageScore', label: 'Процент решения', numeric: true },
+    ] : [
       { key: 'dateLabel', sortKey: 'dateOrder', label: 'Дата' },
       { key: 'subjectLabel', sortKey: 'subjectLabel', label: 'Предмет' },
       { key: 'level', sortKey: 'level', label: 'Экзамен' },
