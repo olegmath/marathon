@@ -170,27 +170,6 @@
       background: white;
     }
 
-    .teacher-group-select {
-      min-width: 220px;
-      max-width: 320px;
-      height: 36px;
-      padding: 0 36px 0 14px;
-      border-radius: 20px;
-      border: 1px solid rgba(255,255,255,0.45);
-      background: rgba(255,255,255,0.25);
-      color: white;
-      font-family: 'Oswald', sans-serif;
-      font-size: 14px;
-      font-weight: 600;
-      font-style: italic;
-      outline: none;
-      cursor: pointer;
-    }
-
-    .teacher-group-select option {
-      color: #1a1a1a;
-      background: white;
-    }
 
     .group-select {
       min-width: 220px;
@@ -1077,10 +1056,6 @@
       }
 
       .teacher-select,
-      .teacher-group-select {
-        width: 100%;
-        max-width: none;
-      }
 
       .metrics-grid {
         grid-template-columns: 1fr;
@@ -3407,19 +3382,12 @@
     document.querySelector('.rating-controls').style.display = currentView === 'rating' ? 'flex' : 'none';
 
     const teacherNames = getCurrentTeacherNames();
-    const teacherGroups = getCurrentTeacherGroups();
     const schoolGroups = getSchoolGroups();
     const teacherFilterHtml = currentScope === 'teacher' ? `
       <select class="teacher-select" id="teacher-select" ${teacherNames.length === 0 ? 'disabled' : ''}>
         <option value="">Выберите преподавателя</option>
         ${teacherNames.map((name, index) => `
           <option value="${index}" ${currentTeacher === name ? 'selected' : ''}>${escapeHtml(name)}</option>
-        `).join('')}
-      </select>
-      <select class="teacher-group-select" id="teacher-group-select" ${teacherGroups.length === 0 ? 'disabled' : ''}>
-        <option value="">Все группы</option>
-        ${teacherGroups.map((group, index) => `
-          <option value="${index}" ${currentTeacherGroup === group ? 'selected' : ''}>${escapeHtml(group)}</option>
         `).join('')}
       </select>
     ` : currentScope === 'school' && schoolGroups.length > 0 ? `
@@ -3544,15 +3512,6 @@
           const teacherNames = getCurrentTeacherNames();
           currentTeacher = teacherNames[Number(e.target.value)] || '';
           currentTeacherGroup = '';
-        }
-        render();
-      }
-      if (e.target.classList.contains('teacher-group-select')) {
-        if (e.target.value === '') {
-          currentTeacherGroup = '';
-        } else {
-          const teacherGroups = getCurrentTeacherGroups();
-          currentTeacherGroup = teacherGroups[Number(e.target.value)] || '';
         }
         render();
       }
