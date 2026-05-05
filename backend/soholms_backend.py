@@ -131,6 +131,11 @@ query AcademicHomeworkResultsStore_Query($id: ID!, $learningGroupIds: [Int!]) {
         deadlineAt
         learningDiscipline {
           masterClientId
+          human {
+            firstName
+            lastName
+            middleName
+          }
         }
         results {
           status
@@ -405,6 +410,19 @@ def parse_soholms_datetime(value: Any) -> datetime | None:
         return None
 
 
+def soholms_human_name(human: dict[str, Any]) -> str:
+    parts = [
+        normalize_text(human.get("lastName")),
+        normalize_text(human.get("firstName")),
+        normalize_text(human.get("middleName")),
+    ]
+    return " ".join(part for part in parts if part)
+
+
+def normalize_person_key(value: Any) -> str:
+    return normalize_text(value).casefold().replace("ё", "е")
+
+
 def dedupe_ints(values: list[Any]) -> list[int]:
     seen: set[int] = set()
     result: list[int] = []
@@ -449,7 +467,9 @@ def fetch_homework_first_attempts(academic_homework_id: int) -> list[dict[str, A
     node = (data.get("data") or {}).get("node") or {}
     rows: list[dict[str, Any]] = []
     for homework in node.get("learningDisciplineHomeworks") or []:
-        master_client_id = ((homework.get("learningDiscipline") or {}).get("masterClientId"))
+        learning_discipline = homework.get("learningDiscipline") or {}
+        master_client_id = learning_discipline.get("masterClientId")
+        student_name = soholms_human_name(learning_discipline.get("human") or {})
         deadline_at = parse_soholms_datetime(homework.get("deadlineAt"))
         results = [
             result
@@ -467,6 +487,7 @@ def fetch_homework_first_attempts(academic_homework_id: int) -> list[dict[str, A
                 "academicHomeworkId": academic_homework_id,
                 "academicDisciplineId": node.get("academicDisciplineId"),
                 "masterClientId": int(master_client_id),
+                "studentName": student_name,
                 "deadlineAt": deadline_at,
                 "firstAttemptAt": first_attempt_at,
             }
@@ -494,10 +515,14 @@ def build_first_attempt_index(period_from: str, period_to: str) -> dict[tuple[st
                     continue
                 if period_end and deadline_day > period_end:
                     continue
-                key = (str(row["masterClientId"]), deadline_day.isoformat())
-                previous = index.get(key)
-                if previous is None or row["firstAttemptAt"] < previous:
-                    index[key] = row["firstAttemptAt"]
+                keys = [(f"id:{row['masterClientId']}", deadline_day.isoformat())]
+                student_name = normalize_person_key(row.get("studentName"))
+                if student_name:
+                    keys.append((f"name:{student_name}", deadline_day.isoformat()))
+                for key in keys:
+                    previous = index.get(key)
+                    if previous is None or row["firstAttemptAt"] < previous:
+                        index[key] = row["firstAttemptAt"]
         return index
 
     cache_key = f"first_attempt_index:{period_from}:{period_to}:{DEFAULT_ATTEMPT_DISCIPLINE_IDS}"
@@ -1026,6 +1051,7 @@ def parse_attendance_xlsx(
     content: bytes,
     group: GroupInfo,
     first_attempt_index: dict[tuple[str, str], datetime] | None = None,
+    first_attempt_stats: dict[str, int] | None = None,
 ) -> list[dict[str, Any]]:
     workbook = load_workbook(io.BytesIO(content), data_only=True, read_only=True)
     worksheet = workbook.active
@@ -1076,21 +1102,44 @@ def parse_attendance_xlsx(
         lesson_date = day.get("lessonDate")
         if not isinstance(lesson_date, (date, datetime)):
             return None
-        due_key = iso_date(lesson_date, shift_days=DEADLINE_SHIFT_DAYS)
-        return first_attempt_index.get((student_key(day.get("studentId")), due_key))
+        if first_attempt_stats is not None:
+            first_attempt_stats["lookups"] = first_attempt_stats.get("lookups", 0) + 1
+
+        date_keys = [
+            iso_date(lesson_date, shift_days=DEADLINE_SHIFT_DAYS),
+            iso_date(lesson_date),
+        ]
+        student_keys = [
+            f"id:{student_key(day.get('studentId'))}",
+            f"name:{normalize_person_key(day['item'].get('name'))}",
+        ]
+        for date_key in date_keys:
+            for key in student_keys:
+                first_attempt = first_attempt_index.get((key, date_key))
+                if first_attempt:
+                    if first_attempt_stats is not None:
+                        first_attempt_stats["matched"] = first_attempt_stats.get("matched", 0) + 1
+                    return first_attempt
+        return None
 
     def record_submission_penalty(day: dict[str, Any], submitted_at: Any) -> None:
-        effective_submitted_at = first_attempt_for_day(day) or submitted_at
+        first_attempt_at = first_attempt_for_day(day)
+        effective_submitted_at = first_attempt_at or submitted_at
         lesson_late_days = late_penalty(day.get("lessonDate"), effective_submitted_at)
+        previous_late_days = late_penalty(day.get("lessonDate"), submitted_at)
         late_by_lesson = day["item"].setdefault("_lateDaysByLesson", {})
         lesson_key = day["dayOrder"]
         previous = late_by_lesson.get(lesson_key)
         if previous is None or lesson_late_days < previous:
             late_by_lesson[lesson_key] = lesson_late_days
             day["dailyScore"]["lateDays"] = lesson_late_days
+            if first_attempt_at and first_attempt_stats is not None:
+                first_attempt_stats["applied"] = first_attempt_stats.get("applied", 0) + 1
+                if lesson_late_days < previous_late_days:
+                    first_attempt_stats["reducedPenalty"] = first_attempt_stats.get("reducedPenalty", 0) + 1
             if isinstance(effective_submitted_at, datetime):
                 day["dailyScore"]["submittedAt"] = effective_submitted_at.isoformat()
-                if effective_submitted_at is not submitted_at:
+                if first_attempt_at:
                     day["dailyScore"]["firstAttemptAt"] = effective_submitted_at.isoformat()
 
     for row in worksheet.iter_rows(min_row=4, values_only=True):
@@ -2124,6 +2173,7 @@ def load_ratings(
     rows: list[dict[str, Any]] = []
     errors: list[dict[str, Any]] = []
     first_attempt_index: dict[tuple[str, str], datetime] = {}
+    first_attempt_stats: dict[str, int] = {"lookups": 0, "matched": 0, "applied": 0, "reducedPenalty": 0}
 
     try:
         first_attempt_index = build_first_attempt_index(period_from, period_to)
@@ -2132,7 +2182,7 @@ def load_ratings(
 
     def load_group(group: GroupInfo):
         content = fetch_attendance_xlsx(group.id, period_from, period_to)
-        return group, parse_attendance_xlsx(content, group, first_attempt_index)
+        return group, parse_attendance_xlsx(content, group, first_attempt_index, first_attempt_stats)
 
     with ThreadPoolExecutor(max_workers=max(1, DEFAULT_CONCURRENCY)) as executor:
         futures = {executor.submit(load_group, group): group for group in groups}
@@ -2155,6 +2205,7 @@ def load_ratings(
         "firstAttempts": {
             "enabled": FIRST_ATTEMPTS_ENABLED,
             "loaded": len(first_attempt_index),
+            **first_attempt_stats,
         },
     }
 
