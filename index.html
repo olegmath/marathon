@@ -1705,25 +1705,27 @@
       for (const level in grouped[subjectKey]) {
         for (const teacher in grouped[subjectKey][level]) {
           const teacherGroups = grouped[subjectKey][level][teacher];
+          const groupNames = Object.keys(teacherGroups).sort((a, b) => a.localeCompare(b, 'ru'));
           const allStudents = Object.values(teacherGroups).flat();
           const ranked = createRankedStudents(allStudents);
 
-          grouped[subjectKey][level][teacher] = {
-            _allGroups: Object.keys(teacherGroups).sort((a, b) => a.localeCompare(b, 'ru')),
-            _groupStudents: {},
-            legends: ranked.filter((s) => s.status === 'legends'),
-            champs: ranked.filter((s) => s.status === 'champs'),
-            starters: ranked.filter((s) => s.status === 'starters'),
-          };
-
-          for (const group in teacherGroups) {
+          const groupStudents = {};
+          for (const group of groupNames) {
             const groupRanked = createRankedStudents(teacherGroups[group]);
-            grouped[subjectKey][level][teacher]._groupStudents[group] = {
+            groupStudents[group] = {
               legends: groupRanked.filter((s) => s.status === 'legends'),
               champs: groupRanked.filter((s) => s.status === 'champs'),
               starters: groupRanked.filter((s) => s.status === 'starters'),
             };
           }
+
+          grouped[subjectKey][level][teacher] = {
+            _allGroups: groupNames,
+            _groupStudents: groupStudents,
+            legends: ranked.filter((s) => s.status === 'legends'),
+            champs: ranked.filter((s) => s.status === 'champs'),
+            starters: ranked.filter((s) => s.status === 'starters'),
+          };
         }
       }
     }
