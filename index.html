@@ -1301,6 +1301,7 @@
   let dailyProgressSubject = '';
   let dailyProgressExam = '';
   let dailyProgressTeacher = '';
+  let dailyProgressStudent = '';
   let dailyProgressSortKey = 'dateOrder';
   let dailyProgressSortDirection = 'asc';
   let pdfStudent = '';
@@ -1815,6 +1816,7 @@
   function getCurrentDailyProgressRows() {
     return getDailyProgressBaseRows().filter((row) => {
       if (dailyProgressTeacher && row.teacher !== dailyProgressTeacher) return false;
+      if (dailyProgressStudent && row.name !== dailyProgressStudent) return false;
       return true;
     });
   }
@@ -1823,10 +1825,12 @@
     const subjects = uniqueSorted(allStudentRows.map((row) => row.subject));
     const exams = uniqueSorted(allStudentRows.map((row) => row.level));
     const teachers = uniqueSorted(getDailyProgressBaseRows().map((row) => row.teacher));
+    const students = uniqueSorted(getDailyProgressBaseRows().map((row) => row.name));
 
     if (dailyProgressSubject && !subjects.includes(dailyProgressSubject)) dailyProgressSubject = '';
     if (dailyProgressExam && !exams.includes(dailyProgressExam)) dailyProgressExam = '';
     if (dailyProgressTeacher && !teachers.includes(dailyProgressTeacher)) dailyProgressTeacher = '';
+    if (dailyProgressStudent && !students.includes(dailyProgressStudent)) dailyProgressStudent = '';
   }
 
   function getSubjectLabel(subjectKey) {
@@ -2423,6 +2427,7 @@
     const subjectOptions = uniqueSorted(allStudentRows.map((row) => row.subject));
     const examOptions = uniqueSorted(allStudentRows.map((row) => row.level));
     const teacherOptions = uniqueSorted(getDailyProgressBaseRows().map((row) => row.teacher));
+    const studentOptions = uniqueSorted(getDailyProgressBaseRows().map((row) => row.name));
     const rows = getCurrentDailyProgressRows();
     const progressRows = buildDailyProgressRows(rows);
     const sortedRows = sortDailyProgressRows(progressRows);
@@ -2475,6 +2480,7 @@
           ${renderDetailSelect('dailyProgressSubject', 'Предмет', dailyProgressSubject, subjectOptions, 'Все предметы', subjectLabels)}
           ${renderDetailSelect('dailyProgressExam', 'Экзамен', dailyProgressExam, examOptions, 'Все экзамены')}
           ${renderDetailSelect('dailyProgressTeacher', 'Преподаватель', dailyProgressTeacher, teacherOptions, 'Все преподаватели')}
+          ${renderDetailSelect('dailyProgressStudent', 'Ученик', dailyProgressStudent, studentOptions, 'Все ученики')}
         </div>
         ${tableHtml}
         <div class="metrics-grid">
@@ -3375,6 +3381,10 @@
       if (filter === 'dailyProgressTeacher') {
         const options = uniqueSorted(getDailyProgressBaseRows().map((row) => row.teacher));
         dailyProgressTeacher = e.target.value === '' ? '' : options[index] || '';
+      }
+      if (filter === 'dailyProgressStudent') {
+        const options = uniqueSorted(getDailyProgressBaseRows().map((row) => row.name));
+        dailyProgressStudent = e.target.value === '' ? '' : options[index] || '';
       }
       if (filter === 'pdfStudent') {
         const options = groupedRowsByStudent(allStudentRows).map(([studentName]) => studentName);
