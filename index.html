@@ -2707,45 +2707,52 @@
   function buildErrorMapDays() {
     const studentRow = getErrorMapStudentRow();
     const maps = Array.isArray(errorMapPayload?.maps) ? errorMapPayload.maps : [];
-    const mapsByDate = new Map();
-    const usedMapIds = new Set();
+    const daysByKey = new Map();
+    const dailyScores = (studentRow?.dailyScores || []).slice();
+    const dailyByDate = new Map(dailyScores.map((item) => [item.dateKey, item]));
+    const dailyByOrder = new Map(dailyScores.map((item) => [String(Number(item.dateOrder) || 0), item]));
 
     for (const item of maps) {
-      const key = item.deadlineDate || dateKeyFromSoholmsDate(item.deadlineAt);
-      if (!key) continue;
-      if (!mapsByDate.has(key)) mapsByDate.set(key, []);
-      mapsByDate.get(key).push(item);
+      const dayNumber = Number(item.dayNumber) || 0;
+      const lessonDate = item.lessonDate || item.deadlineDate || dateKeyFromSoholmsDate(item.deadlineAt);
+      const key = item.dayTitle || lessonDate || String(item.academicHomeworkId);
+      const dailyScore = dailyByDate.get(lessonDate) || dailyByOrder.get(String(dayNumber));
+      if (!daysByKey.has(key)) {
+        daysByKey.set(key, {
+          dayOrder: dayNumber || Number(item.orderIndex || 0) + 1 || Number(dailyScore?.dateOrder || 0),
+          dateKey: lessonDate || dailyScore?.dateKey || '',
+          dateLabel: dailyScore?.dateLabel || lessonDate || '',
+          score: Number(dailyScore?.score ?? item.grade ?? item.scores) || 0,
+          maps: [],
+          title: item.dayTitle || '',
+        });
+      }
+      daysByKey.get(key).maps.push(item);
     }
 
-    const days = (studentRow?.dailyScores || [])
+    const usedDates = new Set([...daysByKey.values()].map((day) => day.dateKey).filter(Boolean));
+    const days = [...daysByKey.values()];
+
+    dailyScores
       .slice()
       .sort((a, b) => (Number(a.dateOrder) || 0) - (Number(b.dateOrder) || 0))
-      .map((dailyScore) => {
-        const dayMaps = mapsByDate.get(dailyScore.dateKey) || [];
-        dayMaps.forEach((item) => usedMapIds.add(String(item.academicHomeworkId)));
-        return {
+      .forEach((dailyScore) => {
+        if (usedDates.has(dailyScore.dateKey)) return;
+        days.push({
           dayOrder: Number(dailyScore.dateOrder) || 0,
           dateKey: dailyScore.dateKey || '',
           dateLabel: dailyScore.dateLabel || dailyScore.dateKey || '',
           score: Number(dailyScore.score) || 0,
-          maps: dayMaps,
-        };
+          maps: [],
+          title: '',
+        });
       });
 
-    for (const item of maps) {
-      const id = String(item.academicHomeworkId);
-      if (usedMapIds.has(id)) continue;
-      days.push({
-        dayOrder: 0,
-        dateKey: item.deadlineDate || dateKeyFromSoholmsDate(item.deadlineAt),
-        dateLabel: item.deadlineDate || dateKeyFromSoholmsDate(item.deadlineAt) || `домашка ${item.academicHomeworkId}`,
-        score: Number(item.grade ?? item.scores) || 0,
-        maps: [item],
-        fallbackTitle: `День не найден · ${item.academicHomeworkId}`,
-      });
-    }
-
-    return days;
+    return days.sort((a, b) => {
+      const orderCompare = (Number(a.dayOrder) || 0) - (Number(b.dayOrder) || 0);
+      if (orderCompare !== 0) return orderCompare;
+      return String(a.dateKey || '').localeCompare(String(b.dateKey || ''));
+    });
   }
 
   function aggregateErrorMapSummary(days) {
@@ -2776,7 +2783,7 @@
     const remaining = maps.reduce((sum, item) => sum + Number(item.summary?.remaining || 0), 0);
     const fixed = maps.reduce((sum, item) => sum + Number(item.summary?.fixed || 0), 0);
     const wrongTotal = maps.reduce((sum, item) => sum + Number(item.summary?.wrongTotal || 0), 0);
-    const title = day.fallbackTitle || `День ${day.dayOrder || '?'}`;
+    const title = day.title || `День ${day.dayOrder || '?'}`;
     const statusHtml = maps.length === 0
       ? '<span class="error-map-status empty">Нет попыток</span>'
       : remaining > 0
