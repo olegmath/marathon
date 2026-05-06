@@ -654,6 +654,7 @@ def fetch_homework_error_maps(academic_homework_id: int) -> list[dict[str, Any]]
                     "masterClientId": int(master_client_id),
                     "studentName": student_name,
                     "deadlineAt": homework.get("deadlineAt"),
+                    "deadlineDate": normalize_text(homework.get("deadlineAt"))[:10],
                     "progressStatus": homework.get("progressStatus"),
                     "grade": homework.get("grade"),
                     "scores": homework.get("scores"),
