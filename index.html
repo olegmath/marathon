@@ -1490,6 +1490,13 @@
   let dailyProgressStudent = '';
   let dailyProgressSortKey = 'dateOrder';
   let dailyProgressSortDirection = 'asc';
+  let groupErrorsSubject = '';
+  let groupErrorsExam = '';
+  let groupErrorsTeacher = '';
+  let groupErrorsGroup = '';
+  let groupErrorsPayload = null;
+  let groupErrorsLoading = false;
+  let groupErrorsError = '';
   let pdfStudent = '';
   let errorMapSubject = '';
   let errorMapExam = '';
@@ -2134,6 +2141,34 @@
     if (dailyProgressStudent && !students.includes(dailyProgressStudent)) dailyProgressStudent = '';
   }
 
+  function getGroupErrorsBaseRows() {
+    return allStudentRows.filter((row) => {
+      if (groupErrorsSubject && row.subject !== groupErrorsSubject) return false;
+      if (groupErrorsExam && row.level !== groupErrorsExam) return false;
+      if (groupErrorsTeacher && row.teacher !== groupErrorsTeacher) return false;
+      return true;
+    });
+  }
+
+  function normalizeGroupErrorsFilters() {
+    const subjects = uniqueSorted(allStudentRows.map((row) => row.subject));
+    const exams = uniqueSorted(allStudentRows.map((row) => row.level));
+    const baseRows = allStudentRows.filter((row) => {
+      if (groupErrorsSubject && row.subject !== groupErrorsSubject) return false;
+      if (groupErrorsExam && row.level !== groupErrorsExam) return false;
+      return true;
+    });
+    const teachers = uniqueSorted(baseRows.map((row) => row.teacher));
+    const groups = uniqueSorted(getGroupErrorsBaseRows().map((row) => row.group));
+
+    if (!groupErrorsSubject && currentSubject) groupErrorsSubject = currentSubject;
+    if (!groupErrorsExam && currentExam) groupErrorsExam = currentExam;
+    if (groupErrorsSubject && !subjects.includes(groupErrorsSubject)) groupErrorsSubject = subjects[0] || '';
+    if (groupErrorsExam && !exams.includes(groupErrorsExam)) groupErrorsExam = exams[0] || '';
+    if (groupErrorsTeacher && !teachers.includes(groupErrorsTeacher)) groupErrorsTeacher = '';
+    if (groupErrorsGroup && !groups.includes(groupErrorsGroup)) groupErrorsGroup = '';
+  }
+
   function getSubjectLabel(subjectKey) {
     return SUBJECTS.find((subject) => subject.key === subjectKey)?.label || subjectKey;
   }
@@ -2443,6 +2478,7 @@
       { key: 'details', label: 'Детали' },
       { key: 'teacherRating', label: 'Рейтинг преподов' },
       { key: 'dailyProgress', label: 'По дням' },
+      { key: 'groupErrors', label: 'Ошибки группы' },
     ];
     if (canManageAdmin()) {
       sections.push({ key: 'pdfReports', label: 'PDF' });
@@ -2585,6 +2621,10 @@
 
     if (adminSection === 'dailyProgress') {
       return renderDailyProgressView();
+    }
+
+    if (adminSection === 'groupErrors') {
+      return renderGroupErrorsView();
     }
 
     if (adminSection === 'pdfReports') {
@@ -3035,6 +3075,85 @@
           ${renderMetricCard('заполненных ячеек', progressRows.reduce((sum, row) => sum + row.filledCount, 0), 'green', 0)}
           ${renderMetricCard('среднее заполнение', averageNumbers(progressRows.map((row) => row.filledPercent)), 'pink')}
         </div>
+      </div>
+    `;
+  }
+
+  function renderGroupErrorsView() {
+    normalizeGroupErrorsFilters();
+
+    const subjectLabels = new Map(SUBJECTS.map((subject) => [subject.key, subject.label]));
+    const subjectOptions = uniqueSorted(allStudentRows.map((row) => row.subject));
+    const examOptions = uniqueSorted(allStudentRows.map((row) => row.level));
+    const baseRows = allStudentRows.filter((row) => {
+      if (groupErrorsSubject && row.subject !== groupErrorsSubject) return false;
+      if (groupErrorsExam && row.level !== groupErrorsExam) return false;
+      return true;
+    });
+    const teacherOptions = uniqueSorted(baseRows.map((row) => row.teacher));
+    const groupOptions = uniqueSorted(getGroupErrorsBaseRows().map((row) => row.group));
+    const days = Array.isArray(groupErrorsPayload?.days) ? groupErrorsPayload.days : [];
+    const rows = days.flatMap((day) => (day.questions || []).map((question) => ({
+      dayTitle: day.dayTitle || `День ${day.dayNumber || '?'}`,
+      dayNumber: Number(day.dayNumber) || 0,
+      lessonDate: day.lessonDate || '',
+      ...question,
+    })));
+
+    const tableHtml = groupErrorsPayload ? (rows.length > 0 ? `
+      <div class="details-table-wrap">
+        <table class="details-table">
+          <thead>
+            <tr>
+              <th>День</th>
+              <th>Задание</th>
+              <th class="numeric">Ошиблись</th>
+              <th class="numeric">Исправили</th>
+              <th class="numeric">Осталось</th>
+              <th>Кто не исправил</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map((row) => `
+              <tr>
+                <td><strong>${escapeHtml(row.dayTitle)}</strong><br><span class="pdf-action-note">${escapeHtml(row.lessonDate || '')}</span></td>
+                <td><strong>№${Number(row.number || 0)}</strong></td>
+                <td class="numeric">${Number(row.studentsWrong || 0)}</td>
+                <td class="numeric">${Number(row.studentsFixed || 0)}</td>
+                <td class="numeric">${Number(row.studentsRemaining || 0)}</td>
+                <td>${escapeHtml((row.remainingStudents || []).join(', ') || '—')}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    ` : '<div class="details-table-empty">Ошибок по выбранным фильтрам не найдено</div>') : '<div class="details-table-empty">Выбери фильтры и нажми “Загрузить аналитику”.</div>';
+
+    const summary = groupErrorsPayload?.summary || {};
+    return `
+      <div class="details-panel">
+        ${renderAdminHeader()}
+        ${renderAdminPeriodPanel()}
+        ${renderAdminIssues()}
+        <div class="details-filters">
+          ${renderDetailSelect('groupErrorsSubject', 'Предмет', groupErrorsSubject, subjectOptions, 'Все предметы', subjectLabels)}
+          ${renderDetailSelect('groupErrorsExam', 'Экзамен', groupErrorsExam, examOptions, 'Все экзамены')}
+          ${renderDetailSelect('groupErrorsTeacher', 'Преподаватель', groupErrorsTeacher, teacherOptions, 'Все преподаватели')}
+          ${renderDetailSelect('groupErrorsGroup', 'Группа', groupErrorsGroup, groupOptions, 'Все группы')}
+        </div>
+        <div class="error-map-actions">
+          <button class="error-map-btn" type="button" id="group-errors-load" ${groupErrorsLoading ? 'disabled' : ''}>${groupErrorsLoading ? 'Загрузка...' : 'Загрузить аналитику'}</button>
+          ${groupErrorsError ? `<span class="pdf-action-note" style="color:#D33E5F;">${escapeHtml(groupErrorsError)}</span>` : ''}
+        </div>
+        ${groupErrorsPayload ? `
+          <div class="metrics-grid">
+            ${renderMetricCard('учеников', Number(summary.students || 0), 'blue', 0)}
+            ${renderMetricCard('с ошибками', Number(summary.studentsWithErrors || 0), 'pink', 0)}
+            ${renderMetricCard('исправлено', Number(summary.fixed || 0), 'green', 0)}
+            ${renderMetricCard('осталось', Number(summary.remaining || 0), 'purple', 0)}
+          </div>
+        ` : ''}
+        ${tableHtml}
       </div>
     `;
   }
@@ -3805,16 +3924,20 @@
       ? 'Рейтинг преподов'
       : adminSection === 'dailyProgress'
         ? 'Процент по дням'
-        : adminSection === 'pdfReports'
-          ? 'PDF'
-          : 'Детальная статистика';
+        : adminSection === 'groupErrors'
+          ? 'Ошибки группы'
+          : adminSection === 'pdfReports'
+            ? 'PDF'
+            : 'Детальная статистика';
     const adminSubtitle = adminSection === 'teacherRating'
       ? 'Средние по группам'
       : adminSection === 'dailyProgress'
         ? 'Решение по датам'
-        : adminSection === 'pdfReports'
-          ? 'Отчёты'
-          : 'Для преподавателей';
+        : adminSection === 'groupErrors'
+          ? 'Аналитика'
+          : adminSection === 'pdfReports'
+            ? 'Отчёты'
+            : 'Для преподавателей';
     document.querySelector('.main-title').textContent = currentView === 'details'
       ? (canManageAdmin() ? 'АДМИН' : 'ТАБЛИЦА')
       : currentView === 'errorMap'
@@ -3900,6 +4023,46 @@
       errorMapError = error.message || 'Не удалось загрузить карту ошибок';
     } finally {
       errorMapLoading = false;
+      render();
+    }
+  }
+
+  async function loadGroupErrors() {
+    if (groupErrorsLoading || !hasSoholmsBackend()) return;
+
+    groupErrorsLoading = true;
+    groupErrorsError = '';
+    groupErrorsPayload = null;
+    render();
+
+    try {
+      const params = new URLSearchParams();
+      const period = adminLoadMeta.period || getRequestPeriod(false);
+      if (period.from) params.set('periodFrom', period.from);
+      if (period.to) params.set('periodTo', period.to);
+      if (SOHOLMS_GROUP_IDS) params.set('groupIds', SOHOLMS_GROUP_IDS);
+      if (SOHOLMS_SUBJECTS) params.set('subjects', SOHOLMS_SUBJECTS);
+      if (SOHOLMS_ORIGINS) params.set('origins', SOHOLMS_ORIGINS);
+      if (SOHOLMS_LIMIT) params.set('limit', SOHOLMS_LIMIT);
+      if (groupErrorsSubject) params.set('subject', groupErrorsSubject);
+      if (groupErrorsExam) params.set('level', groupErrorsExam);
+      if (groupErrorsTeacher) params.set('teacher', groupErrorsTeacher);
+      if (groupErrorsGroup) params.set('group', groupErrorsGroup);
+      params.set('_t', String(Date.now()));
+
+      const response = await fetch(`${SOHOLMS_BACKEND_URL}/api/error-analytics?${params.toString()}`);
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || 'Не удалось загрузить аналитику ошибок');
+      }
+      groupErrorsPayload = data;
+      if (Number(data.summary?.wrongTotal || 0) === 0) {
+        groupErrorsError = 'Ошибок по выбранным фильтрам не найдено';
+      }
+    } catch (error) {
+      groupErrorsError = error.message || 'Не удалось загрузить аналитику ошибок';
+    } finally {
+      groupErrorsLoading = false;
       render();
     }
   }
@@ -4034,6 +4197,36 @@
         const options = uniqueSorted(getDailyProgressBaseRows().map((row) => row.name));
         dailyProgressStudent = e.target.value === '' ? '' : options[index] || '';
       }
+      if (filter === 'groupErrorsSubject') {
+        const options = uniqueSorted(allStudentRows.map((row) => row.subject));
+        groupErrorsSubject = e.target.value === '' ? '' : options[index] || '';
+        groupErrorsTeacher = '';
+        groupErrorsGroup = '';
+        groupErrorsPayload = null;
+      }
+      if (filter === 'groupErrorsExam') {
+        const options = uniqueSorted(allStudentRows.map((row) => row.level));
+        groupErrorsExam = e.target.value === '' ? '' : options[index] || '';
+        groupErrorsTeacher = '';
+        groupErrorsGroup = '';
+        groupErrorsPayload = null;
+      }
+      if (filter === 'groupErrorsTeacher') {
+        const baseRows = allStudentRows.filter((row) => {
+          if (groupErrorsSubject && row.subject !== groupErrorsSubject) return false;
+          if (groupErrorsExam && row.level !== groupErrorsExam) return false;
+          return true;
+        });
+        const options = uniqueSorted(baseRows.map((row) => row.teacher));
+        groupErrorsTeacher = e.target.value === '' ? '' : options[index] || '';
+        groupErrorsGroup = '';
+        groupErrorsPayload = null;
+      }
+      if (filter === 'groupErrorsGroup') {
+        const options = uniqueSorted(getGroupErrorsBaseRows().map((row) => row.group));
+        groupErrorsGroup = e.target.value === '' ? '' : options[index] || '';
+        groupErrorsPayload = null;
+      }
       if (filter === 'pdfStudent') {
         const options = groupedRowsByStudent(allStudentRows).map(([studentName]) => studentName);
         pdfStudent = e.target.value === '' ? '' : options[index] || '';
@@ -4110,6 +4303,11 @@
 
       if (e.target.id === 'error-map-load') {
         loadErrorMap();
+        return;
+      }
+
+      if (e.target.id === 'group-errors-load') {
+        loadGroupErrors();
         return;
       }
 

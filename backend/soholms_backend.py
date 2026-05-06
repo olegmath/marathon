@@ -862,6 +862,174 @@ def build_error_map_payload(query: dict[str, str]) -> dict[str, Any]:
     }
 
 
+def error_homework_items_for_query(query: dict[str, str]) -> tuple[list[int], dict[int, dict[str, Any]]]:
+    requested_subject = infer_subject(query.get("subject", ""))
+    requested_level = normalize_text(query.get("level"))
+    discipline_ids = DEFAULT_ATTEMPT_DISCIPLINE_IDS
+    with ThreadPoolExecutor(max_workers=DEFAULT_CONCURRENCY) as executor:
+        results = list(executor.map(fetch_discipline_homework_items, discipline_ids))
+    homework_items = [item for items in results for item in items]
+    if requested_subject != "без предмета":
+        homework_items = [item for item in homework_items if item.get("subject") == requested_subject]
+    if requested_level:
+        homework_items = [item for item in homework_items if item.get("level") == requested_level]
+    homework_ids = dedupe_ints(item.get("academicHomeworkId") for item in homework_items)
+    homework_metadata = {
+        int(item["academicHomeworkId"]): item
+        for item in homework_items
+        if item.get("academicHomeworkId")
+    }
+    return homework_ids, homework_metadata
+
+
+def selected_error_analytics_students(query: dict[str, str]) -> list[dict[str, Any]]:
+    payload = resolve_ratings_payload(query)
+    requested_subject = infer_subject(query.get("subject", ""))
+    requested_level = normalize_text(query.get("level"))
+    requested_group = normalize_text(query.get("group"))
+    requested_teacher = normalize_text(query.get("teacher"))
+    rows = []
+    seen: set[str] = set()
+    for row in payload.get("rows", []) or []:
+        if requested_subject != "без предмета" and row.get("subject") != requested_subject:
+            continue
+        if requested_level and row.get("level") != requested_level:
+            continue
+        if requested_group and row.get("group") != requested_group:
+            continue
+        if requested_teacher and row.get("teacher") != requested_teacher:
+            continue
+        key = normalize_person_key(row.get("name"))
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        rows.append(row)
+    return rows
+
+
+def build_error_analytics_payload(query: dict[str, str]) -> dict[str, Any]:
+    selected_students = selected_error_analytics_students(query)
+    student_keys = {normalize_person_key(row.get("name")) for row in selected_students}
+    student_names = {
+        normalize_person_key(row.get("name")): normalize_text(row.get("name"))
+        for row in selected_students
+    }
+    homework_ids, homework_metadata = error_homework_items_for_query(query)
+
+    days: dict[str, dict[str, Any]] = {}
+    student_summaries: dict[str, dict[str, Any]] = {
+        key: {
+            "studentName": student_names.get(key, ""),
+            "wrongTotal": 0,
+            "fixed": 0,
+            "remaining": 0,
+        }
+        for key in student_keys
+    }
+    errors: list[dict[str, Any]] = []
+
+    with ThreadPoolExecutor(max_workers=ATTEMPT_CONCURRENCY) as executor:
+        futures = {executor.submit(fetch_homework_error_maps, hw_id): hw_id for hw_id in homework_ids}
+        for future in as_completed(futures):
+            hw_id = futures[future]
+            metadata = homework_metadata.get(int(hw_id), {})
+            try:
+                homework_rows = future.result()
+            except Exception as error:
+                errors.append({"academicHomeworkId": hw_id, "error": str(error)})
+                continue
+
+            for row in homework_rows:
+                student_key = normalize_person_key(row.get("studentName"))
+                if student_key not in student_keys:
+                    continue
+                merged_row = {**row, **metadata}
+                day_key = normalize_text(merged_row.get("dayTitle")) or normalize_text(merged_row.get("lessonDate")) or str(hw_id)
+                day = days.setdefault(
+                    day_key,
+                    {
+                        "dayTitle": merged_row.get("dayTitle") or "",
+                        "dayNumber": merged_row.get("dayNumber"),
+                        "lessonDate": merged_row.get("lessonDate") or "",
+                        "orderIndex": merged_row.get("orderIndex"),
+                        "wrongTotal": 0,
+                        "fixed": 0,
+                        "remaining": 0,
+                        "questions": {},
+                    },
+                )
+                student_summary = student_summaries.setdefault(
+                    student_key,
+                    {
+                        "studentName": student_names.get(student_key) or merged_row.get("studentName") or "",
+                        "wrongTotal": 0,
+                        "fixed": 0,
+                        "remaining": 0,
+                    },
+                )
+                for question in merged_row.get("questions") or []:
+                    question_number = int(question.get("number") or 0)
+                    if not question_number:
+                        continue
+                    status = question.get("status")
+                    wrong_attempts = int(question.get("wrongAttempts") or 0)
+                    q = day["questions"].setdefault(
+                        question_number,
+                        {
+                            "number": question_number,
+                            "studentsWrong": 0,
+                            "studentsFixed": 0,
+                            "studentsRemaining": 0,
+                            "wrongAttempts": 0,
+                            "remainingStudents": [],
+                            "fixedStudents": [],
+                        },
+                    )
+                    q["studentsWrong"] += 1
+                    q["wrongAttempts"] += wrong_attempts
+                    day["wrongTotal"] += 1
+                    student_summary["wrongTotal"] += 1
+                    if status == "fixed":
+                        q["studentsFixed"] += 1
+                        q["fixedStudents"].append(student_summary["studentName"])
+                        day["fixed"] += 1
+                        student_summary["fixed"] += 1
+                    else:
+                        q["studentsRemaining"] += 1
+                        q["remainingStudents"].append(student_summary["studentName"])
+                        day["remaining"] += 1
+                        student_summary["remaining"] += 1
+
+    day_rows = []
+    for day in days.values():
+        questions = sorted(day.pop("questions").values(), key=lambda item: item["number"])
+        day_rows.append({**day, "questions": questions})
+    day_rows.sort(key=lambda day: (
+        int(day.get("dayNumber") or 0),
+        int(day.get("orderIndex") or 0),
+        normalize_text(day.get("lessonDate")),
+    ))
+    student_rows = sorted(
+        student_summaries.values(),
+        key=lambda item: (-int(item.get("remaining") or 0), -int(item.get("wrongTotal") or 0), item.get("studentName") or ""),
+    )
+    summary = {
+        "students": len(selected_students),
+        "studentsWithErrors": sum(1 for item in student_rows if int(item.get("wrongTotal") or 0) > 0),
+        "wrongTotal": sum(int(day.get("wrongTotal") or 0) for day in day_rows),
+        "fixed": sum(int(day.get("fixed") or 0) for day in day_rows),
+        "remaining": sum(int(day.get("remaining") or 0) for day in day_rows),
+    }
+    return {
+        "ok": True,
+        "summary": summary,
+        "days": day_rows,
+        "students": student_rows,
+        "homeworkCount": len(homework_ids),
+        "errors": errors,
+    }
+
+
 def build_first_attempt_index(period_from: str, period_to: str) -> dict[tuple[str, str], datetime]:
     if not FIRST_ATTEMPTS_ENABLED:
         return {}
@@ -2835,6 +3003,9 @@ class Handler(BaseHTTPRequestHandler):
 
             if parsed.path == "/api/error-map":
                 return self.send_json(build_error_map_payload(query), cache_seconds=60)
+
+            if parsed.path == "/api/error-analytics":
+                return self.send_json(build_error_analytics_payload(query), cache_seconds=60)
 
             self.send_json({"ok": False, "error": "Not found"}, HTTPStatus.NOT_FOUND)
         except BackendError as error:
