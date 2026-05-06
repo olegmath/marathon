@@ -108,12 +108,20 @@ query AcademicDisciplineHomeworkIds_Query($id: ID!) {
       uid
       treeContentFlat {
         nodes {
+          id
+          name
+          kind
+          parentNodeId
+          orderIndex
           data {
             lessonContentItem {
               academicHomeworkId
             }
             interactiveLesson {
               uid
+              startsAt
+              finishesAt
+              interactiveLessonSeriesId
             }
           }
         }
@@ -129,6 +137,9 @@ query InteractiveLessonHomeworkIds_Query($id: ID!) {
     __typename
     ... on InteractiveLesson {
       uid
+      name
+      startsAt
+      finishesAt
       content {
         items {
           homework {
@@ -477,7 +488,54 @@ def dedupe_ints(values: list[Any]) -> list[int]:
     return result
 
 
-def fetch_interactive_lesson_homework_ids(interactive_lesson_id: int) -> list[int]:
+def day_number_from_name(value: Any) -> int | None:
+    match = re.search(r"\bдень\s*(\d+)\b", normalize_text(value), flags=re.IGNORECASE)
+    if not match:
+        return None
+    return int(match.group(1))
+
+
+def lesson_date_from_starts_at(value: Any) -> str:
+    text = normalize_text(value)
+    if not text:
+        return ""
+    started_at = parse_soholms_datetime(text)
+    return started_at.date().isoformat() if started_at else text[:10]
+
+
+def homework_metadata_from_lesson(
+    academic_homework_id: Any,
+    *,
+    discipline_id: Any = None,
+    interactive_lesson_id: Any = None,
+    day_title: Any = "",
+    starts_at: Any = "",
+    finishes_at: Any = "",
+    order_index: Any = None,
+    tree_node_id: Any = "",
+    parent_node_id: Any = "",
+) -> dict[str, Any] | None:
+    ids = dedupe_ints([academic_homework_id])
+    if not ids:
+        return None
+    day_title_text = normalize_text(day_title)
+    day_number = day_number_from_name(day_title_text)
+    return {
+        "academicHomeworkId": ids[0],
+        "academicDisciplineId": discipline_id,
+        "interactiveLessonId": interactive_lesson_id,
+        "dayTitle": day_title_text,
+        "dayNumber": day_number,
+        "lessonDate": lesson_date_from_starts_at(starts_at),
+        "startsAt": normalize_text(starts_at),
+        "finishesAt": normalize_text(finishes_at),
+        "orderIndex": order_index,
+        "treeNodeId": normalize_text(tree_node_id),
+        "parentNodeId": normalize_text(parent_node_id),
+    }
+
+
+def fetch_interactive_lesson_homework_items(interactive_lesson_id: int, parent_metadata: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     try:
         lesson_id = int(interactive_lesson_id)
     except (TypeError, ValueError):
@@ -490,16 +548,39 @@ def fetch_interactive_lesson_homework_ids(interactive_lesson_id: int) -> list[in
             "InteractiveLessonHomeworkIds_Query",
         )
         node = (data.get("data") or {}).get("node") or {}
-        ids: list[Any] = []
+        base_metadata = {
+            **(parent_metadata or {}),
+            "interactiveLessonId": node.get("uid") or lesson_id,
+            "dayTitle": normalize_text(node.get("name")) or normalize_text((parent_metadata or {}).get("dayTitle")),
+            "startsAt": node.get("startsAt") or (parent_metadata or {}).get("startsAt"),
+            "finishesAt": node.get("finishesAt") or (parent_metadata or {}).get("finishesAt"),
+        }
+        rows: list[dict[str, Any]] = []
         for content_item in (((node.get("content") or {}).get("items")) or []):
             homework = content_item.get("homework") or {}
-            ids.append(homework.get("academicHomeworkId"))
-        return dedupe_ints(ids)
+            metadata = homework_metadata_from_lesson(
+                homework.get("academicHomeworkId"),
+                discipline_id=base_metadata.get("academicDisciplineId"),
+                interactive_lesson_id=base_metadata.get("interactiveLessonId"),
+                day_title=base_metadata.get("dayTitle"),
+                starts_at=base_metadata.get("startsAt"),
+                finishes_at=base_metadata.get("finishesAt"),
+                order_index=base_metadata.get("orderIndex"),
+                tree_node_id=base_metadata.get("treeNodeId"),
+                parent_node_id=base_metadata.get("parentNodeId"),
+            )
+            if metadata:
+                rows.append(metadata)
+        return rows
 
-    return cached(f"interactive_lesson_homeworks:{lesson_id}", DEFAULT_CACHE_SECONDS, load)
+    return cached(f"interactive_lesson_homework_items:{lesson_id}", DEFAULT_CACHE_SECONDS, load)
 
 
-def fetch_discipline_homework_ids(academic_discipline_id: int) -> list[int]:
+def fetch_interactive_lesson_homework_ids(interactive_lesson_id: int) -> list[int]:
+    return dedupe_ints([item.get("academicHomeworkId") for item in fetch_interactive_lesson_homework_items(interactive_lesson_id)])
+
+
+def fetch_discipline_homework_items(academic_discipline_id: int) -> list[dict[str, Any]]:
     def load():
         data = request_graphql(
             DISCIPLINE_HOMEWORKS_QUERY,
@@ -507,16 +588,43 @@ def fetch_discipline_homework_ids(academic_discipline_id: int) -> list[int]:
             "AcademicDisciplineHomeworkIds_Query",
         )
         node = (data.get("data") or {}).get("node") or {}
-        ids: list[Any] = []
+        rows: list[dict[str, Any]] = []
         for item in ((node.get("treeContentFlat") or {}).get("nodes") or []):
             data_item = item.get("data") or {}
             lesson_item = data_item.get("lessonContentItem") or {}
-            ids.append(lesson_item.get("academicHomeworkId"))
             interactive_lesson = data_item.get("interactiveLesson") or {}
-            ids.extend(fetch_interactive_lesson_homework_ids(interactive_lesson.get("uid")))
-        return dedupe_ints(ids)
+            metadata = {
+                "academicDisciplineId": node.get("uid") or academic_discipline_id,
+                "interactiveLessonId": interactive_lesson.get("uid"),
+                "dayTitle": item.get("name"),
+                "startsAt": interactive_lesson.get("startsAt"),
+                "finishesAt": interactive_lesson.get("finishesAt"),
+                "orderIndex": item.get("orderIndex"),
+                "treeNodeId": item.get("id"),
+                "parentNodeId": item.get("parentNodeId"),
+            }
+            direct_homework = homework_metadata_from_lesson(
+                lesson_item.get("academicHomeworkId"),
+                discipline_id=metadata.get("academicDisciplineId"),
+                interactive_lesson_id=metadata.get("interactiveLessonId"),
+                day_title=metadata.get("dayTitle"),
+                starts_at=metadata.get("startsAt"),
+                finishes_at=metadata.get("finishesAt"),
+                order_index=metadata.get("orderIndex"),
+                tree_node_id=metadata.get("treeNodeId"),
+                parent_node_id=metadata.get("parentNodeId"),
+            )
+            if direct_homework:
+                rows.append(direct_homework)
+            interactive_lesson = data_item.get("interactiveLesson") or {}
+            rows.extend(fetch_interactive_lesson_homework_items(interactive_lesson.get("uid"), metadata))
+        return rows
 
-    return cached(f"discipline_homeworks:{academic_discipline_id}", DEFAULT_CACHE_SECONDS, load)
+    return cached(f"discipline_homework_items:{academic_discipline_id}", DEFAULT_CACHE_SECONDS, load)
+
+
+def fetch_discipline_homework_ids(academic_discipline_id: int) -> list[int]:
+    return dedupe_ints([item.get("academicHomeworkId") for item in fetch_discipline_homework_items(academic_discipline_id)])
 
 
 def fetch_homework_first_attempts(academic_homework_id: int) -> list[dict[str, Any]]:
@@ -687,11 +795,18 @@ def build_error_map_payload(query: dict[str, str]) -> dict[str, Any]:
 
     if homework_id:
         homework_ids = dedupe_ints([homework_id])
+        homework_metadata: dict[int, dict[str, Any]] = {}
     else:
         discipline_ids = DEFAULT_ATTEMPT_DISCIPLINE_IDS
         with ThreadPoolExecutor(max_workers=DEFAULT_CONCURRENCY) as executor:
-            results = list(executor.map(fetch_discipline_homework_ids, discipline_ids))
-        homework_ids = dedupe_ints(id_ for ids in results for id_ in ids)
+            results = list(executor.map(fetch_discipline_homework_items, discipline_ids))
+        homework_items = [item for items in results for item in items]
+        homework_ids = dedupe_ints(item.get("academicHomeworkId") for item in homework_items)
+        homework_metadata = {
+            int(item["academicHomeworkId"]): item
+            for item in homework_items
+            if item.get("academicHomeworkId")
+        }
 
     maps: list[dict[str, Any]] = []
     errors: list[dict[str, Any]] = []
@@ -702,11 +817,17 @@ def build_error_map_payload(query: dict[str, str]) -> dict[str, Any]:
             try:
                 for row in future.result():
                     if student_query in normalize_person_key(row.get("studentName")):
+                        row.update(homework_metadata.get(int(row.get("academicHomeworkId") or 0), {}))
                         maps.append(row)
             except Exception as error:
                 errors.append({"academicHomeworkId": hw_id, "error": str(error)})
 
-    maps.sort(key=lambda row: (normalize_text(row.get("deadlineAt")), int(row.get("academicHomeworkId") or 0)))
+    maps.sort(key=lambda row: (
+        int(row.get("dayNumber") or 0),
+        int(row.get("orderIndex") or 0),
+        normalize_text(row.get("lessonDate") or row.get("deadlineAt")),
+        int(row.get("academicHomeworkId") or 0),
+    ))
     return {
         "ok": True,
         "studentName": query.get("studentName", ""),
