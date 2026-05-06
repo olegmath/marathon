@@ -809,6 +809,49 @@
       gap: 10px;
     }
 
+    .error-map-days {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .error-map-day {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,80,120,0.12);
+      overflow: hidden;
+    }
+
+    .error-map-day-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+      background: #f8fcfe;
+    }
+
+    .error-map-day-title {
+      font-family: 'Oswald', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: #1a1a1a;
+      line-height: 1;
+    }
+
+    .error-map-day-meta {
+      margin-top: 4px;
+      color: rgba(0,0,0,0.55);
+      font-size: 12px;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .error-map-day-body {
+      padding: 14px 16px 16px;
+    }
+
     .error-map-status {
       display: inline-flex;
       align-items: center;
@@ -828,6 +871,33 @@
     .error-map-status.remaining {
       background: rgba(211,62,95,0.12);
       color: #D33E5F;
+    }
+
+    .error-map-status.empty {
+      background: rgba(74,184,224,0.12);
+      color: #267EA0;
+    }
+
+    .error-map-mini-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+    }
+
+    .error-map-mini-table th,
+    .error-map-mini-table td {
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+      padding: 9px 8px;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    .error-map-mini-table th {
+      font-family: 'Oswald', sans-serif;
+      font-size: 12px;
+      text-transform: uppercase;
+      color: #1a1a1a;
     }
 
     .attempt-dots {
@@ -1424,7 +1494,6 @@
   let errorMapSubject = '';
   let errorMapExam = '';
   let errorMapStudent = '';
-  let errorMapHomeworkId = '';
   let errorMapPayload = null;
   let errorMapLoading = false;
   let errorMapError = '';
@@ -2623,17 +2692,71 @@
     if (errorMapExam && !exams.includes(errorMapExam)) errorMapExam = exams[0] || '';
     if (errorMapStudent && !students.includes(errorMapStudent)) {
       errorMapStudent = '';
-      errorMapHomeworkId = '';
       errorMapPayload = null;
     }
   }
 
-  function getSelectedErrorMap() {
+  function getErrorMapStudentRow() {
+    return getErrorMapBaseRows().find((row) => row.name === errorMapStudent) || null;
+  }
+
+  function dateKeyFromSoholmsDate(value) {
+    return value ? String(value).slice(0, 10) : '';
+  }
+
+  function buildErrorMapDays() {
+    const studentRow = getErrorMapStudentRow();
     const maps = Array.isArray(errorMapPayload?.maps) ? errorMapPayload.maps : [];
-    if (errorMapHomeworkId) {
-      return maps.find((item) => String(item.academicHomeworkId) === String(errorMapHomeworkId)) || null;
+    const mapsByDate = new Map();
+    const usedMapIds = new Set();
+
+    for (const item of maps) {
+      const key = item.deadlineDate || dateKeyFromSoholmsDate(item.deadlineAt);
+      if (!key) continue;
+      if (!mapsByDate.has(key)) mapsByDate.set(key, []);
+      mapsByDate.get(key).push(item);
     }
-    return maps[0] || null;
+
+    const days = (studentRow?.dailyScores || [])
+      .slice()
+      .sort((a, b) => (Number(a.dateOrder) || 0) - (Number(b.dateOrder) || 0))
+      .map((dailyScore) => {
+        const dayMaps = mapsByDate.get(dailyScore.dateKey) || [];
+        dayMaps.forEach((item) => usedMapIds.add(String(item.academicHomeworkId)));
+        return {
+          dayOrder: Number(dailyScore.dateOrder) || 0,
+          dateKey: dailyScore.dateKey || '',
+          dateLabel: dailyScore.dateLabel || dailyScore.dateKey || '',
+          score: Number(dailyScore.score) || 0,
+          maps: dayMaps,
+        };
+      });
+
+    for (const item of maps) {
+      const id = String(item.academicHomeworkId);
+      if (usedMapIds.has(id)) continue;
+      days.push({
+        dayOrder: 0,
+        dateKey: item.deadlineDate || dateKeyFromSoholmsDate(item.deadlineAt),
+        dateLabel: item.deadlineDate || dateKeyFromSoholmsDate(item.deadlineAt) || `домашка ${item.academicHomeworkId}`,
+        score: Number(item.grade ?? item.scores) || 0,
+        maps: [item],
+        fallbackTitle: `День не найден · ${item.academicHomeworkId}`,
+      });
+    }
+
+    return days;
+  }
+
+  function aggregateErrorMapSummary(days) {
+    const maps = days.flatMap((day) => day.maps || []);
+    return maps.reduce((summary, item) => {
+      summary.homeworks += 1;
+      summary.wrongTotal += Number(item.summary?.wrongTotal || 0);
+      summary.fixed += Number(item.summary?.fixed || 0);
+      summary.remaining += Number(item.summary?.remaining || 0);
+      return summary;
+    }, { homeworks: 0, wrongTotal: 0, fixed: 0, remaining: 0 });
   }
 
   function renderAttemptDots(attempts) {
@@ -2642,6 +2765,74 @@
         ${attempt.isCorrect ? '✓' : '×'}
       </span>
     `).join('')}</span>`;
+  }
+
+  function renderErrorMapDay(day) {
+    const maps = day.maps || [];
+    const questions = maps.flatMap((item) => (item.questions || []).map((question) => ({
+      ...question,
+      academicHomeworkId: item.academicHomeworkId,
+    })));
+    const remaining = maps.reduce((sum, item) => sum + Number(item.summary?.remaining || 0), 0);
+    const fixed = maps.reduce((sum, item) => sum + Number(item.summary?.fixed || 0), 0);
+    const wrongTotal = maps.reduce((sum, item) => sum + Number(item.summary?.wrongTotal || 0), 0);
+    const title = day.fallbackTitle || `День ${day.dayOrder || '?'}`;
+    const statusHtml = maps.length === 0
+      ? '<span class="error-map-status empty">Нет попыток</span>'
+      : remaining > 0
+        ? '<span class="error-map-status remaining">Нужно исправить</span>'
+        : wrongTotal > 0
+          ? '<span class="error-map-status fixed">Исправлено</span>'
+          : '<span class="error-map-status fixed">Ошибок нет</span>';
+
+    const bodyHtml = maps.length === 0
+      ? '<div class="pdf-action-note">Пока нет проверенных попыток по этому дню.</div>'
+      : questions.length === 0
+        ? '<div class="pdf-action-note">Ошибок в проверенных попытках нет.</div>'
+        : `
+          <table class="error-map-mini-table">
+            <thead>
+              <tr>
+                <th>Задание</th>
+                <th>История</th>
+                <th>Ошибок</th>
+                <th>Статус</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${questions.map((question) => `
+                <tr>
+                  <td><strong>№${question.number}</strong></td>
+                  <td>${renderAttemptDots(question.attempts)}</td>
+                  <td>${Number(question.wrongAttempts || 0)}</td>
+                  <td>
+                    <span class="error-map-status ${question.status}">
+                      ${question.status === 'fixed' ? 'Исправлено' : 'Нужно исправить'}
+                    </span>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+
+    return `
+      <div class="error-map-day">
+        <div class="error-map-day-header">
+          <div>
+            <div class="error-map-day-title">${escapeHtml(title)}</div>
+            <div class="error-map-day-meta">
+              ${escapeHtml(day.dateLabel || day.dateKey || 'без даты')}
+              ${maps.length ? ` · ошибок: ${wrongTotal}, исправлено: ${fixed}, осталось: ${remaining}` : ''}
+            </div>
+          </div>
+          ${statusHtml}
+        </div>
+        <div class="error-map-day-body">
+          ${bodyHtml}
+        </div>
+      </div>
+    `;
   }
 
   function renderErrorMapView() {
@@ -2659,50 +2850,13 @@
     const subjectOptions = uniqueSorted(allStudentRows.map((row) => row.subject));
     const examOptions = uniqueSorted(allStudentRows.map((row) => row.level));
     const studentOptions = uniqueSorted(getErrorMapBaseRows().map((row) => row.name));
-    const maps = Array.isArray(errorMapPayload?.maps) ? errorMapPayload.maps : [];
-    const selectedMap = getSelectedErrorMap();
-    const homeworkOptions = maps.map((item) => {
-      const deadline = item.deadlineAt ? String(item.deadlineAt).slice(0, 10) : 'без даты';
-      const remaining = Number(item.summary?.remaining || 0);
-      const fixed = Number(item.summary?.fixed || 0);
-      return {
-        value: String(item.academicHomeworkId),
-        label: `${deadline} · вариант ${item.academicHomeworkId} · осталось ${remaining}, исправлено ${fixed}`,
-      };
-    });
-
-    const tableHtml = selectedMap && Array.isArray(selectedMap.questions) && selectedMap.questions.length > 0 ? `
-      <div class="details-table-wrap">
-        <table class="details-table">
-          <thead>
-            <tr>
-              <th>Задание</th>
-              <th>История попыток</th>
-              <th>Ошибок</th>
-              <th>Статус</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${selectedMap.questions.map((question) => `
-              <tr>
-                <td><strong>№${question.number}</strong></td>
-                <td>${renderAttemptDots(question.attempts)}</td>
-                <td>${Number(question.wrongAttempts || 0)}</td>
-                <td>
-                  <span class="error-map-status ${question.status}">
-                    ${question.status === 'fixed' ? 'Исправлено' : 'Нужно исправить'}
-                  </span>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    ` : selectedMap
-      ? '<div class="details-table-empty">В выбранном варианте ошибок не найдено. Красиво.</div>'
-      : errorMapPayload
-        ? '<div class="details-table-empty">По этому ученику варианты с проверенными попытками не найдены.</div>'
-        : '<div class="details-table-empty">Выбери ученика и нажми “Показать карту”.</div>';
+    const days = errorMapPayload ? buildErrorMapDays() : [];
+    const summary = aggregateErrorMapSummary(days);
+    const daysHtml = errorMapPayload
+      ? days.length > 0
+        ? `<div class="error-map-days">${days.map(renderErrorMapDay).join('')}</div>`
+        : '<div class="details-table-empty">По этому ученику дни и проверенные попытки не найдены.</div>'
+      : '<div class="details-table-empty">Выбери ученика и нажми “Показать карту”.</div>';
 
     return `
       <div class="error-map-panel">
@@ -2710,21 +2864,20 @@
           ${renderDetailSelect('errorMapSubject', 'Предмет', errorMapSubject, subjectOptions, 'Все предметы', subjectLabels)}
           ${renderDetailSelect('errorMapExam', 'Экзамен', errorMapExam, examOptions, 'Все экзамены')}
           ${renderDetailSelect('errorMapStudent', 'Ученик', errorMapStudent, studentOptions, 'Выбери ученика')}
-          ${renderDetailSelect('errorMapHomework', 'Вариант', errorMapHomeworkId, homeworkOptions.map((item) => item.value), 'Первый найденный', new Map(homeworkOptions.map((item) => [item.value, item.label])))}
         </div>
         <div class="error-map-actions">
           <button class="error-map-btn" type="button" id="error-map-load" ${errorMapStudent && !errorMapLoading ? '' : 'disabled'}>${errorMapLoading ? 'Загрузка...' : 'Показать карту'}</button>
           ${errorMapError ? `<span class="pdf-action-note" style="color:#D33E5F;">${escapeHtml(errorMapError)}</span>` : ''}
         </div>
-        ${selectedMap ? `
+        ${errorMapPayload ? `
           <div class="error-map-summary">
-            ${renderMetricCard('попыток', Number(selectedMap.summary?.attempts || 0), 'blue', 0)}
-            ${renderMetricCard('ошибок всего', Number(selectedMap.summary?.wrongTotal || 0), 'pink', 0)}
-            ${renderMetricCard('исправлено', Number(selectedMap.summary?.fixed || 0), 'green', 0)}
-            ${renderMetricCard('осталось', Number(selectedMap.summary?.remaining || 0), 'purple', 0)}
+            ${renderMetricCard('дней с попытками', summary.homeworks, 'blue', 0)}
+            ${renderMetricCard('ошибок всего', summary.wrongTotal, 'pink', 0)}
+            ${renderMetricCard('исправлено', summary.fixed, 'green', 0)}
+            ${renderMetricCard('осталось', summary.remaining, 'purple', 0)}
           </div>
         ` : ''}
-        ${tableHtml}
+        ${daysHtml}
       </div>
     `;
   }
@@ -3671,7 +3824,7 @@
     document.getElementById('exam-label').textContent = currentView === 'details'
       ? viewLabel.replace(' | ', '')
       : currentView === 'errorMap'
-        ? 'по вариантам'
+        ? 'по дням'
         : `${currentExam}${viewLabel}`;
 
     if (currentView === 'details') {
@@ -3719,7 +3872,6 @@
     errorMapLoading = true;
     errorMapError = '';
     errorMapPayload = null;
-    errorMapHomeworkId = '';
     render();
 
     try {
@@ -3734,7 +3886,6 @@
       }
       errorMapPayload = data;
       const maps = Array.isArray(data.maps) ? data.maps : [];
-      errorMapHomeworkId = maps[0]?.academicHomeworkId ? String(maps[0].academicHomeworkId) : '';
       if (maps.length === 0) {
         errorMapError = 'Проверенных попыток по ученику не найдено';
       }
@@ -3884,26 +4035,18 @@
         const options = uniqueSorted(allStudentRows.map((row) => row.subject));
         errorMapSubject = e.target.value === '' ? '' : options[index] || '';
         errorMapStudent = '';
-        errorMapHomeworkId = '';
         errorMapPayload = null;
       }
       if (filter === 'errorMapExam') {
         const options = uniqueSorted(allStudentRows.map((row) => row.level));
         errorMapExam = e.target.value === '' ? '' : options[index] || '';
         errorMapStudent = '';
-        errorMapHomeworkId = '';
         errorMapPayload = null;
       }
       if (filter === 'errorMapStudent') {
         const options = uniqueSorted(getErrorMapBaseRows().map((row) => row.name));
         errorMapStudent = e.target.value === '' ? '' : options[index] || '';
-        errorMapHomeworkId = '';
         errorMapPayload = null;
-      }
-      if (filter === 'errorMapHomework') {
-        const maps = Array.isArray(errorMapPayload?.maps) ? errorMapPayload.maps : [];
-        const options = maps.map((item) => String(item.academicHomeworkId));
-        errorMapHomeworkId = e.target.value === '' ? '' : options[index] || '';
       }
       render();
     });
