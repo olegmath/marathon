@@ -151,7 +151,12 @@ query AcademicHomeworkResultsStore_Query($id: ID!, $learningGroupIds: [Int!]) {
       academicDisciplineId
       learningDisciplineHomeworks(learningGroupIds: $learningGroupIds) {
         uid
+        grade
+        progressStatus
         deadlineAt
+        academicHomeworkId
+        scores
+        id
         learningDiscipline {
           masterClientId
           human {
@@ -161,8 +166,19 @@ query AcademicHomeworkResultsStore_Query($id: ID!, $learningGroupIds: [Int!]) {
           }
         }
         results {
+          uid
           status
           statusChangedAt
+          grade
+          scores
+          quiz {
+            isPreventProgressWorkflow
+            questionAnswers {
+              uid
+              scores
+              isCorrect
+            }
+          }
         }
       }
     }
@@ -543,6 +559,160 @@ def fetch_homework_first_attempts(academic_homework_id: int) -> list[dict[str, A
             )
         return rows
     return cached(f"homework_first_attempts:{academic_homework_id}", DEFAULT_CACHE_SECONDS, load)
+
+
+def fetch_homework_error_maps(academic_homework_id: int) -> list[dict[str, Any]]:
+    def load():
+        data = request_graphql(
+            HOMEWORK_ATTEMPTS_QUERY,
+            {
+                "id": to_graphql_gid("AcademicHomework", academic_homework_id),
+                "learningGroupIds": [],
+            },
+            "AcademicHomeworkResultsStore_Query",
+        )
+        node = (data.get("data") or {}).get("node") or {}
+        rows: list[dict[str, Any]] = []
+        for homework in node.get("learningDisciplineHomeworks") or []:
+            learning_discipline = homework.get("learningDiscipline") or {}
+            master_client_id = learning_discipline.get("masterClientId")
+            student_name = soholms_human_name(learning_discipline.get("human") or {})
+            attempts = []
+            for result in homework.get("results", []) or []:
+                changed_at = parse_soholms_datetime(result.get("statusChangedAt"))
+                answers = ((result.get("quiz") or {}).get("questionAnswers")) or []
+                if not changed_at or not answers:
+                    continue
+                attempts.append(
+                    {
+                        "uid": result.get("uid"),
+                        "status": result.get("status"),
+                        "statusChangedAt": changed_at.isoformat(),
+                        "grade": result.get("grade"),
+                        "scores": result.get("scores"),
+                        "answers": answers,
+                    }
+                )
+            attempts.sort(key=lambda attempt: parse_soholms_datetime(attempt.get("statusChangedAt")) or datetime.max)
+            if not master_client_id or not student_name or not attempts:
+                continue
+
+            question_order: list[str] = []
+            questions: dict[str, dict[str, Any]] = {}
+            for attempt_index, attempt in enumerate(attempts, start=1):
+                for answer in attempt["answers"]:
+                    question_uid = normalize_text(answer.get("uid"))
+                    if not question_uid:
+                        continue
+                    if question_uid not in questions:
+                        question_order.append(question_uid)
+                        questions[question_uid] = {
+                            "questionUid": question_uid,
+                            "number": len(question_order),
+                            "attempts": [],
+                        }
+                    questions[question_uid]["attempts"].append(
+                        {
+                            "attemptNumber": attempt_index,
+                            "resultUid": attempt.get("uid"),
+                            "statusChangedAt": attempt.get("statusChangedAt"),
+                            "scores": answer.get("scores"),
+                            "isCorrect": bool(answer.get("isCorrect")),
+                        }
+                    )
+
+            question_rows = []
+            fixed = 0
+            remaining = 0
+            wrong_total = 0
+            for question_uid in question_order:
+                question = questions[question_uid]
+                wrong_attempts = [attempt for attempt in question["attempts"] if not attempt["isCorrect"]]
+                if not wrong_attempts:
+                    continue
+                last_attempt = question["attempts"][-1]
+                status = "fixed" if last_attempt["isCorrect"] else "remaining"
+                if status == "fixed":
+                    fixed += 1
+                else:
+                    remaining += 1
+                wrong_total += 1
+                question_rows.append(
+                    {
+                        **question,
+                        "status": status,
+                        "wrongAttempts": len(wrong_attempts),
+                    }
+                )
+
+            rows.append(
+                {
+                    "academicHomeworkId": int(academic_homework_id),
+                    "academicDisciplineId": node.get("academicDisciplineId"),
+                    "homeworkUid": homework.get("uid"),
+                    "studentHomeworkId": homework.get("id"),
+                    "masterClientId": int(master_client_id),
+                    "studentName": student_name,
+                    "deadlineAt": homework.get("deadlineAt"),
+                    "progressStatus": homework.get("progressStatus"),
+                    "grade": homework.get("grade"),
+                    "scores": homework.get("scores"),
+                    "attempts": [
+                        {
+                            key: attempt.get(key)
+                            for key in ("uid", "status", "statusChangedAt", "grade", "scores")
+                        }
+                        for attempt in attempts
+                    ],
+                    "summary": {
+                        "wrongTotal": wrong_total,
+                        "fixed": fixed,
+                        "remaining": remaining,
+                        "attempts": len(attempts),
+                    },
+                    "questions": question_rows,
+                }
+            )
+        return rows
+
+    return cached(f"homework_error_maps:{academic_homework_id}", DEFAULT_CACHE_SECONDS, load)
+
+
+def build_error_map_payload(query: dict[str, str]) -> dict[str, Any]:
+    student_query = normalize_person_key(query.get("studentName", ""))
+    homework_id = normalize_text(query.get("academicHomeworkId") or query.get("homeworkId"))
+    if not student_query:
+        raise BackendError("studentName is required", HTTPStatus.BAD_REQUEST)
+
+    if homework_id:
+        homework_ids = dedupe_ints([homework_id])
+    else:
+        discipline_ids = DEFAULT_ATTEMPT_DISCIPLINE_IDS
+        with ThreadPoolExecutor(max_workers=DEFAULT_CONCURRENCY) as executor:
+            results = list(executor.map(fetch_discipline_homework_ids, discipline_ids))
+        homework_ids = dedupe_ints(id_ for ids in results for id_ in ids)
+
+    maps: list[dict[str, Any]] = []
+    errors: list[dict[str, Any]] = []
+    with ThreadPoolExecutor(max_workers=ATTEMPT_CONCURRENCY) as executor:
+        futures = {executor.submit(fetch_homework_error_maps, hw_id): hw_id for hw_id in homework_ids}
+        for future in as_completed(futures):
+            hw_id = futures[future]
+            try:
+                for row in future.result():
+                    if student_query in normalize_person_key(row.get("studentName")):
+                        maps.append(row)
+            except Exception as error:
+                errors.append({"academicHomeworkId": hw_id, "error": str(error)})
+
+    maps.sort(key=lambda row: (normalize_text(row.get("deadlineAt")), int(row.get("academicHomeworkId") or 0)))
+    return {
+        "ok": True,
+        "studentName": query.get("studentName", ""),
+        "homeworkCount": len(homework_ids),
+        "maps": maps,
+        "errors": errors,
+    }
 
 
 def build_first_attempt_index(period_from: str, period_to: str) -> dict[tuple[str, str], datetime]:
@@ -2515,6 +2685,9 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send_json(payload, cache_seconds=60)
 
                 return self.send_json(resolve_ratings_payload(query))
+
+            if parsed.path == "/api/error-map":
+                return self.send_json(build_error_map_payload(query), cache_seconds=60)
 
             self.send_json({"ok": False, "error": "Not found"}, HTTPStatus.NOT_FOUND)
         except BackendError as error:
