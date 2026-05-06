@@ -795,6 +795,89 @@
       box-shadow: 0 4px 20px rgba(0,80,120,0.12);
     }
 
+    .error-map-panel {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .error-map-summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(130px, 1fr));
+      gap: 10px;
+    }
+
+    .error-map-status {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 120px;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .error-map-status.fixed {
+      background: rgba(99,212,91,0.15);
+      color: #238B2F;
+    }
+
+    .error-map-status.remaining {
+      background: rgba(211,62,95,0.12);
+      color: #D33E5F;
+    }
+
+    .attempt-dots {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+
+    .attempt-dot {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 800;
+      color: white;
+      line-height: 1;
+    }
+
+    .attempt-dot.correct { background: #63D45B; }
+    .attempt-dot.wrong { background: #D33E5F; }
+
+    .error-map-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+
+    .error-map-btn {
+      height: 36px;
+      border: none;
+      border-radius: 8px;
+      background: #4AB8E0;
+      color: white;
+      font-family: 'Oswald', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 0 16px;
+      text-transform: uppercase;
+    }
+
+    .error-map-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
     .metrics-grid {
       display: grid;
       grid-template-columns: repeat(4, minmax(160px, 1fr));
@@ -1136,7 +1219,7 @@
 <script src="config.js"></script>
 <script>
   const PROXY_URL = 'https://script.google.com/macros/s/AKfycbyRMo1Sqm57vXg85VAtOYPDJ-PscpR1AuAGpcuCQmoT1WMuNeykYXaTpf8UPL5R8WPc_w/exec';
-  const SOHOLMS_BACKEND_URL = String(window.SOHOLMS_BACKEND_URL || localStorage.getItem('soholmsBackendUrl') || '').replace(/\/$/, '');
+  const SOHOLMS_BACKEND_URL = String(localStorage.getItem('soholmsBackendUrl') || window.SOHOLMS_BACKEND_URL || '').replace(/\/$/, '');
   const DATA_SOURCE_STORAGE_KEY = 'marathonDataSource';
   const CONFIG_SOHOLMS_PERIOD_FROM = String(window.SOHOLMS_PERIOD_FROM || '');
   const CONFIG_SOHOLMS_PERIOD_TO = String(window.SOHOLMS_PERIOD_TO || '');
@@ -1338,6 +1421,13 @@
   let dailyProgressSortKey = 'dateOrder';
   let dailyProgressSortDirection = 'asc';
   let pdfStudent = '';
+  let errorMapSubject = '';
+  let errorMapExam = '';
+  let errorMapStudent = '';
+  let errorMapHomeworkId = '';
+  let errorMapPayload = null;
+  let errorMapLoading = false;
+  let errorMapError = '';
   let adminToken = sessionStorage.getItem('adminToken') || '';
   let adminRole = sessionStorage.getItem('adminRole') || (adminToken ? 'admin' : '');
   let adminLoading = false;
@@ -1804,6 +1894,7 @@
 
     appData = groupAndSort(normalizedStudents);
     teacherData = groupTeacherRatings(normalizedStudents);
+    allStudentRows = normalizedStudents;
     if (!options.silent || currentView !== 'details') {
       render();
     }
@@ -2513,6 +2604,131 @@
     `;
   }
 
+  function getErrorMapBaseRows() {
+    return allStudentRows.filter((row) => {
+      if (errorMapSubject && row.subject !== errorMapSubject) return false;
+      if (errorMapExam && row.level !== errorMapExam) return false;
+      return true;
+    });
+  }
+
+  function normalizeErrorMapFilters() {
+    const subjects = uniqueSorted(allStudentRows.map((row) => row.subject));
+    const exams = uniqueSorted(allStudentRows.map((row) => row.level));
+    const students = uniqueSorted(getErrorMapBaseRows().map((row) => row.name));
+
+    if (!errorMapSubject && currentSubject) errorMapSubject = currentSubject;
+    if (!errorMapExam && currentExam) errorMapExam = currentExam;
+    if (errorMapSubject && !subjects.includes(errorMapSubject)) errorMapSubject = subjects[0] || '';
+    if (errorMapExam && !exams.includes(errorMapExam)) errorMapExam = exams[0] || '';
+    if (errorMapStudent && !students.includes(errorMapStudent)) {
+      errorMapStudent = '';
+      errorMapHomeworkId = '';
+      errorMapPayload = null;
+    }
+  }
+
+  function getSelectedErrorMap() {
+    const maps = Array.isArray(errorMapPayload?.maps) ? errorMapPayload.maps : [];
+    if (errorMapHomeworkId) {
+      return maps.find((item) => String(item.academicHomeworkId) === String(errorMapHomeworkId)) || null;
+    }
+    return maps[0] || null;
+  }
+
+  function renderAttemptDots(attempts) {
+    return `<span class="attempt-dots">${(attempts || []).map((attempt) => `
+      <span class="attempt-dot ${attempt.isCorrect ? 'correct' : 'wrong'}" title="Попытка ${attempt.attemptNumber}: ${attempt.isCorrect ? 'верно' : 'ошибка'}">
+        ${attempt.isCorrect ? '✓' : '×'}
+      </span>
+    `).join('')}</span>`;
+  }
+
+  function renderErrorMapView() {
+    if (!hasSoholmsBackend()) {
+      return '<div class="details-table-empty">Карта ошибок работает через Soholms backend. Backend URL не настроен.</div>';
+    }
+
+    if (allStudentRows.length === 0 && !dataLoading) {
+      loadData();
+      return '<div class="details-table-empty">Загружаем список учеников...</div>';
+    }
+
+    normalizeErrorMapFilters();
+    const subjectLabels = new Map(SUBJECTS.map((subject) => [subject.key, subject.label]));
+    const subjectOptions = uniqueSorted(allStudentRows.map((row) => row.subject));
+    const examOptions = uniqueSorted(allStudentRows.map((row) => row.level));
+    const studentOptions = uniqueSorted(getErrorMapBaseRows().map((row) => row.name));
+    const maps = Array.isArray(errorMapPayload?.maps) ? errorMapPayload.maps : [];
+    const selectedMap = getSelectedErrorMap();
+    const homeworkOptions = maps.map((item) => {
+      const deadline = item.deadlineAt ? String(item.deadlineAt).slice(0, 10) : 'без даты';
+      const remaining = Number(item.summary?.remaining || 0);
+      const fixed = Number(item.summary?.fixed || 0);
+      return {
+        value: String(item.academicHomeworkId),
+        label: `${deadline} · вариант ${item.academicHomeworkId} · осталось ${remaining}, исправлено ${fixed}`,
+      };
+    });
+
+    const tableHtml = selectedMap && Array.isArray(selectedMap.questions) && selectedMap.questions.length > 0 ? `
+      <div class="details-table-wrap">
+        <table class="details-table">
+          <thead>
+            <tr>
+              <th>Задание</th>
+              <th>История попыток</th>
+              <th>Ошибок</th>
+              <th>Статус</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${selectedMap.questions.map((question) => `
+              <tr>
+                <td><strong>№${question.number}</strong></td>
+                <td>${renderAttemptDots(question.attempts)}</td>
+                <td>${Number(question.wrongAttempts || 0)}</td>
+                <td>
+                  <span class="error-map-status ${question.status}">
+                    ${question.status === 'fixed' ? 'Исправлено' : 'Нужно исправить'}
+                  </span>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    ` : selectedMap
+      ? '<div class="details-table-empty">В выбранном варианте ошибок не найдено. Красиво.</div>'
+      : errorMapPayload
+        ? '<div class="details-table-empty">По этому ученику варианты с проверенными попытками не найдены.</div>'
+        : '<div class="details-table-empty">Выбери ученика и нажми “Показать карту”.</div>';
+
+    return `
+      <div class="error-map-panel">
+        <div class="details-filters">
+          ${renderDetailSelect('errorMapSubject', 'Предмет', errorMapSubject, subjectOptions, 'Все предметы', subjectLabels)}
+          ${renderDetailSelect('errorMapExam', 'Экзамен', errorMapExam, examOptions, 'Все экзамены')}
+          ${renderDetailSelect('errorMapStudent', 'Ученик', errorMapStudent, studentOptions, 'Выбери ученика')}
+          ${renderDetailSelect('errorMapHomework', 'Вариант', errorMapHomeworkId, homeworkOptions.map((item) => item.value), 'Первый найденный', new Map(homeworkOptions.map((item) => [item.value, item.label])))}
+        </div>
+        <div class="error-map-actions">
+          <button class="error-map-btn" type="button" id="error-map-load" ${errorMapStudent && !errorMapLoading ? '' : 'disabled'}>${errorMapLoading ? 'Загрузка...' : 'Показать карту'}</button>
+          ${errorMapError ? `<span class="pdf-action-note" style="color:#D33E5F;">${escapeHtml(errorMapError)}</span>` : ''}
+        </div>
+        ${selectedMap ? `
+          <div class="error-map-summary">
+            ${renderMetricCard('попыток', Number(selectedMap.summary?.attempts || 0), 'blue', 0)}
+            ${renderMetricCard('ошибок всего', Number(selectedMap.summary?.wrongTotal || 0), 'pink', 0)}
+            ${renderMetricCard('исправлено', Number(selectedMap.summary?.fixed || 0), 'green', 0)}
+            ${renderMetricCard('осталось', Number(selectedMap.summary?.remaining || 0), 'purple', 0)}
+          </div>
+        ` : ''}
+        ${tableHtml}
+      </div>
+    `;
+  }
+
   function renderTeacherRatingView() {
     normalizeTeacherRatingFilters();
 
@@ -3102,6 +3318,7 @@
           ${s.label}
         </button>
       `).join('')}
+      <button class="subject-btn ${currentView === 'errorMap' ? 'active' : ''}" data-view="errorMap">Карта ошибок</button>
       <button class="subject-btn" data-view="details">Таблица</button>
     `;
     document.getElementById('subject-tabs').style.display = 'flex';
@@ -3368,6 +3585,7 @@
       </button>
     `).join('')}
       <button class="subject-btn ${currentView === 'details' ? 'active' : ''}" data-view="details">Таблица</button>
+      <button class="subject-btn ${currentView === 'errorMap' ? 'active' : ''}" data-view="errorMap">Карта ошибок</button>
     `;
     document.getElementById('subject-tabs').innerHTML = subjectTabsHtml;
     document.getElementById('subject-tabs').style.display = 'flex';
@@ -3437,15 +3655,32 @@
         : adminSection === 'pdfReports'
           ? 'Отчёты'
           : 'Для преподавателей';
-    document.querySelector('.main-title').textContent = currentView === 'details' ? (canManageAdmin() ? 'АДМИН' : 'ТАБЛИЦА') : 'РЕЙТИНГ';
+    document.querySelector('.main-title').textContent = currentView === 'details'
+      ? (canManageAdmin() ? 'АДМИН' : 'ТАБЛИЦА')
+      : currentView === 'errorMap'
+        ? 'КАРТА ОШИБОК'
+        : 'РЕЙТИНГ';
     const subjectLabel = SUBJECTS.find(s => s.key === currentSubject)?.label || '';
-    document.getElementById('subject-label').textContent = currentView === 'details' ? adminTitle : subjectLabel;
+    document.getElementById('subject-label').textContent = currentView === 'details'
+      ? adminTitle
+      : currentView === 'errorMap'
+        ? 'Ученики'
+        : subjectLabel;
     const teacherLabel = currentScope === 'teacher' && currentTeacher ? ` | ${currentTeacher}` : '';
     const viewLabel = currentView === 'details' ? ` | ${adminSubtitle}` : teacherLabel;
-    document.getElementById('exam-label').textContent = currentView === 'details' ? viewLabel.replace(' | ', '') : `${currentExam}${viewLabel}`;
+    document.getElementById('exam-label').textContent = currentView === 'details'
+      ? viewLabel.replace(' | ', '')
+      : currentView === 'errorMap'
+        ? 'по вариантам'
+        : `${currentExam}${viewLabel}`;
 
     if (currentView === 'details') {
       document.getElementById('columns-container').innerHTML = renderDetailsView();
+      return;
+    }
+
+    if (currentView === 'errorMap') {
+      document.getElementById('columns-container').innerHTML = renderErrorMapView();
       return;
     }
 
@@ -3478,9 +3713,48 @@
     document.getElementById('columns-container').innerHTML = columnsHtml;
   }
 
+  async function loadErrorMap() {
+    if (!errorMapStudent || errorMapLoading || !hasSoholmsBackend()) return;
+
+    errorMapLoading = true;
+    errorMapError = '';
+    errorMapPayload = null;
+    errorMapHomeworkId = '';
+    render();
+
+    try {
+      const params = new URLSearchParams();
+      params.set('studentName', errorMapStudent);
+      if (errorMapSubject) params.set('subject', errorMapSubject);
+      if (errorMapExam) params.set('level', errorMapExam);
+      const response = await fetch(`${SOHOLMS_BACKEND_URL}/api/error-map?${params.toString()}&_t=${Date.now()}`);
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || 'Не удалось загрузить карту ошибок');
+      }
+      errorMapPayload = data;
+      const maps = Array.isArray(data.maps) ? data.maps : [];
+      errorMapHomeworkId = maps[0]?.academicHomeworkId ? String(maps[0].academicHomeworkId) : '';
+      if (maps.length === 0) {
+        errorMapError = 'Проверенных попыток по ученику не найдено';
+      }
+    } catch (error) {
+      errorMapError = error.message || 'Не удалось загрузить карту ошибок';
+    } finally {
+      errorMapLoading = false;
+      render();
+    }
+  }
+
   function initEventListeners() {
     document.getElementById('subject-tabs').addEventListener('click', (e) => {
       if (e.target.classList.contains('subject-btn')) {
+        if (e.target.dataset.view === 'errorMap') {
+          currentView = 'errorMap';
+          render();
+          return;
+        }
+
         if (e.target.dataset.view === 'details') {
           currentView = 'details';
           render();
@@ -3606,6 +3880,31 @@
         const options = groupedRowsByStudent(allStudentRows).map(([studentName]) => studentName);
         pdfStudent = e.target.value === '' ? '' : options[index] || '';
       }
+      if (filter === 'errorMapSubject') {
+        const options = uniqueSorted(allStudentRows.map((row) => row.subject));
+        errorMapSubject = e.target.value === '' ? '' : options[index] || '';
+        errorMapStudent = '';
+        errorMapHomeworkId = '';
+        errorMapPayload = null;
+      }
+      if (filter === 'errorMapExam') {
+        const options = uniqueSorted(allStudentRows.map((row) => row.level));
+        errorMapExam = e.target.value === '' ? '' : options[index] || '';
+        errorMapStudent = '';
+        errorMapHomeworkId = '';
+        errorMapPayload = null;
+      }
+      if (filter === 'errorMapStudent') {
+        const options = uniqueSorted(getErrorMapBaseRows().map((row) => row.name));
+        errorMapStudent = e.target.value === '' ? '' : options[index] || '';
+        errorMapHomeworkId = '';
+        errorMapPayload = null;
+      }
+      if (filter === 'errorMapHomework') {
+        const maps = Array.isArray(errorMapPayload?.maps) ? errorMapPayload.maps : [];
+        const options = maps.map((item) => String(item.academicHomeworkId));
+        errorMapHomeworkId = e.target.value === '' ? '' : options[index] || '';
+      }
       render();
     });
 
@@ -3656,6 +3955,11 @@
       if (e.target.id === 'admin-cache-clear') {
         if (!canManageAdmin()) return;
         clearBackendCacheAndReload();
+        return;
+      }
+
+      if (e.target.id === 'error-map-load') {
+        loadErrorMap();
         return;
       }
 
