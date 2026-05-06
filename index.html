@@ -118,6 +118,13 @@
       flex-wrap: wrap;
     }
 
+    .teacher-filter {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
     .scope-toggle {
       display: flex;
       background: rgba(255,255,255,0.2);
@@ -1056,6 +1063,10 @@
       }
 
       .teacher-select,
+      .group-select {
+        width: 100%;
+        max-width: none;
+      }
 
       .metrics-grid {
         grid-template-columns: 1fr;
@@ -1874,8 +1885,8 @@
       currentTeacher = names[0] || '';
     }
     const groups = getCurrentTeacherGroups();
-    if (!groups.includes(currentTeacherGroup)) {
-      currentTeacherGroup = groups[0] || '';
+    if (currentTeacherGroup && !groups.includes(currentTeacherGroup)) {
+      currentTeacherGroup = '';
     }
   }
 
@@ -3383,11 +3394,18 @@
 
     const teacherNames = getCurrentTeacherNames();
     const schoolGroups = getSchoolGroups();
+    const teacherGroups = currentScope === 'teacher' ? getCurrentTeacherGroups() : [];
     const teacherFilterHtml = currentScope === 'teacher' ? `
       <select class="teacher-select" id="teacher-select" ${teacherNames.length === 0 ? 'disabled' : ''}>
         <option value="">Выберите преподавателя</option>
         ${teacherNames.map((name, index) => `
           <option value="${index}" ${currentTeacher === name ? 'selected' : ''}>${escapeHtml(name)}</option>
+        `).join('')}
+      </select>
+      <select class="group-select" id="teacher-group-select" ${!currentTeacher || teacherGroups.length === 0 ? 'disabled' : ''}>
+        <option value="">Все группы препода</option>
+        ${teacherGroups.map((group, index) => `
+          <option value="${index}" ${currentTeacherGroup === group ? 'selected' : ''}>${escapeHtml(group)}</option>
         `).join('')}
       </select>
     ` : currentScope === 'school' && schoolGroups.length > 0 ? `
@@ -3449,7 +3467,9 @@
           : baseData;
 
     // Render columns
-    const placeLabel = currentScope === 'teacher' ? 'У ПРЕПОД.' : 'В ШКОЛЕ';
+    const placeLabel = currentScope === 'teacher'
+      ? (currentTeacherGroup ? 'В ГРУППЕ' : 'У ПРЕПОД.')
+      : (currentGroup ? 'В ГРУППЕ' : 'В ШКОЛЕ');
     const columnsHtml = `
       ${renderRatingColumn('legends', levelData.legends, placeLabel)}
       ${renderRatingColumn('champs', levelData.champs, placeLabel)}
@@ -3516,8 +3536,13 @@
         render();
       }
       if (e.target.classList.contains('group-select')) {
-        const groups = getSchoolGroups();
-        currentGroup = e.target.value === '' ? '' : groups[Number(e.target.value)] || '';
+        if (currentScope === 'teacher') {
+          const groups = getCurrentTeacherGroups();
+          currentTeacherGroup = e.target.value === '' ? '' : groups[Number(e.target.value)] || '';
+        } else {
+          const groups = getSchoolGroups();
+          currentGroup = e.target.value === '' ? '' : groups[Number(e.target.value)] || '';
+        }
         render();
       }
     });
