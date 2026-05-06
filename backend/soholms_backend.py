@@ -1552,6 +1552,7 @@ def public_row(row: dict[str, Any]) -> dict[str, Any]:
     return {
         "subject": row.get("subject", ""),
         "level": row.get("level", ""),
+        "group": row.get("group", ""),
         "name": row.get("name", ""),
         "teacher": row.get("teacher", "Без преподавателя"),
         "score": row.get("score", 0),
