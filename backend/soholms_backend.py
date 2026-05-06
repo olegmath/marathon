@@ -106,6 +106,7 @@ query AcademicDisciplineHomeworkIds_Query($id: ID!) {
     __typename
     ... on AcademicDiscipline {
       uid
+      name
       treeContentFlat {
         nodes {
           id
@@ -495,18 +496,21 @@ def day_number_from_name(value: Any) -> int | None:
     return int(match.group(1))
 
 
-def lesson_date_from_starts_at(value: Any) -> str:
-    text = normalize_text(value)
+def lesson_date_from_schedule(starts_at_value: Any, finishes_at_value: Any) -> str:
+    text = normalize_text(finishes_at_value) or normalize_text(starts_at_value)
     if not text:
         return ""
-    started_at = parse_soholms_datetime(text)
-    return started_at.date().isoformat() if started_at else text[:10]
+    scheduled_at = parse_soholms_datetime(text)
+    return scheduled_at.date().isoformat() if scheduled_at else text[:10]
 
 
 def homework_metadata_from_lesson(
     academic_homework_id: Any,
     *,
     discipline_id: Any = None,
+    discipline_name: Any = "",
+    subject: Any = "",
+    level: Any = "",
     interactive_lesson_id: Any = None,
     day_title: Any = "",
     starts_at: Any = "",
@@ -523,10 +527,13 @@ def homework_metadata_from_lesson(
     return {
         "academicHomeworkId": ids[0],
         "academicDisciplineId": discipline_id,
+        "disciplineName": normalize_text(discipline_name),
+        "subject": normalize_text(subject),
+        "level": normalize_text(level),
         "interactiveLessonId": interactive_lesson_id,
         "dayTitle": day_title_text,
         "dayNumber": day_number,
-        "lessonDate": lesson_date_from_starts_at(starts_at),
+        "lessonDate": lesson_date_from_schedule(starts_at, finishes_at),
         "startsAt": normalize_text(starts_at),
         "finishesAt": normalize_text(finishes_at),
         "orderIndex": order_index,
@@ -561,6 +568,9 @@ def fetch_interactive_lesson_homework_items(interactive_lesson_id: int, parent_m
             metadata = homework_metadata_from_lesson(
                 homework.get("academicHomeworkId"),
                 discipline_id=base_metadata.get("academicDisciplineId"),
+                discipline_name=base_metadata.get("disciplineName"),
+                subject=base_metadata.get("subject"),
+                level=base_metadata.get("level"),
                 interactive_lesson_id=base_metadata.get("interactiveLessonId"),
                 day_title=base_metadata.get("dayTitle"),
                 starts_at=base_metadata.get("startsAt"),
@@ -588,6 +598,9 @@ def fetch_discipline_homework_items(academic_discipline_id: int) -> list[dict[st
             "AcademicDisciplineHomeworkIds_Query",
         )
         node = (data.get("data") or {}).get("node") or {}
+        discipline_name = normalize_text(node.get("name"))
+        discipline_subject = infer_subject(discipline_name)
+        discipline_level = infer_level(discipline_name)
         rows: list[dict[str, Any]] = []
         for item in ((node.get("treeContentFlat") or {}).get("nodes") or []):
             data_item = item.get("data") or {}
@@ -595,6 +608,9 @@ def fetch_discipline_homework_items(academic_discipline_id: int) -> list[dict[st
             interactive_lesson = data_item.get("interactiveLesson") or {}
             metadata = {
                 "academicDisciplineId": node.get("uid") or academic_discipline_id,
+                "disciplineName": discipline_name,
+                "subject": discipline_subject,
+                "level": discipline_level,
                 "interactiveLessonId": interactive_lesson.get("uid"),
                 "dayTitle": item.get("name"),
                 "startsAt": interactive_lesson.get("startsAt"),
@@ -606,6 +622,9 @@ def fetch_discipline_homework_items(academic_discipline_id: int) -> list[dict[st
             direct_homework = homework_metadata_from_lesson(
                 lesson_item.get("academicHomeworkId"),
                 discipline_id=metadata.get("academicDisciplineId"),
+                discipline_name=metadata.get("disciplineName"),
+                subject=metadata.get("subject"),
+                level=metadata.get("level"),
                 interactive_lesson_id=metadata.get("interactiveLessonId"),
                 day_title=metadata.get("dayTitle"),
                 starts_at=metadata.get("startsAt"),
@@ -790,6 +809,8 @@ def fetch_homework_error_maps(academic_homework_id: int) -> list[dict[str, Any]]
 def build_error_map_payload(query: dict[str, str]) -> dict[str, Any]:
     student_query = normalize_person_key(query.get("studentName", ""))
     homework_id = normalize_text(query.get("academicHomeworkId") or query.get("homeworkId"))
+    requested_subject = infer_subject(query.get("subject", ""))
+    requested_level = normalize_text(query.get("level"))
     if not student_query:
         raise BackendError("studentName is required", HTTPStatus.BAD_REQUEST)
 
@@ -801,6 +822,10 @@ def build_error_map_payload(query: dict[str, str]) -> dict[str, Any]:
         with ThreadPoolExecutor(max_workers=DEFAULT_CONCURRENCY) as executor:
             results = list(executor.map(fetch_discipline_homework_items, discipline_ids))
         homework_items = [item for items in results for item in items]
+        if requested_subject != "без предмета":
+            homework_items = [item for item in homework_items if item.get("subject") == requested_subject]
+        if requested_level:
+            homework_items = [item for item in homework_items if item.get("level") == requested_level]
         homework_ids = dedupe_ints(item.get("academicHomeworkId") for item in homework_items)
         homework_metadata = {
             int(item["academicHomeworkId"]): item
