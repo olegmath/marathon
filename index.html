@@ -2960,6 +2960,7 @@
           completed: true,
           maps: [],
           title: item.dayTitle || '',
+          marathonPlan: item.marathonPlan || null,
         });
       }
       daysByKey.get(key).maps.push(item);
@@ -3005,6 +3006,32 @@
     return summary;
   }
 
+  function getQuestionPlan(question) {
+    return question?.plannedTask || null;
+  }
+
+  function getQuestionTaskLabel(question) {
+    const plan = getQuestionPlan(question);
+    return plan?.label || String(Number(question?.number || 0) || '');
+  }
+
+  function getQuestionTaskKey(question) {
+    const plan = getQuestionPlan(question);
+    return plan?.key || getQuestionTaskLabel(question);
+  }
+
+  function getQuestionSortNumber(question) {
+    const plan = getQuestionPlan(question);
+    return Number(plan?.number || question?.taskNumber || question?.number || 0);
+  }
+
+  function getQuestionTopicNote(question, fallbackPlan = null) {
+    const plan = getQuestionPlan(question) || {};
+    const section = plan.section || fallbackPlan?.section || '';
+    const topic = plan.topic || fallbackPlan?.topic || '';
+    return [section, topic].filter(Boolean).join(' · ');
+  }
+
   function buildStudentErrorAnalytics(days) {
     const taskMap = new Map();
     const maps = days.flatMap((day) => day.maps || []);
@@ -3012,10 +3039,13 @@
     for (const day of days) {
       for (const item of day.maps || []) {
         for (const question of item.questions || []) {
-          const number = Number(question.number || 0);
-          if (!number) continue;
-          const task = taskMap.get(number) || {
-            number,
+          const taskKey = getQuestionTaskKey(question);
+          if (!taskKey) continue;
+          const task = taskMap.get(taskKey) || {
+            key: taskKey,
+            number: getQuestionTaskLabel(question),
+            sortNumber: getQuestionSortNumber(question),
+            topicNote: getQuestionTopicNote(question, item.marathonPlan || day.marathonPlan),
             days: new Set(),
             wrongAttempts: 0,
             wrongHomeworks: 0,
@@ -3032,7 +3062,7 @@
           } else {
             task.remaining += 1;
           }
-          taskMap.set(number, task);
+          taskMap.set(taskKey, task);
         }
       }
     }
@@ -3045,13 +3075,14 @@
       b.remaining - a.remaining
       || b.wrongHomeworks - a.wrongHomeworks
       || b.wrongAttempts - a.wrongAttempts
-      || a.number - b.number
+      || Number(a.sortNumber || 0) - Number(b.sortNumber || 0)
+      || String(a.number || '').localeCompare(String(b.number || ''), 'ru')
     );
     const remainingTasks = tasks.filter((task) => task.remaining > 0).sort(byPriority);
     const frequentErrors = tasks
       .filter((task) => task.wrongHomeworks >= 2 || task.wrongAttempts >= 3)
-      .sort((a, b) => b.wrongHomeworks - a.wrongHomeworks || b.wrongAttempts - a.wrongAttempts || a.number - b.number);
-    const fixedTasks = tasks.filter((task) => task.fixed > 0 && task.remaining === 0).sort((a, b) => b.fixed - a.fixed || a.number - b.number);
+      .sort((a, b) => b.wrongHomeworks - a.wrongHomeworks || b.wrongAttempts - a.wrongAttempts || Number(a.sortNumber || 0) - Number(b.sortNumber || 0) || String(a.number || '').localeCompare(String(b.number || ''), 'ru'));
+    const fixedTasks = tasks.filter((task) => task.fixed > 0 && task.remaining === 0).sort((a, b) => b.fixed - a.fixed || Number(a.sortNumber || 0) - Number(b.sortNumber || 0) || String(a.number || '').localeCompare(String(b.number || ''), 'ru'));
     const cleanDays = days.filter((day) => (day.maps || []).length > 0 && (day.maps || []).every((item) => Number(item.summary?.wrongTotal || 0) === 0));
 
     const recommendations = [];
@@ -3091,10 +3122,10 @@
         <div class="student-error-task-list">
           ${visibleTasks.length ? visibleTasks.map((task) => `
             <div class="student-error-task-item">
-              <span class="student-error-task-number" style="background:${color};">№${Number(task.number || 0)}</span>
+              <span class="student-error-task-number" style="background:${color};">№${escapeHtml(task.number || '')}</span>
               <span class="student-error-task-main">
                 <span class="student-error-task-name">${mode === 'fixed' ? 'ошибка закрыта' : mode === 'frequent' ? 'повторяется' : 'в работе'}</span>
-                <span class="student-error-task-note">${escapeHtml(task.dayLabels.slice(0, 2).join(', ') || 'по карте ошибок')}</span>
+                <span class="student-error-task-note">${escapeHtml(task.topicNote || task.dayLabels.slice(0, 2).join(', ') || 'по карте ошибок')}</span>
               </span>
               <span class="student-error-task-score" style="color:${color};">${Number(task.wrongAttempts || 0)}×</span>
             </div>
@@ -3146,10 +3177,13 @@
 
   function renderErrorMapDay(day) {
     const maps = day.maps || [];
-    const questions = maps.flatMap((item) => (item.questions || []).map((question) => ({
-      ...question,
-      academicHomeworkId: item.academicHomeworkId,
-    })));
+    const questions = maps
+      .flatMap((item) => (item.questions || []).map((question) => ({
+        ...question,
+        academicHomeworkId: item.academicHomeworkId,
+        marathonPlan: item.marathonPlan || day.marathonPlan || null,
+      })))
+      .sort((a, b) => getQuestionSortNumber(a) - getQuestionSortNumber(b) || String(getQuestionTaskLabel(a)).localeCompare(String(getQuestionTaskLabel(b)), 'ru'));
     const remaining = maps.reduce((sum, item) => sum + Number(item.summary?.remaining || 0), 0);
     const fixed = maps.reduce((sum, item) => sum + Number(item.summary?.fixed || 0), 0);
     const wrongTotal = maps.reduce((sum, item) => sum + Number(item.summary?.wrongTotal || 0), 0);
@@ -3175,6 +3209,7 @@
             <thead>
               <tr>
                 <th>Задание</th>
+                <th>Тема</th>
                 <th>История</th>
                 <th>Ошибок</th>
                 <th>Статус</th>
@@ -3183,7 +3218,8 @@
             <tbody>
               ${questions.map((question) => `
                 <tr>
-                  <td><strong>№${question.number}</strong></td>
+                  <td><strong>№${escapeHtml(getQuestionTaskLabel(question))}</strong></td>
+                  <td>${escapeHtml(getQuestionTopicNote(question, question.marathonPlan) || '—')}</td>
                   <td>${renderAttemptDots(question.attempts)}</td>
                   <td>${Number(question.wrongAttempts || 0)}</td>
                   <td>
@@ -3433,6 +3469,7 @@
       dayTitle: day.dayTitle || `День ${day.dayNumber || '?'}`,
       dayNumber: Number(day.dayNumber) || 0,
       lessonDate: day.lessonDate || '',
+      marathonPlan: day.marathonPlan || null,
       ...question,
     })));
 
@@ -3443,6 +3480,7 @@
             <tr>
               <th>День</th>
               <th>Задание</th>
+              <th>Тема</th>
               <th class="numeric">Ошиблись</th>
               <th class="numeric">Исправили</th>
               <th class="numeric">Осталось</th>
@@ -3453,7 +3491,8 @@
             ${rows.map((row) => `
               <tr>
                 <td><strong>${escapeHtml(row.dayTitle)}</strong><br><span class="pdf-action-note">${escapeHtml(row.lessonDate || '')}</span></td>
-                <td><strong>№${Number(row.number || 0)}</strong></td>
+                <td><strong>№${escapeHtml(row.taskLabel || row.number || '')}</strong></td>
+                <td>${escapeHtml([row.section, row.topic].filter(Boolean).join(' · ') || '—')}</td>
                 <td class="numeric">${Number(row.studentsWrong || 0)}</td>
                 <td class="numeric">${Number(row.studentsFixed || 0)}</td>
                 <td class="numeric">${Number(row.studentsRemaining || 0)}</td>

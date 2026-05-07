@@ -15,6 +15,7 @@ import os
 import re
 import base64
 import copy
+import csv
 import sys
 import threading
 import time
@@ -85,6 +86,7 @@ PENALTY_OVERRIDES_PATH = os.getenv(
 )
 DEFAULT_TELEGRAM_CHAT_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "telegram_chats.json")
 TELEGRAM_API_BASE = os.getenv("TELEGRAM_API_BASE", "https://api.telegram.org").rstrip("/")
+MARATHON_PLAN_CSV_PATH = os.getenv("MARATHON_PLAN_CSV_PATH", "").strip()
 
 GROUP_TREE_PATH = "/api/v1/learning_group/get_tree"
 ATTENDANCE_PATH = "/master/api/learning/attendance-sheet/excel/data"
@@ -506,6 +508,254 @@ def lesson_date_from_schedule(starts_at_value: Any, finishes_at_value: Any) -> s
     return scheduled_at.date().isoformat() if scheduled_at else text[:10]
 
 
+MARATHON_PLAN_CACHE: dict[str, Any] = {"path": None, "mtime": None, "items": []}
+
+
+def marathon_plan_candidate_paths() -> list[str]:
+    candidates = [
+        MARATHON_PLAN_CSV_PATH,
+        os.path.join(os.path.dirname(__file__), "marathon_plan.csv"),
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), "marathon_plan.csv"),
+        os.path.expanduser("~/Downloads/Марафон - Лист1.csv"),
+    ]
+    result: list[str] = []
+    for path in candidates:
+        if path and path not in result:
+            result.append(path)
+    return result
+
+
+def parse_marathon_date(value: Any) -> str:
+    text = normalize_text(value)
+    match = re.match(r"^(\d{1,2})[./](\d{1,2})(?:[./](\d{2,4}))?$", text)
+    if not match:
+        return ""
+    day = int(match.group(1))
+    month = int(match.group(2))
+    year_text = match.group(3)
+    if year_text:
+        year = int(year_text)
+        if year < 100:
+            year += 2000
+    else:
+        year = datetime.fromisoformat(DEFAULT_PERIOD_FROM).year
+    try:
+        return date(year, month, day).isoformat()
+    except ValueError:
+        return ""
+
+
+def expand_task_format(value: Any) -> list[dict[str, Any]]:
+    text = normalize_text(value)
+    if not text:
+        return []
+    lowered = text.casefold()
+    lowered = re.sub(r"\bс\s*(\d+)\s*по\s*(\d+)\b", r"\1-\2", lowered)
+    tasks: list[dict[str, Any]] = []
+    for match in re.finditer(r"\d+\s*-\s*\d+|\d+", lowered):
+        token = match.group(0)
+        if "-" in token:
+            start_text, end_text = re.split(r"\s*-\s*", token, maxsplit=1)
+            start = int(start_text)
+            end = int(end_text)
+            step = 1 if end >= start else -1
+            for number in range(start, end + step, step):
+                tasks.append(
+                    {
+                        "key": str(number),
+                        "label": str(number),
+                        "number": number,
+                        "source": text,
+                    }
+                )
+        else:
+            number = int(token)
+            tasks.append(
+                {
+                    "key": str(number),
+                    "label": str(number),
+                    "number": number,
+                    "source": text,
+                }
+            )
+    return tasks
+
+
+def split_topic_section(topic_value: Any, section_value: Any = "") -> tuple[str, str]:
+    topic = normalize_text(topic_value)
+    section = normalize_text(section_value)
+    if section or not topic:
+        return section, topic
+    match = re.match(r"^(.+?\s+\d+(?:\.\d+)*)\s+(.+)$", topic)
+    if match:
+        return normalize_text(match.group(1)), normalize_text(match.group(2))
+    return "", topic
+
+
+def marathon_plan_from_csv(path: str) -> list[dict[str, Any]]:
+    with open(path, "r", encoding="utf-8-sig", newline="") as file:
+        rows = list(csv.reader(file))
+    if len(rows) < 4:
+        return []
+
+    width = max(len(row) for row in rows)
+    rows = [row + [""] * (width - len(row)) for row in rows]
+    subject_by_col: list[str] = []
+    level_by_col: list[str] = []
+    current_subject = ""
+    current_level = ""
+    for col in range(width):
+        if normalize_text(rows[0][col]):
+            current_subject = infer_subject(rows[0][col])
+        if normalize_text(rows[1][col]):
+            current_level = normalize_text(rows[1][col])
+        subject_by_col.append(current_subject)
+        level_by_col.append(current_level)
+
+    items: list[dict[str, Any]] = []
+    col = 0
+    while col < width:
+        if normalize_text(rows[2][col]).casefold() != "№":
+            col += 1
+            continue
+        start = col
+        end = start + 1
+        while end < width and normalize_text(rows[2][end]):
+            end += 1
+        headers = {normalize_text(rows[2][index]).casefold(): index for index in range(start, end)}
+        subject = subject_by_col[start]
+        level = level_by_col[start]
+        theme_col = headers.get("тема")
+        format_col = headers.get("формат")
+        section_col = headers.get("раздел")
+        day_col = headers.get("№")
+        date_col = headers.get("дата")
+        count_col = headers.get("кол-во заданий")
+        current_day_number = None
+        current_date_key = ""
+
+        for row in rows[3:]:
+            row_day_number = None
+            try:
+                row_day_number = int(float(normalize_text(row[day_col]))) if day_col is not None and normalize_text(row[day_col]) else None
+            except (TypeError, ValueError):
+                row_day_number = None
+            if row_day_number is not None:
+                current_day_number = row_day_number
+            row_date_key = parse_marathon_date(row[date_col]) if date_col is not None else ""
+            if row_date_key:
+                current_date_key = row_date_key
+            day_number = row_day_number if row_day_number is not None else current_day_number
+            topic_source = row[theme_col] if theme_col is not None else ""
+            format_text = normalize_text(row[format_col]) if format_col is not None else ""
+            if row_day_number is None and not normalize_text(topic_source) and not format_text:
+                continue
+            if day_number is None and not normalize_text(topic_source) and not format_text:
+                continue
+            section, topic = split_topic_section(topic_source, row[section_col] if section_col is not None else "")
+            task_source = format_text if format_col is not None else topic
+            tasks = expand_task_format(task_source)
+            item = {
+                "subject": subject,
+                "level": level,
+                "dayNumber": day_number,
+                "dateKey": row_date_key or current_date_key,
+                "section": section,
+                "topic": topic,
+                "format": format_text,
+                "taskCount": normalize_text(row[count_col]) if count_col is not None else "",
+                "plannedTasks": tasks,
+            }
+            if item["dayNumber"] is not None or item["topic"] or item["plannedTasks"]:
+                items.append(item)
+        col = end + 1
+    return items
+
+
+def load_marathon_plan_items() -> list[dict[str, Any]]:
+    for path in marathon_plan_candidate_paths():
+        if not os.path.exists(path):
+            continue
+        try:
+            mtime = os.path.getmtime(path)
+            if MARATHON_PLAN_CACHE["path"] == path and MARATHON_PLAN_CACHE["mtime"] == mtime:
+                return MARATHON_PLAN_CACHE["items"]
+            items = marathon_plan_from_csv(path)
+            MARATHON_PLAN_CACHE.update({"path": path, "mtime": mtime, "items": items})
+            return items
+        except Exception as error:
+            sys.stderr.write(f"Failed to load marathon plan CSV {path}: {error}\n")
+    MARATHON_PLAN_CACHE.update({"path": None, "mtime": None, "items": []})
+    return []
+
+
+def combine_marathon_plan_items(items: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if not items:
+        return None
+    base = dict(items[0])
+    for key in ("section", "topic", "format", "taskCount"):
+        values: list[str] = []
+        for item in items:
+            value = normalize_text(item.get(key))
+            if value and value not in values:
+                values.append(value)
+        base[key] = "; ".join(values)
+    planned_tasks: list[dict[str, Any]] = []
+    for item in items:
+        planned_tasks.extend(item.get("plannedTasks") or [])
+    base["plannedTasks"] = planned_tasks
+    return base
+
+
+def find_marathon_plan_item(row: dict[str, Any]) -> dict[str, Any] | None:
+    subject = normalize_text(row.get("subject"))
+    level = normalize_text(row.get("level"))
+    day_number = int(row.get("dayNumber") or 0)
+    lesson_date = normalize_text(row.get("dateKey") or row.get("lessonDate"))
+    candidates = [
+        item for item in load_marathon_plan_items()
+        if item.get("subject") == subject and item.get("level") == level
+    ]
+    if day_number:
+        by_day = [item for item in candidates if int(item.get("dayNumber") or 0) == day_number]
+        if by_day:
+            return combine_marathon_plan_items(by_day)
+    if lesson_date:
+        by_date = [item for item in candidates if item.get("dateKey") == lesson_date]
+        if by_date:
+            return combine_marathon_plan_items(by_date)
+    return None
+
+
+def enrich_questions_with_marathon_plan(row: dict[str, Any]) -> dict[str, Any]:
+    plan = find_marathon_plan_item(row)
+    if not plan:
+        return row
+    planned_tasks = plan.get("plannedTasks") or []
+    enriched_questions = []
+    for question in row.get("questions") or []:
+        question_number = int(question.get("number") or 0)
+        planned_task = planned_tasks[question_number - 1] if 0 < question_number <= len(planned_tasks) else None
+        if planned_task:
+            planned_task = {
+                **planned_task,
+                "section": plan.get("section") or "",
+                "topic": plan.get("topic") or "",
+            }
+        enriched_questions.append({**question, "plannedTask": planned_task})
+    return {
+        **row,
+        "marathonPlan": {
+            "section": plan.get("section") or "",
+            "topic": plan.get("topic") or "",
+            "format": plan.get("format") or "",
+            "taskCount": plan.get("taskCount") or "",
+            "plannedTasks": planned_tasks,
+        },
+        "questions": enriched_questions,
+    }
+
+
 def homework_metadata_from_lesson(
     academic_homework_id: Any,
     *,
@@ -854,6 +1104,7 @@ def build_error_map_payload(query: dict[str, str]) -> dict[str, Any]:
                         if not date_in_period(display_date, period_from, period_to):
                             continue
                         merged_row["dateKey"] = display_date
+                        merged_row = enrich_questions_with_marathon_plan(merged_row)
                         maps.append(merged_row)
             except Exception as error:
                 errors.append({"academicHomeworkId": hw_id, "error": str(error)})
@@ -978,6 +1229,8 @@ def build_error_analytics_payload(query: dict[str, str]) -> dict[str, Any]:
                 display_date = error_map_display_date(merged_row)
                 if not date_in_period(display_date, period_from, period_to):
                     continue
+                merged_row["dateKey"] = display_date
+                merged_row = enrich_questions_with_marathon_plan(merged_row)
                 day_key = normalize_text(merged_row.get("dayTitle")) or normalize_text(merged_row.get("lessonDate")) or str(hw_id)
                 day = days.setdefault(
                     day_key,
@@ -986,6 +1239,7 @@ def build_error_analytics_payload(query: dict[str, str]) -> dict[str, Any]:
                         "dayNumber": merged_row.get("dayNumber"),
                         "lessonDate": display_date or merged_row.get("lessonDate") or "",
                         "orderIndex": merged_row.get("orderIndex"),
+                        "marathonPlan": merged_row.get("marathonPlan") or {},
                         "wrongTotal": 0,
                         "fixed": 0,
                         "remaining": 0,
@@ -1005,12 +1259,21 @@ def build_error_analytics_payload(query: dict[str, str]) -> dict[str, Any]:
                     question_number = int(question.get("number") or 0)
                     if not question_number:
                         continue
+                    planned_task = question.get("plannedTask") or {}
+                    day_plan = merged_row.get("marathonPlan") or {}
+                    question_key = normalize_text(planned_task.get("key")) or str(question_number)
+                    task_label = normalize_text(planned_task.get("label")) or str(question_number)
                     status = question.get("status")
                     wrong_attempts = int(question.get("wrongAttempts") or 0)
                     q = day["questions"].setdefault(
-                        question_number,
+                        question_key,
                         {
                             "number": question_number,
+                            "taskKey": question_key,
+                            "taskLabel": task_label,
+                            "taskNumber": planned_task.get("number"),
+                            "section": planned_task.get("section") or day_plan.get("section") or "",
+                            "topic": planned_task.get("topic") or day_plan.get("topic") or "",
                             "studentsWrong": 0,
                             "studentsFixed": 0,
                             "studentsRemaining": 0,
@@ -1036,7 +1299,13 @@ def build_error_analytics_payload(query: dict[str, str]) -> dict[str, Any]:
 
     day_rows = []
     for day in days.values():
-        questions = sorted(day.pop("questions").values(), key=lambda item: item["number"])
+        questions = sorted(
+            day.pop("questions").values(),
+            key=lambda item: (
+                int(item.get("taskNumber") or item.get("number") or 0),
+                normalize_text(item.get("taskLabel")),
+            ),
+        )
         day_rows.append({**day, "questions": questions})
     day_rows.sort(key=lambda day: (
         int(day.get("dayNumber") or 0),
