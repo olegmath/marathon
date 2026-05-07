@@ -1295,9 +1295,8 @@
   const CONFIG_SOHOLMS_PERIOD_TO = String(window.SOHOLMS_PERIOD_TO || '');
   let soholmsPeriodFrom = String(CONFIG_SOHOLMS_PERIOD_FROM || localStorage.getItem('soholmsPeriodFrom') || '');
   let soholmsPeriodTo = String(CONFIG_SOHOLMS_PERIOD_TO || localStorage.getItem('soholmsPeriodTo') || '');
-  const defaultTeacherPeriod = getCurrentMonthPeriod();
-  let teacherPeriodFrom = String(window.SOHOLMS_PERIOD_FROM || sessionStorage.getItem('teacherPeriodFrom') || defaultTeacherPeriod.from);
-  let teacherPeriodTo = String(window.SOHOLMS_PERIOD_TO || sessionStorage.getItem('teacherPeriodTo') || defaultTeacherPeriod.to);
+  let teacherPeriodFrom = String(CONFIG_SOHOLMS_PERIOD_FROM || sessionStorage.getItem('teacherPeriodFrom') || '');
+  let teacherPeriodTo = String(CONFIG_SOHOLMS_PERIOD_TO || sessionStorage.getItem('teacherPeriodTo') || '');
   const SOHOLMS_GROUP_IDS = String(window.SOHOLMS_GROUP_IDS || localStorage.getItem('soholmsGroupIds') || '');
   const SOHOLMS_SUBJECTS = String(window.SOHOLMS_SUBJECTS || localStorage.getItem('soholmsSubjects') || '');
   const SOHOLMS_ORIGINS = String(window.SOHOLMS_ORIGINS || localStorage.getItem('soholmsOrigins') || '');
@@ -1403,21 +1402,6 @@
       throw new Error(data.error || 'Не удалось сохранить источник данных');
     }
     return data;
-  }
-
-  function formatLocalDate(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
-  function getCurrentMonthPeriod() {
-    const now = new Date();
-    return {
-      from: formatLocalDate(new Date(now.getFullYear(), now.getMonth(), 1)),
-      to: formatLocalDate(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
-    };
   }
 
   function getRequestPeriod(publicOnly) {
@@ -3719,9 +3703,8 @@
     if (!canChangePeriod() || !usesSoholmsSource()) return;
 
     if (adminRole === 'teacher') {
-      const currentMonth = getCurrentMonthPeriod();
-      teacherPeriodFrom = String(window.SOHOLMS_PERIOD_FROM || currentMonth.from);
-      teacherPeriodTo = String(window.SOHOLMS_PERIOD_TO || currentMonth.to);
+      teacherPeriodFrom = CONFIG_SOHOLMS_PERIOD_FROM;
+      teacherPeriodTo = CONFIG_SOHOLMS_PERIOD_TO;
       sessionStorage.removeItem('teacherPeriodFrom');
       sessionStorage.removeItem('teacherPeriodTo');
       allStudentRows = [];

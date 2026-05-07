@@ -2788,7 +2788,7 @@ def resolve_ratings_payload(query: dict[str, str]) -> dict[str, Any]:
     config = load_group_config()
     configured_ids, missing_names, missing_candidates = resolve_config_group_ids(fetch_group_tree(), config)
     period_from = query.get("periodFrom") or os.getenv("SOHOLMS_PERIOD_FROM") or config.get("periodFrom") or default_from
-    period_to = query.get("periodTo") or default_to
+    period_to = query.get("periodTo") or os.getenv("SOHOLMS_PERIOD_TO") or config.get("periodTo") or default_to
     group_ids = parse_int_set(query.get("groupIds", "")) or configured_ids or None
     subjects = parse_str_set(query.get("subjects", ""))
     include_virtual = query.get("includeVirtual") == "1" or bool(config.get("includeVirtual"))
@@ -2947,7 +2947,7 @@ class Handler(BaseHTTPRequestHandler):
                 group_id_value = query.get("groupId", "")
                 default_from, default_to = current_marathon_period()
                 period_from = query.get("periodFrom") or os.getenv("SOHOLMS_PERIOD_FROM") or load_group_config().get("periodFrom") or default_from
-                period_to = query.get("periodTo") or default_to
+                period_to = query.get("periodTo") or os.getenv("SOHOLMS_PERIOD_TO") or load_group_config().get("periodTo") or default_to
                 try:
                     group_id = int(group_id_value)
                 except ValueError:
