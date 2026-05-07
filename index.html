@@ -1602,7 +1602,7 @@
 
   function buildSoholmsRatingsUrl(publicOnly = false, options = {}) {
     const cacheBust = options.cacheBust !== false;
-    const refresh = Boolean(options.refresh);
+    const refresh = !publicOnly && Boolean(options.refresh);
     const params = new URLSearchParams();
     const period = getRequestPeriod(publicOnly);
     if (period.from) params.set('periodFrom', period.from);
@@ -1615,6 +1615,19 @@
     if (publicOnly && refresh) params.set('refresh', '1');
     if (cacheBust) params.set('_t', String(Date.now()));
     return `${SOHOLMS_BACKEND_URL}/api/ratings?${params.toString()}`;
+  }
+
+  function buildSoholmsRatingsRefreshUrl(publicOnly = false) {
+    const params = new URLSearchParams();
+    const period = getRequestPeriod(publicOnly);
+    if (period.from) params.set('periodFrom', period.from);
+    if (period.to) params.set('periodTo', period.to);
+    if (SOHOLMS_GROUP_IDS) params.set('groupIds', SOHOLMS_GROUP_IDS);
+    if (SOHOLMS_SUBJECTS) params.set('subjects', SOHOLMS_SUBJECTS);
+    if (SOHOLMS_ORIGINS) params.set('origins', SOHOLMS_ORIGINS);
+    if (SOHOLMS_LIMIT) params.set('limit', SOHOLMS_LIMIT);
+    params.set('_t', String(Date.now()));
+    return `${SOHOLMS_BACKEND_URL}/api/ratings/refresh?${params.toString()}`;
   }
 
   const EXAMS = ['ЕГЭ', 'ОГЭ'];
@@ -4789,7 +4802,12 @@
     dataLoading = true;
     try {
       if (usesSoholmsSource()) {
-        const response = await fetch(buildSoholmsRatingsUrl(true, { cacheBust: force, refresh: force }));
+        if (force) {
+          fetch(buildSoholmsRatingsRefreshUrl(true)).catch((error) => {
+            console.warn('Не удалось запустить фоновое обновление Soholms:', error.message || error);
+          });
+        }
+        const response = await fetch(buildSoholmsRatingsUrl(true, { cacheBust: force }));
         const data = await response.json();
 
         if (!response.ok || !data.ok || !Array.isArray(data.rows)) {
@@ -4801,6 +4819,14 @@
         }
 
         const allStudents = parseApiRows(data.rows);
+        if (allStudents.length === 0 && data.snapshot?.source === 'warming') {
+          if (!silent) {
+            renderLoadingShell();
+          }
+          window.setTimeout(() => refreshData({ silent: true }), 5000);
+          return;
+        }
+
         writePublicRatingsCache(allStudents);
         if (allStudents.length === 0 && Array.isArray(data.errors) && data.errors.length > 0) {
           throw new Error(`Soholms вернул 0 учеников. Первая ошибка: ${data.errors[0].error || 'неизвестно'}`);

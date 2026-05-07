@@ -237,6 +237,8 @@ _PDF_FONT_NAMES: tuple[str, str] | None = None
 _PENALTY_OVERRIDES_LOCK = threading.Lock()
 _PUBLIC_RATINGS_SNAPSHOT_LOCK = threading.Lock()
 _PUBLIC_RATINGS_REFRESH_LOCK = threading.Lock()
+_PUBLIC_RATINGS_REFRESHING_LOCK = threading.Lock()
+_PUBLIC_RATINGS_REFRESHING_KEYS: set[str] = set()
 
 
 class BackendError(Exception):
@@ -2098,11 +2100,21 @@ PUBLIC_RATINGS_QUERY_KEYS = (
 
 def normalize_public_ratings_query(query: dict[str, str] | None = None) -> dict[str, str]:
     query = query or {}
-    return {
+    default_from, default_to = current_marathon_period()
+    normalized = {
+        "periodFrom": default_from,
+        "periodTo": default_to,
+    }
+    normalized.update({
         key: str(query.get(key, "")).strip()
         for key in PUBLIC_RATINGS_QUERY_KEYS
         if str(query.get(key, "")).strip()
-    }
+    })
+    return {key: value for key, value in normalized.items() if value}
+
+
+def public_ratings_refresh_key(query: dict[str, str] | None = None) -> str:
+    return json.dumps(normalize_public_ratings_query(query), ensure_ascii=False, sort_keys=True)
 
 
 def utc_timestamp() -> str:
@@ -2165,6 +2177,21 @@ def read_public_ratings_snapshot(query: dict[str, str] | None = None) -> dict[st
     return add_public_snapshot_meta(payload, snapshot)
 
 
+def read_any_public_ratings_snapshot(query: dict[str, str] | None = None) -> dict[str, Any] | None:
+    snapshot = read_public_ratings_snapshot_file()
+    if not snapshot:
+        return None
+
+    payload = snapshot.get("payload")
+    if not isinstance(payload, dict):
+        return None
+
+    result = add_public_snapshot_meta(payload, snapshot)
+    result["snapshot"]["source"] = "snapshot-fallback"
+    result["snapshot"]["queryMismatch"] = snapshot.get("query") != normalize_public_ratings_query(query)
+    return result
+
+
 def refresh_public_ratings_snapshot(query: dict[str, str] | None = None) -> dict[str, Any]:
     normalized_query = normalize_public_ratings_query(query)
     with _PUBLIC_RATINGS_REFRESH_LOCK:
@@ -2181,10 +2208,31 @@ def refresh_public_ratings_snapshot(query: dict[str, str] | None = None) -> dict
         return add_public_snapshot_meta(payload, snapshot)
 
 
-def public_ratings_snapshot_is_stale(snapshot: dict[str, Any] | None) -> bool:
+def start_public_ratings_snapshot_refresh(query: dict[str, str] | None = None) -> bool:
+    refresh_key = public_ratings_refresh_key(query)
+    with _PUBLIC_RATINGS_REFRESHING_LOCK:
+        if refresh_key in _PUBLIC_RATINGS_REFRESHING_KEYS:
+            return False
+        _PUBLIC_RATINGS_REFRESHING_KEYS.add(refresh_key)
+
+    def refresh() -> None:
+        try:
+            refresh_public_ratings_snapshot(query)
+        except Exception as error:
+            sys.stderr.write(f"Public ratings snapshot background refresh failed: {error}\n")
+        finally:
+            with _PUBLIC_RATINGS_REFRESHING_LOCK:
+                _PUBLIC_RATINGS_REFRESHING_KEYS.discard(refresh_key)
+
+    thread = threading.Thread(target=refresh, daemon=True)
+    thread.start()
+    return True
+
+
+def public_ratings_snapshot_is_stale(snapshot: dict[str, Any] | None, query: dict[str, str] | None = None) -> bool:
     if not snapshot:
         return True
-    if snapshot.get("query") != normalize_public_ratings_query({}):
+    if snapshot.get("query") != normalize_public_ratings_query(query):
         return True
     saved_at_epoch = float(snapshot.get("savedAtEpoch") or 0)
     return not saved_at_epoch or time.time() - saved_at_epoch >= PUBLIC_RATINGS_REFRESH_SECONDS
@@ -2194,7 +2242,7 @@ def public_ratings_snapshot_scheduler() -> None:
     while True:
         try:
             if public_ratings_snapshot_is_stale(read_public_ratings_snapshot_file()):
-                refresh_public_ratings_snapshot({})
+                start_public_ratings_snapshot_refresh({})
         except Exception as error:
             sys.stderr.write(f"Public ratings snapshot refresh failed: {error}\n")
 
@@ -3017,17 +3065,28 @@ class Handler(BaseHTTPRequestHandler):
                 })
 
             if parsed.path == "/api/ratings/refresh":
-                return self.send_json(refresh_public_ratings_snapshot(query))
+                start_public_ratings_snapshot_refresh(query)
+                payload = read_public_ratings_snapshot(query) or read_any_public_ratings_snapshot(query) or {
+                    "ok": True,
+                    "rows": [],
+                    "snapshot": {"source": "warming", "refreshing": True},
+                }
+                return self.send_json(payload, cache_seconds=15)
 
             if parsed.path == "/api/ratings":
                 if query.get("public") == "1":
-                    payload = (
-                        refresh_public_ratings_snapshot(query)
-                        if query.get("refresh") == "1"
-                        else read_public_ratings_snapshot(query)
-                    )
+                    snapshot = read_public_ratings_snapshot_file()
+                    payload = read_public_ratings_snapshot(query)
+                    if query.get("refresh") == "1" or public_ratings_snapshot_is_stale(snapshot, query):
+                        start_public_ratings_snapshot_refresh(query)
                     if not payload:
-                        payload = refresh_public_ratings_snapshot(query)
+                        payload = read_any_public_ratings_snapshot(query)
+                    if not payload:
+                        payload = {
+                            "ok": True,
+                            "rows": [],
+                            "snapshot": {"source": "warming", "refreshing": True},
+                        }
                     return self.send_json(payload, cache_seconds=60)
 
                 return self.send_json(resolve_ratings_payload(query))
