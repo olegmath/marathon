@@ -1449,6 +1449,7 @@
   let appData = null;
   let teacherData = null;
   let allStudentRows = [];
+  let publicStudentRows = [];
   let currentSubject = 'физика';
   let currentExam = 'ОГЭ';
   let currentView = 'rating';
@@ -1954,7 +1955,10 @@
 
     appData = groupAndSort(normalizedStudents);
     teacherData = groupTeacherRatings(normalizedStudents);
-    allStudentRows = normalizedStudents;
+    publicStudentRows = normalizedStudents;
+    if (!adminToken) {
+      allStudentRows = normalizedStudents;
+    }
     if (!options.silent || currentView !== 'details') {
       render();
     }
@@ -2025,8 +2029,8 @@
   }
 
   function getSchoolGroups() {
-    if (!allStudentRows) return [];
-    const rows = allStudentRows.filter(row => row.subject === currentSubject && row.level === currentExam);
+    const rows = (publicStudentRows.length ? publicStudentRows : allStudentRows)
+      .filter(row => row.subject === currentSubject && row.level === currentExam);
     return uniqueSorted(rows.map(row => row.group)).filter(g => g);
   }
 
@@ -3642,6 +3646,7 @@
       applyDataSource(settings.dataSource);
       appData = null;
       teacherData = null;
+      publicStudentRows = [];
       allStudentRows = [];
       globalNullScoreStudents = [];
       resetAdminLoadMeta();
@@ -4621,6 +4626,7 @@
     if (selectedDataSource !== previousDataSource) {
       appData = null;
       teacherData = null;
+      publicStudentRows = [];
       if (!hydratePublicRatingsFromCache()) {
         renderLoadingShell();
       }
