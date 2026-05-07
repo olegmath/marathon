@@ -1468,12 +1468,24 @@
   const DATA_SOURCE_STORAGE_KEY = 'marathonDataSource';
   const CONFIG_SOHOLMS_PERIOD_FROM = String(window.SOHOLMS_PERIOD_FROM || '');
   const CONFIG_SOHOLMS_PERIOD_TO = String(window.SOHOLMS_PERIOD_TO || '');
+  function localIsoDate(date = new Date()) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  function clampDateToToday(value) {
+    const dateValue = String(value || '');
+    const today = localIsoDate();
+    return dateValue && dateValue > today ? today : dateValue;
+  }
   const DEFAULT_SOHOLMS_PERIOD_FROM = CONFIG_SOHOLMS_PERIOD_FROM || '2026-04-01';
-  const DEFAULT_SOHOLMS_PERIOD_TO = CONFIG_SOHOLMS_PERIOD_TO || new Date().toLocaleDateString('en-CA');
+  const TODAY_ISO = localIsoDate();
+  const DEFAULT_SOHOLMS_PERIOD_TO = clampDateToToday(CONFIG_SOHOLMS_PERIOD_TO || TODAY_ISO);
   let soholmsPeriodFrom = String(localStorage.getItem('soholmsPeriodFrom') || DEFAULT_SOHOLMS_PERIOD_FROM);
-  let soholmsPeriodTo = String(localStorage.getItem('soholmsPeriodTo') || DEFAULT_SOHOLMS_PERIOD_TO);
+  let soholmsPeriodTo = clampDateToToday(localStorage.getItem('soholmsPeriodTo') || DEFAULT_SOHOLMS_PERIOD_TO);
   let teacherPeriodFrom = String(sessionStorage.getItem('teacherPeriodFrom') || DEFAULT_SOHOLMS_PERIOD_FROM);
-  let teacherPeriodTo = String(sessionStorage.getItem('teacherPeriodTo') || DEFAULT_SOHOLMS_PERIOD_TO);
+  let teacherPeriodTo = clampDateToToday(sessionStorage.getItem('teacherPeriodTo') || DEFAULT_SOHOLMS_PERIOD_TO);
   const SOHOLMS_GROUP_IDS = String(window.SOHOLMS_GROUP_IDS || localStorage.getItem('soholmsGroupIds') || '');
   const SOHOLMS_SUBJECTS = String(window.SOHOLMS_SUBJECTS || localStorage.getItem('soholmsSubjects') || '');
   const SOHOLMS_ORIGINS = String(window.SOHOLMS_ORIGINS || localStorage.getItem('soholmsOrigins') || '');
@@ -2707,11 +2719,11 @@
         ${sourceControlsHtml}
         <label class="period-field">
           С
-          <input class="period-input" id="admin-period-from" type="date" value="${escapeHtml(periodInputFrom)}" ${sourceIsSoholms ? '' : 'disabled'}>
+          <input class="period-input" id="admin-period-from" type="date" value="${escapeHtml(periodInputFrom)}" max="${escapeHtml(TODAY_ISO)}" ${sourceIsSoholms ? '' : 'disabled'}>
         </label>
         <label class="period-field">
           По
-          <input class="period-input" id="admin-period-to" type="date" value="${escapeHtml(periodInputTo)}" ${sourceIsSoholms ? '' : 'disabled'}>
+          <input class="period-input" id="admin-period-to" type="date" value="${escapeHtml(periodInputTo)}" max="${escapeHtml(TODAY_ISO)}" ${sourceIsSoholms ? '' : 'disabled'}>
         </label>
         <button class="period-apply-btn" type="button" id="admin-period-apply" ${sourceIsSoholms ? '' : 'disabled'}>Применить</button>
         <button class="period-reset-btn" type="button" id="admin-period-reset" ${sourceIsSoholms ? '' : 'disabled'}>Сброс</button>
@@ -4003,8 +4015,8 @@
   function applyAdminPeriod() {
     if (!canChangePeriod() || !usesSoholmsSource()) return;
 
-    const from = document.getElementById('admin-period-from')?.value || '';
-    const to = document.getElementById('admin-period-to')?.value || '';
+    const from = clampDateToToday(document.getElementById('admin-period-from')?.value || '');
+    const to = clampDateToToday(document.getElementById('admin-period-to')?.value || '');
 
     if (adminRole === 'teacher') {
       teacherPeriodFrom = from;
