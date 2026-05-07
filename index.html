@@ -2936,7 +2936,7 @@
 
     for (const item of maps) {
       const dayNumber = Number(item.dayNumber) || 0;
-      const lessonDate = item.lessonDate || item.deadlineDate || dateKeyFromSoholmsDate(item.deadlineAt);
+      const lessonDate = item.dateKey || item.lessonDate || item.deadlineDate || dateKeyFromSoholmsDate(item.deadlineAt);
       const key = item.dayTitle || lessonDate || String(item.academicHomeworkId);
       const dailyScore = dailyByDate.get(lessonDate) || dailyByOrder.get(String(dayNumber));
       if (!daysByKey.has(key)) {
@@ -4330,7 +4330,10 @@
 
     try {
       const params = new URLSearchParams();
+      const period = adminLoadMeta.period || getRequestPeriod(false);
       params.set('studentName', errorMapStudent);
+      if (period.from) params.set('periodFrom', period.from);
+      if (period.to) params.set('periodTo', period.to);
       if (errorMapSubject) params.set('subject', errorMapSubject);
       if (errorMapExam) params.set('level', errorMapExam);
       const response = await fetch(`${SOHOLMS_BACKEND_URL}/api/error-map?${params.toString()}&_t=${Date.now()}`);

@@ -813,6 +813,8 @@ def build_error_map_payload(query: dict[str, str]) -> dict[str, Any]:
     homework_id = normalize_text(query.get("academicHomeworkId") or query.get("homeworkId"))
     requested_subject = infer_subject(query.get("subject", ""))
     requested_level = normalize_text(query.get("level"))
+    period_from = normalize_text(query.get("periodFrom"))
+    period_to = normalize_text(query.get("periodTo"))
     if not student_query:
         raise BackendError("studentName is required", HTTPStatus.BAD_REQUEST)
 
@@ -844,8 +846,15 @@ def build_error_map_payload(query: dict[str, str]) -> dict[str, Any]:
             try:
                 for row in future.result():
                     if student_query in normalize_person_key(row.get("studentName")):
-                        row.update(homework_metadata.get(int(row.get("academicHomeworkId") or 0), {}))
-                        maps.append(row)
+                        merged_row = {
+                            **row,
+                            **homework_metadata.get(int(row.get("academicHomeworkId") or 0), {}),
+                        }
+                        display_date = error_map_display_date(merged_row)
+                        if not date_in_period(display_date, period_from, period_to):
+                            continue
+                        merged_row["dateKey"] = display_date
+                        maps.append(merged_row)
             except Exception as error:
                 errors.append({"academicHomeworkId": hw_id, "error": str(error)})
 
@@ -858,10 +867,28 @@ def build_error_map_payload(query: dict[str, str]) -> dict[str, Any]:
     return {
         "ok": True,
         "studentName": query.get("studentName", ""),
+        "period": {"from": period_from, "to": period_to},
         "homeworkCount": len(homework_ids),
         "maps": maps,
         "errors": errors,
     }
+
+
+def error_map_display_date(row: dict[str, Any]) -> str:
+    lesson_date = normalize_text(row.get("lessonDate"))
+    if lesson_date:
+        return shift_iso_date(lesson_date, DEADLINE_SHIFT_DAYS)
+    return normalize_text(row.get("deadlineDate")) or normalize_text(row.get("deadlineAt"))[:10]
+
+
+def date_in_period(date_key: str, period_from: str, period_to: str) -> bool:
+    if not date_key:
+        return True
+    if period_from and date_key < period_from:
+        return False
+    if period_to and date_key > period_to:
+        return False
+    return True
 
 
 def error_homework_items_for_query(query: dict[str, str]) -> tuple[list[int], dict[int, dict[str, Any]]]:
@@ -916,6 +943,8 @@ def build_error_analytics_payload(query: dict[str, str]) -> dict[str, Any]:
         normalize_person_key(row.get("name")): normalize_text(row.get("name"))
         for row in selected_students
     }
+    period_from = normalize_text(query.get("periodFrom"))
+    period_to = normalize_text(query.get("periodTo"))
     homework_ids, homework_metadata = error_homework_items_for_query(query)
 
     days: dict[str, dict[str, Any]] = {}
@@ -946,13 +975,16 @@ def build_error_analytics_payload(query: dict[str, str]) -> dict[str, Any]:
                 if student_key not in student_keys:
                     continue
                 merged_row = {**row, **metadata}
+                display_date = error_map_display_date(merged_row)
+                if not date_in_period(display_date, period_from, period_to):
+                    continue
                 day_key = normalize_text(merged_row.get("dayTitle")) or normalize_text(merged_row.get("lessonDate")) or str(hw_id)
                 day = days.setdefault(
                     day_key,
                     {
                         "dayTitle": merged_row.get("dayTitle") or "",
                         "dayNumber": merged_row.get("dayNumber"),
-                        "lessonDate": merged_row.get("lessonDate") or "",
+                        "lessonDate": display_date or merged_row.get("lessonDate") or "",
                         "orderIndex": merged_row.get("orderIndex"),
                         "wrongTotal": 0,
                         "fixed": 0,
@@ -1532,6 +1564,25 @@ def iso_date(value: Any, shift_days: int = 0) -> str:
     if isinstance(value, date):
         return (value + timedelta(days=shift_days)).isoformat()
     return normalize_text(value)
+
+
+def shift_iso_date(value: Any, shift_days: int) -> str:
+    text = normalize_text(value)
+    if not text:
+        return ""
+    try:
+        return (datetime.fromisoformat(text[:10]).date() + timedelta(days=shift_days)).isoformat()
+    except ValueError:
+        return text
+
+
+def attendance_request_period(period_from: str, period_to: str) -> tuple[str, str]:
+    if DEADLINE_SHIFT_DAYS == 0:
+        return period_from, period_to
+    return (
+        shift_iso_date(period_from, -DEADLINE_SHIFT_DAYS),
+        shift_iso_date(period_to, -DEADLINE_SHIFT_DAYS),
+    )
 
 
 def date_label(value: Any, shift_days: int = 0) -> str:
@@ -2821,9 +2872,10 @@ def load_ratings(
     except Exception as error:
         errors.append({"source": "firstAttempts", "error": str(error)})
     t_first_attempts_ms = int((time.time() - t0) * 1000)
+    attendance_period_from, attendance_period_to = attendance_request_period(period_from, period_to)
 
     def load_group(group: GroupInfo):
-        content = fetch_attendance_xlsx(group.id, period_from, period_to)
+        content = fetch_attendance_xlsx(group.id, attendance_period_from, attendance_period_to)
         return group, parse_attendance_xlsx(content, group, first_attempt_index, first_attempt_stats)
 
     t1 = time.time()
@@ -2846,6 +2898,7 @@ def load_ratings(
     return {
         "ok": True,
         "period": {"from": period_from, "to": period_to},
+        "attendancePeriod": {"from": attendance_period_from, "to": attendance_period_to},
         "groups": [group.__dict__ for group in groups],
         "rows": rows,
         "errors": errors,
