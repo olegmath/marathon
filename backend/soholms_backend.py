@@ -581,6 +581,41 @@ def expand_task_format(value: Any) -> list[dict[str, Any]]:
     return tasks
 
 
+def task_repeat_count(count_value: Any, task_count: int) -> int:
+    text = normalize_text(count_value).casefold()
+    if not text or task_count <= 0:
+        return 1
+    per_match = re.search(r"\bпо\s*(\d+)\b", text)
+    if per_match:
+        return max(1, int(per_match.group(1)))
+    numbers = [int(match.group(0)) for match in re.finditer(r"\d+", text)]
+    if not numbers:
+        return 1
+    total = numbers[0]
+    if task_count == 1:
+        return max(1, total)
+    if total > task_count and total % task_count == 0:
+        return max(1, total // task_count)
+    return 1
+
+
+def repeat_planned_tasks(tasks: list[dict[str, Any]], count_value: Any) -> list[dict[str, Any]]:
+    repeat_count = task_repeat_count(count_value, len(tasks))
+    if repeat_count <= 1:
+        return tasks
+    repeated: list[dict[str, Any]] = []
+    for task in tasks:
+        for repeat_index in range(1, repeat_count + 1):
+            repeated.append(
+                {
+                    **task,
+                    "repeatIndex": repeat_index,
+                    "repeatTotal": repeat_count,
+                }
+            )
+    return repeated
+
+
 def split_topic_section(topic_value: Any, section_value: Any = "") -> tuple[str, str]:
     topic = normalize_text(topic_value)
     section = normalize_text(section_value)
@@ -654,7 +689,8 @@ def marathon_plan_from_csv(path: str) -> list[dict[str, Any]]:
                 continue
             section, topic = split_topic_section(topic_source, row[section_col] if section_col is not None else "")
             task_source = format_text if format_col is not None else topic
-            tasks = expand_task_format(task_source)
+            task_count_text = normalize_text(row[count_col]) if count_col is not None else ""
+            tasks = repeat_planned_tasks(expand_task_format(task_source), task_count_text)
             item = {
                 "subject": subject,
                 "level": level,
@@ -663,7 +699,7 @@ def marathon_plan_from_csv(path: str) -> list[dict[str, Any]]:
                 "section": section,
                 "topic": topic,
                 "format": format_text,
-                "taskCount": normalize_text(row[count_col]) if count_col is not None else "",
+                "taskCount": task_count_text,
                 "plannedTasks": tasks,
             }
             if item["dayNumber"] is not None or item["topic"] or item["plannedTasks"]:
