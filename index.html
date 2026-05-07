@@ -805,8 +805,159 @@
 
     .error-map-summary {
       display: grid;
-      grid-template-columns: repeat(4, minmax(130px, 1fr));
+      grid-template-columns: repeat(5, minmax(120px, 1fr));
       gap: 10px;
+    }
+
+    .student-error-insights {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+      gap: 12px;
+      align-items: start;
+    }
+
+    .student-error-card {
+      background: white;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 4px 20px rgba(0,80,120,0.12);
+      min-width: 0;
+    }
+
+    .student-error-card-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: baseline;
+      margin-bottom: 12px;
+      font-family: 'Oswald', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: #1a1a1a;
+      text-transform: uppercase;
+    }
+
+    .student-error-card-title span {
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      color: rgba(0,0,0,0.52);
+      text-transform: none;
+    }
+
+    .student-error-task-groups {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .student-error-task-group {
+      min-width: 0;
+      border: 1px solid rgba(0,0,0,0.07);
+      border-radius: 12px;
+      padding: 12px;
+      background: #fbfdfe;
+    }
+
+    .student-error-task-heading {
+      font-family: 'Oswald', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .student-error-task-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .student-error-task-item {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      padding: 8px;
+      border-radius: 10px;
+      background: white;
+      border: 1px solid rgba(0,0,0,0.06);
+      font-family: 'Inter', sans-serif;
+    }
+
+    .student-error-task-number {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 800;
+      font-size: 13px;
+      line-height: 1;
+    }
+
+    .student-error-task-main {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .student-error-task-name {
+      font-size: 12px;
+      font-weight: 800;
+      color: #1a1a1a;
+    }
+
+    .student-error-task-note {
+      margin-top: 2px;
+      font-size: 10px;
+      font-weight: 600;
+      color: rgba(0,0,0,0.55);
+      line-height: 1.2;
+    }
+
+    .student-error-task-score {
+      text-align: right;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .student-error-recs {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .student-error-rec {
+      display: grid;
+      grid-template-columns: 26px minmax(0, 1fr);
+      gap: 8px;
+      align-items: start;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .student-error-rec-index {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #4AB8E0;
+      color: white;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .student-error-rec-text {
+      font-size: 13px;
+      font-weight: 650;
+      line-height: 1.32;
+      color: #1a1a1a;
     }
 
     .error-map-days {
@@ -871,6 +1022,11 @@
     .error-map-status.remaining {
       background: rgba(211,62,95,0.12);
       color: #D33E5F;
+    }
+
+    .error-map-status.unfinished {
+      background: rgba(245,166,35,0.16);
+      color: #B46C00;
     }
 
     .error-map-status.empty {
@@ -1164,6 +1320,12 @@
         grid-template-columns: repeat(2, minmax(160px, 1fr));
       }
 
+      .error-map-summary,
+      .student-error-insights,
+      .student-error-task-groups {
+        grid-template-columns: 1fr;
+      }
+
       .top-nav {
         flex-direction: column;
       }
@@ -1223,6 +1385,19 @@
 
       .metrics-grid {
         grid-template-columns: 1fr;
+      }
+
+      .student-error-card {
+        padding: 14px;
+      }
+
+      .student-error-task-item {
+        grid-template-columns: auto minmax(0, 1fr);
+      }
+
+      .student-error-task-score {
+        grid-column: 2;
+        text-align: left;
       }
 
       .admin-login-form {
@@ -1293,10 +1468,12 @@
   const DATA_SOURCE_STORAGE_KEY = 'marathonDataSource';
   const CONFIG_SOHOLMS_PERIOD_FROM = String(window.SOHOLMS_PERIOD_FROM || '');
   const CONFIG_SOHOLMS_PERIOD_TO = String(window.SOHOLMS_PERIOD_TO || '');
-  let soholmsPeriodFrom = String(CONFIG_SOHOLMS_PERIOD_FROM || localStorage.getItem('soholmsPeriodFrom') || '');
-  let soholmsPeriodTo = String(CONFIG_SOHOLMS_PERIOD_TO || localStorage.getItem('soholmsPeriodTo') || '');
-  let teacherPeriodFrom = String(CONFIG_SOHOLMS_PERIOD_FROM || sessionStorage.getItem('teacherPeriodFrom') || '');
-  let teacherPeriodTo = String(CONFIG_SOHOLMS_PERIOD_TO || sessionStorage.getItem('teacherPeriodTo') || '');
+  const DEFAULT_SOHOLMS_PERIOD_FROM = CONFIG_SOHOLMS_PERIOD_FROM || '2026-04-01';
+  const DEFAULT_SOHOLMS_PERIOD_TO = CONFIG_SOHOLMS_PERIOD_TO || new Date().toLocaleDateString('en-CA');
+  let soholmsPeriodFrom = String(localStorage.getItem('soholmsPeriodFrom') || DEFAULT_SOHOLMS_PERIOD_FROM);
+  let soholmsPeriodTo = String(localStorage.getItem('soholmsPeriodTo') || DEFAULT_SOHOLMS_PERIOD_TO);
+  let teacherPeriodFrom = String(sessionStorage.getItem('teacherPeriodFrom') || DEFAULT_SOHOLMS_PERIOD_FROM);
+  let teacherPeriodTo = String(sessionStorage.getItem('teacherPeriodTo') || DEFAULT_SOHOLMS_PERIOD_TO);
   const SOHOLMS_GROUP_IDS = String(window.SOHOLMS_GROUP_IDS || localStorage.getItem('soholmsGroupIds') || '');
   const SOHOLMS_SUBJECTS = String(window.SOHOLMS_SUBJECTS || localStorage.getItem('soholmsSubjects') || '');
   const SOHOLMS_ORIGINS = String(window.SOHOLMS_ORIGINS || localStorage.getItem('soholmsOrigins') || '');
@@ -1407,8 +1584,8 @@
   function getRequestPeriod(publicOnly) {
     if (publicOnly) {
       return {
-        from: CONFIG_SOHOLMS_PERIOD_FROM,
-        to: CONFIG_SOHOLMS_PERIOD_TO,
+        from: DEFAULT_SOHOLMS_PERIOD_FROM,
+        to: DEFAULT_SOHOLMS_PERIOD_TO,
       };
     }
     if (!publicOnly && adminRole === 'teacher') {
@@ -1622,6 +1799,8 @@
             ...item,
             score: Number(item.score) || 0,
             dateOrder: Number(item.dateOrder) || 0,
+            completed: item.completed !== false,
+            lateDays: Number(item.lateDays) || 0,
           }))
           : [],
       };
@@ -2257,8 +2436,10 @@
         }
 
         const day = days.get(key);
-        day.totalScore += Number(dailyScore.score) || 0;
-        day.filledCount++;
+        if (dailyScore.completed !== false) {
+          day.totalScore += Number(dailyScore.score) || 0;
+          day.filledCount++;
+        }
       }
     }
 
@@ -2293,9 +2474,9 @@
           dateLabel: dailyScore.dateLabel,
           dateOrder: Number(dailyScore.dateOrder) || 0,
           averageScore: Number(dailyScore.score) || 0,
-          filledCount: 1,
+          filledCount: dailyScore.completed === false ? 0 : 1,
           studentCount: 1,
-          filledPercent: 100,
+          filledPercent: dailyScore.completed === false ? 0 : 100,
         });
       }
     }
@@ -2751,6 +2932,7 @@
           dateKey: lessonDate || dailyScore?.dateKey || '',
           dateLabel: dailyScore?.dateLabel || lessonDate || '',
           score: Number(dailyScore?.score ?? item.grade ?? item.scores) || 0,
+          completed: true,
           maps: [],
           title: item.dayTitle || '',
         });
@@ -2759,18 +2941,20 @@
     }
 
     const usedDates = new Set([...daysByKey.values()].map((day) => day.dateKey).filter(Boolean));
+    const usedOrders = new Set([...daysByKey.values()].map((day) => Number(day.dayOrder) || 0).filter(Boolean));
     const days = [...daysByKey.values()];
 
     dailyScores
       .slice()
       .sort((a, b) => (Number(a.dateOrder) || 0) - (Number(b.dateOrder) || 0))
       .forEach((dailyScore) => {
-        if (usedDates.has(dailyScore.dateKey)) return;
+        if (usedDates.has(dailyScore.dateKey) || usedOrders.has(Number(dailyScore.dateOrder) || 0)) return;
         days.push({
           dayOrder: Number(dailyScore.dateOrder) || 0,
           dateKey: dailyScore.dateKey || '',
           dateLabel: dailyScore.dateLabel || dailyScore.dateKey || '',
           score: Number(dailyScore.score) || 0,
+          completed: dailyScore.completed !== false,
           maps: [],
           title: '',
         });
@@ -2785,13 +2969,146 @@
 
   function aggregateErrorMapSummary(days) {
     const maps = days.flatMap((day) => day.maps || []);
-    return maps.reduce((summary, item) => {
-      summary.homeworks += 1;
-      summary.wrongTotal += Number(item.summary?.wrongTotal || 0);
-      summary.fixed += Number(item.summary?.fixed || 0);
-      summary.remaining += Number(item.summary?.remaining || 0);
-      return summary;
-    }, { homeworks: 0, wrongTotal: 0, fixed: 0, remaining: 0 });
+    const summary = maps.reduce((result, item) => {
+      result.homeworks += 1;
+      result.wrongTotal += Number(item.summary?.wrongTotal || 0);
+      result.fixed += Number(item.summary?.fixed || 0);
+      result.remaining += Number(item.summary?.remaining || 0);
+      return result;
+    }, { homeworks: 0, wrongTotal: 0, fixed: 0, remaining: 0, unfinished: 0 });
+    summary.unfinished = days.filter((day) => day.completed === false).length;
+    return summary;
+  }
+
+  function buildStudentErrorAnalytics(days) {
+    const taskMap = new Map();
+    const maps = days.flatMap((day) => day.maps || []);
+
+    for (const day of days) {
+      for (const item of day.maps || []) {
+        for (const question of item.questions || []) {
+          const number = Number(question.number || 0);
+          if (!number) continue;
+          const task = taskMap.get(number) || {
+            number,
+            days: new Set(),
+            wrongAttempts: 0,
+            wrongHomeworks: 0,
+            fixed: 0,
+            remaining: 0,
+            attempts: 0,
+          };
+          task.days.add(day.title || day.dateLabel || day.dateKey || `День ${day.dayOrder || '?'}`);
+          task.wrongAttempts += Number(question.wrongAttempts || 0);
+          task.wrongHomeworks += 1;
+          task.attempts += (question.attempts || []).length;
+          if (question.status === 'fixed') {
+            task.fixed += 1;
+          } else {
+            task.remaining += 1;
+          }
+          taskMap.set(number, task);
+        }
+      }
+    }
+
+    const tasks = [...taskMap.values()].map((task) => ({
+      ...task,
+      dayLabels: [...task.days],
+    }));
+    const byPriority = (a, b) => (
+      b.remaining - a.remaining
+      || b.wrongHomeworks - a.wrongHomeworks
+      || b.wrongAttempts - a.wrongAttempts
+      || a.number - b.number
+    );
+    const remainingTasks = tasks.filter((task) => task.remaining > 0).sort(byPriority);
+    const frequentErrors = tasks
+      .filter((task) => task.wrongHomeworks >= 2 || task.wrongAttempts >= 3)
+      .sort((a, b) => b.wrongHomeworks - a.wrongHomeworks || b.wrongAttempts - a.wrongAttempts || a.number - b.number);
+    const fixedTasks = tasks.filter((task) => task.fixed > 0 && task.remaining === 0).sort((a, b) => b.fixed - a.fixed || a.number - b.number);
+    const cleanDays = days.filter((day) => (day.maps || []).length > 0 && (day.maps || []).every((item) => Number(item.summary?.wrongTotal || 0) === 0));
+
+    const recommendations = [];
+    if (remainingTasks.length > 0) {
+      recommendations.push(`Сначала закрыть задания ${remainingTasks.slice(0, 4).map((task) => `№${task.number}`).join(', ')}: там ещё есть неисправленные ошибки.`);
+    }
+    if (frequentErrors.length > 0) {
+      recommendations.push(`Отдельно повторить частые ошибки: ${frequentErrors.slice(0, 4).map((task) => `№${task.number}`).join(', ')}.`);
+    }
+    if (fixedTasks.length > 0) {
+      recommendations.push(`Закрепить уже исправленное: ${fixedTasks.slice(0, 4).map((task) => `№${task.number}`).join(', ')} лучше дать в короткой повторной практике.`);
+    }
+    if (cleanDays.length > 0) {
+      recommendations.push(`Есть дни без ошибок в проверенных попытках: ${cleanDays.slice(0, 2).map((day) => day.title || day.dateLabel || `день ${day.dayOrder || '?'}`).join(', ')}.`);
+    }
+    if (recommendations.length === 0) {
+      recommendations.push(maps.length > 0
+        ? 'Критичных повторяющихся ошибок не видно: можно работать точечно по дневным карточкам ниже.'
+        : 'Когда появятся проверенные попытки, здесь соберётся приоритетный список заданий.');
+    }
+
+    return {
+      tasks,
+      remainingTasks,
+      frequentErrors,
+      fixedTasks,
+      recommendations: recommendations.slice(0, 4),
+    };
+  }
+
+  function renderStudentErrorTaskGroup(title, tasks, mode, emptyText) {
+    const color = mode === 'fixed' ? '#34b87a' : mode === 'frequent' ? '#f5a623' : '#D33E5F';
+    const visibleTasks = tasks.slice(0, 5);
+    return `
+      <div class="student-error-task-group">
+        <div class="student-error-task-heading" style="color:${color};">${escapeHtml(title)}</div>
+        <div class="student-error-task-list">
+          ${visibleTasks.length ? visibleTasks.map((task) => `
+            <div class="student-error-task-item">
+              <span class="student-error-task-number" style="background:${color};">№${Number(task.number || 0)}</span>
+              <span class="student-error-task-main">
+                <span class="student-error-task-name">${mode === 'fixed' ? 'ошибка закрыта' : mode === 'frequent' ? 'повторяется' : 'в работе'}</span>
+                <span class="student-error-task-note">${escapeHtml(task.dayLabels.slice(0, 2).join(', ') || 'по карте ошибок')}</span>
+              </span>
+              <span class="student-error-task-score" style="color:${color};">${Number(task.wrongAttempts || 0)}×</span>
+            </div>
+          `).join('') : `<div class="pdf-action-note">${escapeHtml(emptyText)}</div>`}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderStudentErrorInsights(days) {
+    const analytics = buildStudentErrorAnalytics(days);
+    if (!analytics.tasks.length) return '';
+
+    return `
+      <div class="student-error-insights">
+        <div class="student-error-card">
+          <div class="student-error-card-title">
+            Статистика по заданиям
+            <span>по всем проверенным попыткам</span>
+          </div>
+          <div class="student-error-task-groups">
+            ${renderStudentErrorTaskGroup('Нужно исправить', analytics.remainingTasks, 'remaining', 'Неисправленных ошибок нет')}
+            ${renderStudentErrorTaskGroup('Частые ошибки', analytics.frequentErrors, 'frequent', 'Повторяющихся ошибок пока нет')}
+            ${renderStudentErrorTaskGroup('Исправлено', analytics.fixedTasks, 'fixed', 'Исправленных ошибок пока нет')}
+          </div>
+        </div>
+        <div class="student-error-card">
+          <div class="student-error-card-title">На что обратить внимание</div>
+          <div class="student-error-recs">
+            ${analytics.recommendations.map((text, index) => `
+              <div class="student-error-rec">
+                <span class="student-error-rec-index">${index + 1}</span>
+                <span class="student-error-rec-text">${escapeHtml(text)}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   function renderAttemptDots(attempts) {
@@ -2812,7 +3129,9 @@
     const fixed = maps.reduce((sum, item) => sum + Number(item.summary?.fixed || 0), 0);
     const wrongTotal = maps.reduce((sum, item) => sum + Number(item.summary?.wrongTotal || 0), 0);
     const title = day.title || `День ${day.dayOrder || '?'}`;
-    const statusHtml = maps.length === 0
+    const statusHtml = day.completed === false
+      ? '<span class="error-map-status unfinished">Не выполнен</span>'
+      : maps.length === 0
       ? '<span class="error-map-status empty">Нет попыток</span>'
       : remaining > 0
         ? '<span class="error-map-status remaining">Нужно исправить</span>'
@@ -2820,7 +3139,9 @@
           ? '<span class="error-map-status fixed">Исправлено</span>'
           : '<span class="error-map-status fixed">Ошибок нет</span>';
 
-    const bodyHtml = maps.length === 0
+    const bodyHtml = day.completed === false
+      ? '<div class="pdf-action-note">Ученик не выполнил этот день, поэтому ошибок по заданиям нет не потому, что всё верно, а потому что нет сдачи.</div>'
+      : maps.length === 0
       ? '<div class="pdf-action-note">Пока нет проверенных попыток по этому дню.</div>'
       : questions.length === 0
         ? '<div class="pdf-action-note">Ошибок в проверенных попытках нет.</div>'
@@ -2910,7 +3231,9 @@
             ${renderMetricCard('ошибок всего', summary.wrongTotal, 'pink', 0)}
             ${renderMetricCard('исправлено', summary.fixed, 'green', 0)}
             ${renderMetricCard('осталось', summary.remaining, 'purple', 0)}
+            ${renderMetricCard('не выполнено', summary.unfinished, 'pink', 0)}
           </div>
+          ${renderStudentErrorInsights(days)}
         ` : ''}
         ${daysHtml}
       </div>
@@ -3708,8 +4031,8 @@
     if (!canChangePeriod() || !usesSoholmsSource()) return;
 
     if (adminRole === 'teacher') {
-      teacherPeriodFrom = CONFIG_SOHOLMS_PERIOD_FROM;
-      teacherPeriodTo = CONFIG_SOHOLMS_PERIOD_TO;
+      teacherPeriodFrom = DEFAULT_SOHOLMS_PERIOD_FROM;
+      teacherPeriodTo = DEFAULT_SOHOLMS_PERIOD_TO;
       sessionStorage.removeItem('teacherPeriodFrom');
       sessionStorage.removeItem('teacherPeriodTo');
       allStudentRows = [];

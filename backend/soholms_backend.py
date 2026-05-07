@@ -1619,6 +1619,7 @@ def parse_attendance_xlsx(
     group_day_keys: list[str] = []
     group_day_key_set: set[str] = set()
     day_key_orders: dict[str, int] = {}
+    group_day_metadata: dict[str, dict[str, Any]] = {}
     current_day: dict[str, Any] | None = None
 
     def register_group_day(lesson: Any, lesson_date: Any) -> tuple[str, int]:
@@ -1628,6 +1629,12 @@ def parse_attendance_xlsx(
             group_day_key_set.add(day_key)
             group_day_keys.append(day_key)
             day_key_orders[day_key] = raw_day_order or len(group_day_keys)
+            group_day_metadata[day_key] = {
+                "dateKey": iso_date(lesson_date, shift_days=DEADLINE_SHIFT_DAYS),
+                "dateLabel": date_label(lesson_date, shift_days=DEADLINE_SHIFT_DAYS),
+                "dateOrder": day_key_orders[day_key],
+                "lesson": normalize_text(lesson),
+            }
         return day_key, day_key_orders[day_key]
 
     def has_assignment_submission(assignment_status: Any, assignment_score: Any, submitted_at: Any) -> bool:
@@ -1751,6 +1758,7 @@ def parse_attendance_xlsx(
             "dateOrder": day_order,
             "dayKey": day_key,
             "score": score,
+            "completed": True,
             "lateDays": 0,
         }
         item["dailyScores"].append(daily_score)
@@ -1776,8 +1784,31 @@ def parse_attendance_xlsx(
     group_days_total = len(group_day_keys)
     for item in students.values():
         daily_scores = item["dailyScores"]
+        existing_day_keys = {
+            str(day.get("dayKey") or day.get("dateOrder") or "")
+            for day in daily_scores
+            if day.get("dayKey") or day.get("dateOrder")
+        }
+        for day_key in group_day_keys:
+            if day_key in existing_day_keys:
+                continue
+            metadata = group_day_metadata.get(day_key, {})
+            daily_scores.append(
+                {
+                    "dateKey": metadata.get("dateKey", ""),
+                    "dateLabel": metadata.get("dateLabel", ""),
+                    "dateOrder": metadata.get("dateOrder") or day_key_orders.get(day_key, 0),
+                    "dayKey": day_key,
+                    "score": 0,
+                    "completed": False,
+                    "lateDays": 0,
+                }
+            )
+        daily_scores.sort(key=lambda day: (int(day.get("dateOrder") or 0), normalize_text(day.get("dateKey"))))
         scores_by_day: dict[str, float] = {}
         for day in daily_scores:
+            if not day.get("completed", True):
+                continue
             day_key = str(day.get("dayKey") or day.get("dateOrder") or "")
             if not day_key:
                 continue
@@ -2787,8 +2818,8 @@ def resolve_ratings_payload(query: dict[str, str]) -> dict[str, Any]:
     default_from, default_to = current_marathon_period()
     config = load_group_config()
     configured_ids, missing_names, missing_candidates = resolve_config_group_ids(fetch_group_tree(), config)
-    period_from = query.get("periodFrom") or os.getenv("SOHOLMS_PERIOD_FROM") or config.get("periodFrom") or default_from
-    period_to = query.get("periodTo") or os.getenv("SOHOLMS_PERIOD_TO") or config.get("periodTo") or default_to
+    period_from = query.get("periodFrom") or os.getenv("SOHOLMS_PERIOD_FROM") or default_from
+    period_to = query.get("periodTo") or os.getenv("SOHOLMS_PERIOD_TO") or default_to
     group_ids = parse_int_set(query.get("groupIds", "")) or configured_ids or None
     subjects = parse_str_set(query.get("subjects", ""))
     include_virtual = query.get("includeVirtual") == "1" or bool(config.get("includeVirtual"))
@@ -2946,8 +2977,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.require_admin(query)
                 group_id_value = query.get("groupId", "")
                 default_from, default_to = current_marathon_period()
-                period_from = query.get("periodFrom") or os.getenv("SOHOLMS_PERIOD_FROM") or load_group_config().get("periodFrom") or default_from
-                period_to = query.get("periodTo") or os.getenv("SOHOLMS_PERIOD_TO") or load_group_config().get("periodTo") or default_to
+                period_from = query.get("periodFrom") or os.getenv("SOHOLMS_PERIOD_FROM") or default_from
+                period_to = query.get("periodTo") or os.getenv("SOHOLMS_PERIOD_TO") or default_to
                 try:
                     group_id = int(group_id_value)
                 except ValueError:
