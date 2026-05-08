@@ -136,6 +136,7 @@ SOHOLMS_PERIOD_TO         период по умолчанию, если query �
 SOHOLMS_CACHE_SECONDS     кеш в памяти, по умолчанию 900 секунд
 SOHOLMS_CONCURRENCY       параллельные XLSX-загрузки, по умолчанию 4
 SOHOLMS_MAX_GROUPS        лимит групп за запрос, по умолчанию 80
+ADMIN_RATINGS_REFRESH_SECONDS обновление snapshot полной админской таблицы, по умолчанию 3600 секунд
 CORS_ORIGIN               CORS, по умолчанию *
 BACKEND_ADMIN_KEY         ключ для служебных endpoint: очистка кеша и debug
 TELEGRAM_BOT_TOKEN        токен Telegram-бота от BotFather
@@ -219,6 +220,7 @@ TELEGRAM_CHATS_JSON=
 SOHOLMS_CACHE_SECONDS=900
 SOHOLMS_CONCURRENCY=2
 SOHOLMS_MAX_GROUPS=80
+ADMIN_RATINGS_REFRESH_SECONDS=3600
 SOHOLMS_DEADLINE_SHIFT_DAYS=1
 ```
 

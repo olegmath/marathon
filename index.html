@@ -1704,6 +1704,9 @@
     errors: [],
     missingConfigNames: [],
   };
+  let publicLoadMeta = {
+    period: null,
+  };
   let globalNullScoreStudents = []; // Для отслеживания студентов с null в cells[10]
 
   function canManageAdmin() {
@@ -2166,6 +2169,12 @@
     if (!options.silent || currentView !== 'details') {
       render();
     }
+  }
+
+  function applyPublicLoadMeta(data) {
+    publicLoadMeta = {
+      period: data?.period || null,
+    };
   }
 
   function readPublicRatingsCache() {
@@ -4381,7 +4390,9 @@
 
     try {
       const params = new URLSearchParams();
-      const period = adminLoadMeta.period || getRequestPeriod(false);
+      const period = adminToken
+        ? adminLoadMeta.period || getRequestPeriod(false)
+        : publicLoadMeta.period || getRequestPeriod(true);
       params.set('studentName', errorMapStudent);
       if (period.from) params.set('periodFrom', period.from);
       if (period.to) params.set('periodTo', period.to);
@@ -4819,6 +4830,10 @@
         throw new Error(data.error === 'unauthorized' ? 'Сессия истекла, войдите заново' : 'Не удалось загрузить админские данные');
       }
 
+      if (data.rows.length === 0 && data.snapshot?.refreshing) {
+        window.setTimeout(() => loadAdminData(), 5000);
+      }
+
       allStudentRows = parseApiRows(data.rows);
       adminLoadMeta = {
         period: data.period || null,
@@ -4882,6 +4897,7 @@
         }
 
         writePublicRatingsCache(allStudents);
+        applyPublicLoadMeta(data);
         if (allStudents.length === 0 && Array.isArray(data.errors) && data.errors.length > 0) {
           throw new Error(`Soholms вернул 0 учеников. Первая ошибка: ${data.errors[0].error || 'неизвестно'}`);
         }
