@@ -1,0 +1,66 @@
+name: Warm public ratings
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 00:10, 08:00, 14:00 Asia/Tomsk.
+    - cron: "10 17 * * *"
+    - cron: "0 1,7 * * *"
+
+jobs:
+  warm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      BACKEND_URL: ${{ vars.SOHOLMS_BACKEND_URL || 'https://marathon-production-0ac4.up.railway.app' }}
+      PERIOD_FROM: ${{ vars.SOHOLMS_PERIOD_FROM || '2026-04-01' }}
+      TZ: Asia/Tomsk
+
+    steps:
+      - name: Warm current public ratings snapshot
+        run: |
+          set -euo pipefail
+
+          period_to="$(date +%F)"
+          base_url="${BACKEND_URL%/}"
+          query="periodFrom=${PERIOD_FROM}&periodTo=${period_to}"
+
+          echo "Starting warmup for ${query}"
+          curl --fail --silent --show-error "${base_url}/api/ratings/refresh?${query}&_t=$(date +%s)" >/tmp/ratings-refresh.json
+
+          for attempt in $(seq 1 18); do
+            curl --fail --silent --show-error "${base_url}/api/ratings?${query}&public=1&_t=$(date +%s)" >/tmp/ratings.json
+            if python3 - "$period_to" <<'PY'
+          import json
+          import sys
+
+          expected_period_to = sys.argv[1]
+          with open("/tmp/ratings.json", "r", encoding="utf-8") as file:
+              payload = json.load(file)
+
+          rows = payload.get("rows") or []
+          period_to = (payload.get("period") or {}).get("to")
+          snapshot = payload.get("snapshot") or {}
+
+          if payload.get("ok") and rows and period_to == expected_period_to and snapshot.get("source") == "snapshot":
+              print(f"Snapshot ready: rows={len(rows)} updatedAt={snapshot.get('updatedAt', '')}")
+              raise SystemExit(0)
+
+          print(
+              "Snapshot not ready yet: "
+              f"rows={len(rows)} periodTo={period_to} source={snapshot.get('source')} "
+              f"refreshing={snapshot.get('refreshing')}"
+          )
+          raise SystemExit(1)
+          PY
+            then
+              exit 0
+            fi
+            if [ "$attempt" -lt 18 ]; then
+              sleep 20
+            fi
+          done
+
+          echo "Public ratings snapshot did not become ready in time"
+          cat /tmp/ratings.json
+          exit 1

@@ -161,6 +161,18 @@ SOHOLMS_EXCEL_TOKEN='ТОКЕН_ИЗ_EXCEL_GET' \
 python3 soholms_backend.py
 ```
 
+## Прогрев публичного рейтинга
+
+Публичный сайт быстро открывается, когда на backend уже есть свежий snapshot для текущего периода.
+В репозитории есть GitHub Actions workflow:
+
+```text
+.github/workflows/warm-public-ratings.yml
+```
+
+Он запускает `/api/ratings/refresh` для периода `SOHOLMS_PERIOD_FROM` -> сегодняшний день в `Asia/Tomsk`, затем проверяет `/api/ratings?public=1`, пока snapshot не станет готов.
+По умолчанию workflow использует production backend из `config.js`; для другого адреса задай GitHub variable `SOHOLMS_BACKEND_URL`.
+
 ## Постоянный запуск
 
 В папке `backend` подготовлены файлы:
