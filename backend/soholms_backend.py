@@ -2613,6 +2613,11 @@ def start_public_ratings_snapshot_refresh(query: dict[str, str] | None = None) -
     return True
 
 
+def public_ratings_snapshot_refreshing() -> bool:
+    with _PUBLIC_RATINGS_REFRESHING_LOCK:
+        return bool(_PUBLIC_RATINGS_REFRESHING_KEYS)
+
+
 def public_ratings_snapshot_is_stale(snapshot: dict[str, Any] | None, query: dict[str, str] | None = None) -> bool:
     if not snapshot:
         return True
@@ -2781,7 +2786,9 @@ def start_public_ratings_snapshot_scheduler() -> None:
 def admin_ratings_snapshot_scheduler() -> None:
     while True:
         try:
-            if admin_ratings_snapshot_is_stale(read_admin_ratings_snapshot_file()):
+            if public_ratings_snapshot_is_stale(read_public_ratings_snapshot_file()):
+                start_public_ratings_snapshot_refresh({})
+            elif not public_ratings_snapshot_refreshing() and admin_ratings_snapshot_is_stale(read_admin_ratings_snapshot_file()):
                 start_admin_ratings_snapshot_refresh({})
         except Exception as error:
             sys.stderr.write(f"Admin ratings snapshot refresh failed: {error}\n")
@@ -3718,8 +3725,7 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     host = os.getenv("HOST", "127.0.0.1")
     port = int(os.getenv("PORT", "8787"))
-    if ADMIN_RATINGS_REFRESH_SECONDS <= 0:
-        start_public_ratings_snapshot_scheduler()
+    start_public_ratings_snapshot_scheduler()
     start_admin_ratings_snapshot_scheduler()
     server = ThreadingHTTPServer((host, port), Handler)
     print(f"Soholms backend listening on http://{host}:{port}", flush=True)
