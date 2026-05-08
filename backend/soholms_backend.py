@@ -2431,18 +2431,6 @@ def save_penalty_override(body: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def public_daily_score(row: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "dateKey": row.get("dateKey", ""),
-        "dateLabel": row.get("dateLabel", ""),
-        "dateOrder": row.get("dateOrder", 0),
-        "dayKey": row.get("dayKey", ""),
-        "score": row.get("score", 0),
-        "completed": row.get("completed", True),
-        "lateDays": row.get("lateDays", 0),
-    }
-
-
 def public_row(row: dict[str, Any]) -> dict[str, Any]:
     return {
         "subject": row.get("subject", ""),
@@ -2454,11 +2442,6 @@ def public_row(row: dict[str, Any]) -> dict[str, Any]:
         "finalScore": row.get("finalScore", row.get("score", 0)),
         "groupPlace": row.get("groupPlace", 0),
         "schoolPlace": row.get("schoolPlace", 0),
-        "dailyScores": [
-            public_daily_score(day)
-            for day in row.get("dailyScores", [])
-            if isinstance(day, dict)
-        ],
     }
 
 
@@ -2555,7 +2538,7 @@ def write_public_ratings_snapshot_file(snapshot: dict[str, Any]) -> None:
 def add_public_snapshot_meta(payload: dict[str, Any], snapshot: dict[str, Any]) -> dict[str, Any]:
     saved_at_epoch = float(snapshot.get("savedAtEpoch") or 0)
     return {
-        **copy.deepcopy(payload),
+        **copy.deepcopy(strip_for_public(payload)),
         "snapshot": {
             "updatedAt": snapshot.get("savedAt", ""),
             "nextRefreshAt": snapshot_next_refresh_at(saved_at_epoch, PUBLIC_RATINGS_REFRESH_SECONDS) if saved_at_epoch else "",
@@ -2702,6 +2685,22 @@ def read_any_admin_ratings_snapshot(query: dict[str, str] | None = None) -> dict
 
     result = add_admin_snapshot_meta(payload, snapshot)
     result["snapshot"]["source"] = "admin-snapshot-fallback"
+    result["snapshot"]["queryMismatch"] = snapshot.get("query") != normalize_admin_ratings_query(query)
+    return result
+
+
+def read_public_from_admin_ratings_snapshot(query: dict[str, str] | None = None) -> dict[str, Any] | None:
+    snapshot = read_admin_ratings_snapshot_file()
+    if not snapshot:
+        return None
+
+    payload = snapshot.get("payload")
+    if not isinstance(payload, dict):
+        return None
+
+    public_payload = strip_for_public(payload)
+    result = add_public_snapshot_meta(public_payload, snapshot)
+    result["snapshot"]["source"] = "admin-snapshot-public"
     result["snapshot"]["queryMismatch"] = snapshot.get("query") != normalize_admin_ratings_query(query)
     return result
 
@@ -3633,6 +3632,8 @@ class Handler(BaseHTTPRequestHandler):
                         start_public_ratings_snapshot_refresh(query)
                     if not payload:
                         payload = read_any_public_ratings_snapshot(query)
+                    if not payload:
+                        payload = read_public_from_admin_ratings_snapshot(query)
                     if not payload:
                         payload = {
                             "ok": True,
