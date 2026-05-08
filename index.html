@@ -2917,16 +2917,21 @@
   }
 
   function getErrorMapBaseRows() {
-    return allStudentRows.filter((row) => {
+    return getErrorMapRows().filter((row) => {
       if (errorMapSubject && row.subject !== errorMapSubject) return false;
       if (errorMapExam && row.level !== errorMapExam) return false;
       return true;
     });
   }
 
+  function getErrorMapRows() {
+    return publicStudentRows.length ? publicStudentRows : allStudentRows;
+  }
+
   function normalizeErrorMapFilters() {
-    const subjects = uniqueSorted(allStudentRows.map((row) => row.subject));
-    const exams = uniqueSorted(allStudentRows.map((row) => row.level));
+    const rows = getErrorMapRows();
+    const subjects = uniqueSorted(rows.map((row) => row.subject));
+    const exams = uniqueSorted(rows.map((row) => row.level));
     const students = uniqueSorted(getErrorMapBaseRows().map((row) => row.name));
 
     if (!errorMapSubject && currentSubject) errorMapSubject = currentSubject;
@@ -3266,15 +3271,17 @@
       return '<div class="details-table-empty">Карта ошибок работает через Soholms backend. Backend URL не настроен.</div>';
     }
 
-    if (allStudentRows.length === 0 && !dataLoading) {
+    const errorMapRows = getErrorMapRows();
+    if (errorMapRows.length === 0 && !dataLoading) {
       loadData();
       return '<div class="details-table-empty">Загружаем список учеников...</div>';
     }
 
     normalizeErrorMapFilters();
     const subjectLabels = new Map(SUBJECTS.map((subject) => [subject.key, subject.label]));
-    const subjectOptions = uniqueSorted(allStudentRows.map((row) => row.subject));
-    const examOptions = uniqueSorted(allStudentRows.map((row) => row.level));
+    const rows = getErrorMapRows();
+    const subjectOptions = uniqueSorted(rows.map((row) => row.subject));
+    const examOptions = uniqueSorted(rows.map((row) => row.level));
     const studentOptions = uniqueSorted(getErrorMapBaseRows().map((row) => row.name));
     const days = errorMapPayload ? buildErrorMapDays() : [];
     const summary = aggregateErrorMapSummary(days);
@@ -4621,13 +4628,13 @@
         pdfStudent = e.target.value === '' ? '' : options[index] || '';
       }
       if (filter === 'errorMapSubject') {
-        const options = uniqueSorted(allStudentRows.map((row) => row.subject));
+        const options = uniqueSorted(getErrorMapRows().map((row) => row.subject));
         errorMapSubject = e.target.value === '' ? '' : options[index] || '';
         errorMapStudent = '';
         errorMapPayload = null;
       }
       if (filter === 'errorMapExam') {
-        const options = uniqueSorted(allStudentRows.map((row) => row.level));
+        const options = uniqueSorted(getErrorMapRows().map((row) => row.level));
         errorMapExam = e.target.value === '' ? '' : options[index] || '';
         errorMapStudent = '';
         errorMapPayload = null;
