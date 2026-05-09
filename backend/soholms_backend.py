@@ -2325,6 +2325,7 @@ def parse_xlsx_raw_rows(content: bytes) -> list[dict[str, Any]]:
     headers = [cell.value for cell in next(worksheet.iter_rows(min_row=3, max_row=3))]
     columns = {
         "name": header_index(headers, "Ученик", default=1),
+        "group": header_index(headers, "Учебная группа", default=2),
         "lesson_date": header_index(headers, "Дата урока", default=5),
         "lesson_score": header_index(headers, "Оценка за урок", default=8),
         "homework_score": header_index(headers, "Оценка за ДЗ", default=9),
@@ -2341,6 +2342,7 @@ def parse_xlsx_raw_rows(content: bytes) -> list[dict[str, Any]]:
             continue
         rows.append({
             "name": normalize_text(name),
+            "group": normalize_text(row_value(row, columns["group"])),
             "month_key": date_key[:7],
             "hw": score_value(row_value(row, columns["homework_score"])),
             "sr": score_value(row_value(row, columns["checkpoint_score"])),
@@ -2359,7 +2361,13 @@ def fetch_year_raw_rows(period_from: str, period_to: str) -> list[dict[str, Any]
 
         def fetch_group(group: GroupInfo):
             content = fetch_attendance_xlsx(group.id, period_from, period_to)
-            return parse_xlsx_raw_rows(content)
+            rows = parse_xlsx_raw_rows(content)
+            level = infer_level(group.name) or ""
+            for r in rows:
+                r["_subject"] = group.subject
+                r["_level"] = level
+                r["_teacher"] = group.teacher
+            return rows
 
         with ThreadPoolExecutor(max_workers=max(1, DEFAULT_CONCURRENCY)) as executor:
             futures = {executor.submit(fetch_group, group): group for group in groups}
@@ -2426,6 +2434,65 @@ def aggregate_student_year(rows: list[dict[str, Any]], student_name: str) -> dic
             "attendancePct": avg_attendance,
         },
     }
+
+
+def aggregate_all_students(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    students: dict[tuple[str, str], dict[str, Any]] = {}
+
+    for r in rows:
+        name = r.get("name", "")
+        group = r.get("group", "")
+        if not name:
+            continue
+        key = (normalize_person_key(name), group)
+        if key not in students:
+            students[key] = {
+                "name": name,
+                "group": group,
+                "subject": r.get("_subject", ""),
+                "level": r.get("_level", ""),
+                "teacher": r.get("_teacher", ""),
+                "hw_scores": [],
+                "kr_scores": [],
+                "lessons": 0,
+                "present": 0,
+            }
+        s = students[key]
+        s["lessons"] += 1
+        hw = r.get("hw")
+        kr = r.get("kr")
+        sr = r.get("sr")
+        lesson = r.get("lesson")
+        if hw is not None or kr is not None or sr is not None or lesson is not None:
+            s["present"] += 1
+        if hw is not None:
+            s["hw_scores"].append(hw)
+        kr_val = kr if kr is not None else sr
+        if kr_val is not None:
+            s["kr_scores"].append(kr_val)
+
+    result = []
+    for s in students.values():
+        hw_scores = s["hw_scores"]
+        kr_scores = s["kr_scores"]
+        hw_avg = round(sum(hw_scores) / len(hw_scores), 1) if hw_scores else None
+        kr_avg = round(sum(kr_scores) / len(kr_scores), 1) if kr_scores else None
+        attendance = round(s["present"] / s["lessons"] * 100) if s["lessons"] else 0
+        result.append({
+            "name": s["name"],
+            "group": s["group"],
+            "subject": s["subject"],
+            "level": s["level"],
+            "teacher": s["teacher"],
+            "hwAvg": hw_avg,
+            "hwCount": len(hw_scores),
+            "krAvg": kr_avg,
+            "krCount": len(kr_scores),
+            "attendancePct": attendance,
+            "lessonsTotal": s["lessons"],
+        })
+
+    return sorted(result, key=lambda x: (x.get("group", ""), x.get("name", "")))
 
 
 def add_places(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -3843,6 +3910,18 @@ class Handler(BaseHTTPRequestHandler):
                     "student": student_name,
                     "period": {"from": period_from, "to": period_to},
                     **result,
+                }, cache_seconds=300)
+
+            if parsed.path == "/api/grades-summary":
+                self.require_admin(query)
+                period_from = query.get("periodFrom") or "2025-09-01"
+                period_to = query.get("periodTo") or "2026-05-31"
+                rows = fetch_year_raw_rows(period_from, period_to)
+                result = aggregate_all_students(rows)
+                return self.send_json({
+                    "ok": True,
+                    "rows": result,
+                    "period": {"from": period_from, "to": period_to},
                 }, cache_seconds=300)
 
             self.send_json({"ok": False, "error": "Not found"}, HTTPStatus.NOT_FOUND)
