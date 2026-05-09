@@ -2112,7 +2112,11 @@ def parse_attendance_xlsx(
                 record_submission_penalty(current_day, submitted_at)
             continue
 
-        if current_day and not is_day_lesson(lesson) and has_assignment_submission(assignment_status, assignment_score, submitted_at):
+        _new_key = str(int(student_id)) if isinstance(student_id, (int, float)) else normalize_text(name)
+        if (current_day
+                and current_day.get("studentKey") == _new_key
+                and not is_day_lesson(lesson)
+                and has_assignment_submission(assignment_status, assignment_score, submitted_at)):
             record_submission_penalty(current_day, submitted_at)
             continue
 
@@ -2159,6 +2163,7 @@ def parse_attendance_xlsx(
         current_day = {
             "item": item,
             "studentId": student_id,
+            "studentKey": row_student_key,
             "dayOrder": day_order,
             "lessonDate": lesson_date,
             "dailyScore": daily_score,
@@ -2297,6 +2302,129 @@ def inspect_attendance_xlsx(content: bytes, sample_limit: int = 12) -> dict[str,
             "unnamedAssignmentRows": unnamed_assignment_rows,
         },
         "samples": samples,
+    }
+
+
+_MONTH_RU = {
+    "01": "Январь", "02": "Февраль", "03": "Март",
+    "04": "Апрель", "05": "Май", "06": "Июнь",
+    "07": "Июль", "08": "Август", "09": "Сентябрь",
+    "10": "Октябрь", "11": "Ноябрь", "12": "Декабрь",
+}
+
+
+def _month_label(mk: str) -> str:
+    if len(mk) >= 7:
+        return f"{_MONTH_RU.get(mk[5:7], mk[5:7])} {mk[:4]}"
+    return mk
+
+
+def parse_xlsx_raw_rows(content: bytes) -> list[dict[str, Any]]:
+    workbook = load_workbook(io.BytesIO(content), data_only=True, read_only=True)
+    worksheet = workbook.active
+    headers = [cell.value for cell in next(worksheet.iter_rows(min_row=3, max_row=3))]
+    columns = {
+        "name": header_index(headers, "Ученик", default=1),
+        "lesson_date": header_index(headers, "Дата урока", default=5),
+        "lesson_score": header_index(headers, "Оценка за урок", default=8),
+        "homework_score": header_index(headers, "Оценка за ДЗ", default=9),
+        "checkpoint_score": header_index(headers, "Оценка за СР", default=10),
+        "control_score": header_index(headers, "Оценка за КР", default=11),
+    }
+    rows: list[dict[str, Any]] = []
+    for row in worksheet.iter_rows(min_row=4, values_only=True):
+        name = row_value(row, columns["name"])
+        if not name:
+            continue
+        date_key = iso_date(row_value(row, columns["lesson_date"]))
+        if len(date_key) < 7:
+            continue
+        rows.append({
+            "name": normalize_text(name),
+            "month_key": date_key[:7],
+            "hw": score_value(row_value(row, columns["homework_score"])),
+            "sr": score_value(row_value(row, columns["checkpoint_score"])),
+            "kr": score_value(row_value(row, columns["control_score"])),
+            "lesson": score_value(row_value(row, columns["lesson_score"])),
+        })
+    return rows
+
+
+def fetch_year_raw_rows(period_from: str, period_to: str) -> list[dict[str, Any]]:
+    cache_key = f"year_raw_rows:{period_from}:{period_to}"
+
+    def load():
+        groups = selected_groups()
+        all_rows: list[dict[str, Any]] = []
+
+        def fetch_group(group: GroupInfo):
+            content = fetch_attendance_xlsx(group.id, period_from, period_to)
+            return parse_xlsx_raw_rows(content)
+
+        with ThreadPoolExecutor(max_workers=max(1, DEFAULT_CONCURRENCY)) as executor:
+            futures = {executor.submit(fetch_group, group): group for group in groups}
+            for future in as_completed(futures):
+                try:
+                    all_rows.extend(future.result())
+                except Exception:
+                    pass
+        return all_rows
+
+    return cached(cache_key, 3600, load)
+
+
+def aggregate_student_year(rows: list[dict[str, Any]], student_name: str) -> dict[str, Any] | None:
+    name_key = normalize_person_key(student_name)
+    student_rows = [r for r in rows if normalize_person_key(r["name"]).startswith(name_key)]
+    if not student_rows:
+        return None
+
+    months_data: dict[str, dict[str, Any]] = {}
+    for r in student_rows:
+        mk = r["month_key"]
+        if mk not in months_data:
+            months_data[mk] = {"hw_done": 0, "hw_total": 0, "test_scores": [], "lessons": 0, "present": 0}
+        m = months_data[mk]
+        m["lessons"] += 1
+        if r["lesson"] is not None or r["sr"] is not None or r["kr"] is not None or r["hw"] is not None:
+            m["present"] += 1
+        if r["hw"] is not None:
+            m["hw_total"] += 1
+            if r["hw"] > 0:
+                m["hw_done"] += 1
+        if r["kr"] is not None:
+            m["test_scores"].append(r["kr"])
+        if r["sr"] is not None:
+            m["test_scores"].append(r["sr"])
+
+    months = []
+    for mk in sorted(months_data):
+        m = months_data[mk]
+        test_avg = round(sum(m["test_scores"]) / len(m["test_scores"]), 1) if m["test_scores"] else None
+        attendance = round(m["present"] / m["lessons"] * 100) if m["lessons"] else 0
+        months.append({
+            "month": _month_label(mk),
+            "hwDone": m["hw_done"],
+            "hwTotal": m["hw_total"],
+            "testAvg": test_avg,
+            "attendance": attendance,
+        })
+
+    total_hw_done = sum(m["hwDone"] for m in months)
+    total_hw_total = sum(m["hwTotal"] for m in months)
+    test_avgs = [m["testAvg"] for m in months if m["testAvg"] is not None]
+    overall_test_avg = round(sum(test_avgs) / len(test_avgs), 1) if test_avgs else None
+    attendance_vals = [m["attendance"] for m in months]
+    avg_attendance = round(sum(attendance_vals) / len(attendance_vals)) if attendance_vals else 0
+
+    return {
+        "months": months,
+        "summary": {
+            "hwDone": total_hw_done,
+            "hwTotal": total_hw_total,
+            "testAvg": overall_test_avg,
+            "attendancePct": avg_attendance,
+        },
     }
 
 
@@ -3699,6 +3827,23 @@ class Handler(BaseHTTPRequestHandler):
 
             if parsed.path == "/api/error-analytics":
                 return self.send_json(build_error_analytics_payload(query), cache_seconds=60)
+
+            if parsed.path == "/api/student-year":
+                student_name = normalize_text(query.get("name", ""))
+                if not student_name:
+                    raise BackendError("name is required", HTTPStatus.BAD_REQUEST)
+                period_from = query.get("from") or "2025-09-01"
+                period_to = query.get("to") or "2026-05-31"
+                rows = fetch_year_raw_rows(period_from, period_to)
+                result = aggregate_student_year(rows, student_name)
+                if result is None:
+                    return self.send_json({"ok": False, "error": "student not found"}, HTTPStatus.NOT_FOUND)
+                return self.send_json({
+                    "ok": True,
+                    "student": student_name,
+                    "period": {"from": period_from, "to": period_to},
+                    **result,
+                }, cache_seconds=300)
 
             self.send_json({"ok": False, "error": "Not found"}, HTTPStatus.NOT_FOUND)
         except BackendError as error:
