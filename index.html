@@ -1692,7 +1692,12 @@
   let errorMapLoading = false;
   let errorMapError = '';
   let adminToken = sessionStorage.getItem('adminToken') || '';
-  let adminRole = sessionStorage.getItem('adminRole') || (adminToken ? 'admin' : '');
+  const storedAdminRole = sessionStorage.getItem('adminRole') || '';
+  const pendingAdminRole = adminToken && (storedAdminRole === 'admin' || storedAdminRole === 'teacher')
+    ? storedAdminRole
+    : '';
+  let adminRole = '';
+  let adminConfirmed = false;
   let adminLoading = false;
   let adminError = '';
   let dataLoading = false;
@@ -1710,11 +1715,11 @@
   let globalNullScoreStudents = []; // Для отслеживания студентов с null в cells[10]
 
   function canManageAdmin() {
-    return adminRole === 'admin';
+    return adminConfirmed && adminRole === 'admin';
   }
 
   function canChangePeriod() {
-    return adminRole === 'admin' || adminRole === 'teacher';
+    return adminConfirmed && (adminRole === 'admin' || adminRole === 'teacher');
   }
 
   // SVG Icons
@@ -2791,7 +2796,7 @@
   }
 
   function renderDetailsView() {
-    if (!adminToken) {
+    if (!adminToken || !adminConfirmed) {
       return renderAdminLogin();
     }
 
@@ -4664,6 +4669,7 @@
       if (e.target.id === 'admin-logout-btn') {
         adminToken = '';
         adminRole = '';
+        adminConfirmed = false;
         adminError = '';
         allStudentRows = [];
         adminLoadMeta = {
@@ -4799,6 +4805,7 @@
 
       adminToken = data.token;
       adminRole = data.role === 'teacher' ? 'teacher' : 'admin';
+      adminConfirmed = true;
       if (!canManageAdmin() && adminSection === 'pdfReports') {
         adminSection = 'details';
       }
@@ -4809,6 +4816,7 @@
     } catch (error) {
       adminToken = '';
       adminRole = '';
+      adminConfirmed = false;
       sessionStorage.removeItem('adminToken');
       sessionStorage.removeItem('adminRole');
       adminError = error.message || 'Не удалось войти';
@@ -4826,15 +4834,24 @@
     render();
 
     try {
+      const soholms = usesSoholmsSource();
+      const adminKey = soholms ? getBackendAdminKey() : '';
+      if (soholms && !adminKey) {
+        throw new Error('Не настроен ключ доступа администратора');
+      }
       const response = await fetch(
-        usesSoholmsSource()
+        soholms
           ? buildSoholmsRatingsUrl(false)
-          : `${PROXY_URL}?mode=admin&token=${encodeURIComponent(adminToken)}&_t=${Date.now()}`
+          : `${PROXY_URL}?mode=admin&token=${encodeURIComponent(adminToken)}&_t=${Date.now()}`,
+        soholms ? { headers: { 'x-admin-key': adminKey } } : undefined
       );
       const data = await response.json();
 
-      if (!data.ok || !Array.isArray(data.rows)) {
-        throw new Error(data.error === 'unauthorized' ? 'Сессия истекла, войдите заново' : 'Не удалось загрузить админские данные');
+      if (!response.ok || !data.ok || !Array.isArray(data.rows)) {
+        const err = data.error === 'unauthorized' || response.status === 401 || response.status === 403
+          ? 'Сессия истекла, войдите заново'
+          : 'Не удалось загрузить админские данные';
+        throw new Error(err);
       }
 
       if (data.rows.length === 0 && data.snapshot?.refreshing) {
@@ -4849,6 +4866,10 @@
         errors: Array.isArray(data.errors) ? data.errors : [],
         missingConfigNames: Array.isArray(data.missingConfigNames) ? data.missingConfigNames : [],
       };
+      if (!adminRole && pendingAdminRole) {
+        adminRole = pendingAdminRole;
+      }
+      adminConfirmed = true;
     } catch (error) {
       allStudentRows = [];
       adminLoadMeta = {
@@ -4858,12 +4879,11 @@
         errors: [],
         missingConfigNames: [],
       };
-      if (!usesSoholmsSource()) {
-        adminToken = '';
-        adminRole = '';
-        sessionStorage.removeItem('adminToken');
-        sessionStorage.removeItem('adminRole');
-      }
+      adminToken = '';
+      adminRole = '';
+      adminConfirmed = false;
+      sessionStorage.removeItem('adminToken');
+      sessionStorage.removeItem('adminRole');
       adminError = error.message || 'Не удалось загрузить админские данные';
     } finally {
       adminLoading = false;
@@ -5094,6 +5114,9 @@
       window.listenersInitialized = true;
     }
     await refreshData({ silent: hasCachedData });
+    if (adminToken && pendingAdminRole) {
+      await loadAdminData();
+    }
     startAutoRefresh();
   }
 

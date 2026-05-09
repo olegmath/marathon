@@ -9,6 +9,7 @@ current frontend rating calculations.
 from __future__ import annotations
 
 import gzip
+import hmac
 import io
 import json
 import os
@@ -3499,7 +3500,9 @@ def json_bytes(payload: Any) -> bytes:
 
 
 def admin_key_matches(value: str) -> bool:
-    return bool(BACKEND_ADMIN_KEY) and value.strip() == BACKEND_ADMIN_KEY
+    if not BACKEND_ADMIN_KEY:
+        return False
+    return hmac.compare_digest(value.strip().encode("utf-8"), BACKEND_ADMIN_KEY.encode("utf-8"))
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -3589,6 +3592,7 @@ class Handler(BaseHTTPRequestHandler):
                 })
 
             if parsed.path == "/api/groups":
+                self.require_admin(query)
                 search = query.get("search", "").strip()
                 if search:
                     return self.send_json({
@@ -3649,6 +3653,7 @@ class Handler(BaseHTTPRequestHandler):
                         }
                     return self.send_json(payload, cache_seconds=60)
 
+                self.require_admin(query)
                 snapshot = read_admin_ratings_snapshot_file()
                 payload = read_admin_ratings_snapshot(query)
                 if admin_ratings_snapshot_is_stale(snapshot, query):
@@ -3683,7 +3688,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def require_admin(self, query: dict[str, str]) -> None:
         if not BACKEND_ADMIN_KEY:
-            return
+            raise BackendError("Admin key not configured", HTTPStatus.SERVICE_UNAVAILABLE)
         value = self.headers.get("x-admin-key", "") or query.get("adminKey", "")
         if not admin_key_matches(value):
             raise BackendError("Forbidden", HTTPStatus.FORBIDDEN)
