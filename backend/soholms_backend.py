@@ -1161,12 +1161,38 @@ def build_error_map_payload(query: dict[str, str]) -> dict[str, Any]:
         normalize_text(row.get("lessonDate") or row.get("deadlineAt")),
         int(row.get("academicHomeworkId") or 0),
     ))
+
+    day_groups: list[dict[str, Any]] = []
+    day_index: dict[tuple, int] = {}
+    for row in maps:
+        day_key = (
+            normalize_text(row.get("dayTitle") or ""),
+            int(row.get("dayNumber") or 0),
+            int(row.get("orderIndex") or 0),
+        )
+        if day_key not in day_index:
+            day_index[day_key] = len(day_groups)
+            day_groups.append({
+                "dayTitle": row.get("dayTitle") or "",
+                "dayNumber": row.get("dayNumber"),
+                "dayOrder": row.get("dayNumber"),
+                "orderIndex": row.get("orderIndex"),
+                "dateKey": row.get("dateKey") or "",
+                "marathonPlan": row.get("marathonPlan"),
+                "maps": [],
+            })
+        day_groups[day_index[day_key]]["maps"].append({
+            "questions": row.get("questions") or [],
+            "summary": row.get("summary") or {},
+            "marathonPlan": row.get("marathonPlan"),
+        })
+
     return {
         "ok": True,
         "studentName": query.get("studentName", ""),
         "period": {"from": period_from, "to": period_to},
         "homeworkCount": len(homework_ids),
-        "maps": maps,
+        "maps": day_groups,
         "errors": errors,
     }
 
