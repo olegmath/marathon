@@ -1730,10 +1730,14 @@ def infer_level(value: str) -> str:
     return ""
 
 
-def discipline_matches_group(discipline: Any, group: GroupInfo) -> bool:
+def discipline_matches_group(discipline: Any, group: GroupInfo, xlsx_group: str = "") -> bool:
     text = normalize_text(discipline)
     lowered = text.casefold()
     if not text:
+        if xlsx_group and group.subject != "без предмета":
+            xlsx_group_subject = infer_subject(normalize_text(xlsx_group))
+            if xlsx_group_subject != "без предмета" and xlsx_group_subject != group.subject:
+                return False
         return True
     if "основн" in lowered:
         return False
@@ -2133,7 +2137,7 @@ def parse_attendance_xlsx(
             record_submission_penalty(current_day, submitted_at)
             continue
 
-        if not discipline_matches_group(discipline, group):
+        if not discipline_matches_group(discipline, group, xlsx_group or ""):
             current_day = None
             continue
 
