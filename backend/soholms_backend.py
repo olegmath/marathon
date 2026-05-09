@@ -1421,7 +1421,7 @@ def build_first_attempt_index(period_from: str, period_to: str) -> dict[tuple[st
         t_disciplines = time.time() - t0
 
         t1 = time.time()
-        index: dict[tuple[str, str], datetime] = {}
+        index: dict[tuple[str, str], tuple[datetime, date]] = {}
         with ThreadPoolExecutor(max_workers=ATTEMPT_CONCURRENCY) as executor:
             futures = {executor.submit(fetch_homework_first_attempts, hw_id): hw_id for hw_id in homework_ids}
             for future in as_completed(futures):
@@ -1437,8 +1437,8 @@ def build_first_attempt_index(period_from: str, period_to: str) -> dict[tuple[st
                         keys.append((f"name:{student_name}", deadline_day.isoformat()))
                     for key in keys:
                         previous = index.get(key)
-                        if previous is None or row["firstAttemptAt"] < previous:
-                            index[key] = row["firstAttemptAt"]
+                        if previous is None or row["firstAttemptAt"] < previous[0]:
+                            index[key] = (row["firstAttemptAt"], deadline_day)
         t_homeworks = time.time() - t1
 
         print(f"[timings] build_first_attempt_index: disciplines={t_disciplines:.2f}s homeworks={t_homeworks:.2f}s total={time.time()-t_total:.2f}s n_homeworks={len(homework_ids)}", flush=True, file=sys.stderr)
@@ -1705,10 +1705,15 @@ def group_teacher_label(group: dict[str, Any]) -> str:
 
 
 def infer_subject(value: str, parent_subject: str = "") -> str:
-    text = f"{value} {parent_subject}".lower()
+    own_text = value.lower()
     for subject, aliases in SUBJECT_ALIASES:
-        if any(alias in text for alias in aliases):
+        if any(alias in own_text for alias in aliases):
             return subject
+    if parent_subject:
+        parent_text = parent_subject.lower()
+        for subject, aliases in SUBJECT_ALIASES:
+            if any(alias in parent_text for alias in aliases):
+                return subject
     return "без предмета"
 
 
@@ -1988,7 +1993,7 @@ def late_penalty(lesson_date: Any, submitted_at: Any) -> int:
 def parse_attendance_xlsx(
     content: bytes,
     group: GroupInfo,
-    first_attempt_index: dict[tuple[str, str], datetime] | None = None,
+    first_attempt_index: dict[tuple[str, str], tuple[datetime, date]] | None = None,
     first_attempt_stats: dict[str, int] | None = None,
 ) -> list[dict[str, Any]]:
     workbook = load_workbook(io.BytesIO(content), data_only=True, read_only=True)
@@ -2041,7 +2046,7 @@ def parse_attendance_xlsx(
     def student_key(value: Any) -> str:
         return str(int(value)) if isinstance(value, (int, float)) else normalize_text(value)
 
-    def first_attempt_for_day(day: dict[str, Any]) -> datetime | None:
+    def first_attempt_for_day(day: dict[str, Any]) -> tuple[datetime, date] | None:
         if not first_attempt_index:
             return None
         lesson_date = day.get("lessonDate")
@@ -2051,8 +2056,8 @@ def parse_attendance_xlsx(
             first_attempt_stats["lookups"] = first_attempt_stats.get("lookups", 0) + 1
 
         date_keys = [
-            iso_date(lesson_date, shift_days=DEADLINE_SHIFT_DAYS),
-            iso_date(lesson_date),
+            iso_date(lesson_date, shift_days=shift)
+            for shift in range(0, 8)
         ]
         student_keys = [
             f"id:{student_key(day.get('studentId'))}",
@@ -2060,18 +2065,25 @@ def parse_attendance_xlsx(
         ]
         for date_key in date_keys:
             for key in student_keys:
-                first_attempt = first_attempt_index.get((key, date_key))
-                if first_attempt:
+                entry = first_attempt_index.get((key, date_key))
+                if entry:
                     if first_attempt_stats is not None:
                         first_attempt_stats["matched"] = first_attempt_stats.get("matched", 0) + 1
-                    return first_attempt
+                    return entry
         return None
 
     def record_submission_penalty(day: dict[str, Any], submitted_at: Any) -> None:
-        first_attempt_at = first_attempt_for_day(day)
-        effective_submitted_at = first_attempt_at or submitted_at
-        lesson_late_days = late_penalty(day.get("lessonDate"), effective_submitted_at)
-        previous_late_days = late_penalty(day.get("lessonDate"), submitted_at)
+        first_attempt_entry = first_attempt_for_day(day)
+        if first_attempt_entry is not None:
+            first_attempt_at, deadline_at = first_attempt_entry
+            lesson_late_days = 0 if first_attempt_at.date() <= deadline_at else 1
+            previous_late_days = late_penalty(day.get("lessonDate"), submitted_at)
+        else:
+            first_attempt_at = None
+            if not isinstance(submitted_at, (date, datetime)):
+                return
+            lesson_late_days = late_penalty(day.get("lessonDate"), submitted_at)
+            previous_late_days = lesson_late_days
         late_by_lesson = day["item"].setdefault("_lateDaysByLesson", {})
         lesson_key = day["dayOrder"]
         previous = late_by_lesson.get(lesson_key)
@@ -2082,10 +2094,11 @@ def parse_attendance_xlsx(
                 first_attempt_stats["applied"] = first_attempt_stats.get("applied", 0) + 1
                 if lesson_late_days < previous_late_days:
                     first_attempt_stats["reducedPenalty"] = first_attempt_stats.get("reducedPenalty", 0) + 1
-            if isinstance(effective_submitted_at, datetime):
-                day["dailyScore"]["submittedAt"] = effective_submitted_at.isoformat()
+            effective = first_attempt_at or submitted_at
+            if isinstance(effective, datetime):
+                day["dailyScore"]["submittedAt"] = effective.isoformat()
                 if first_attempt_at:
-                    day["dailyScore"]["firstAttemptAt"] = effective_submitted_at.isoformat()
+                    day["dailyScore"]["firstAttemptAt"] = first_attempt_at.isoformat()
 
     all_students_metadata: dict[str, dict[str, Any]] = {}
 
@@ -2326,6 +2339,7 @@ def parse_xlsx_raw_rows(content: bytes) -> list[dict[str, Any]]:
     columns = {
         "name": header_index(headers, "Ученик", default=1),
         "group": header_index(headers, "Учебная группа", default=2),
+        "discipline": header_index(headers, "Дисциплина", default=3),
         "lesson_date": header_index(headers, "Дата урока", default=5),
         "lesson_score": header_index(headers, "Оценка за урок", default=8),
         "homework_score": header_index(headers, "Оценка за ДЗ", default=9),
@@ -2336,6 +2350,9 @@ def parse_xlsx_raw_rows(content: bytes) -> list[dict[str, Any]]:
     for row in worksheet.iter_rows(min_row=4, values_only=True):
         name = row_value(row, columns["name"])
         if not name:
+            continue
+        discipline = normalize_text(row_value(row, columns["discipline"]))
+        if discipline and "основн" not in discipline.casefold():
             continue
         date_key = iso_date(row_value(row, columns["lesson_date"]))
         if len(date_key) < 7:
@@ -3581,7 +3598,7 @@ def load_ratings(
 
     rows: list[dict[str, Any]] = []
     errors: list[dict[str, Any]] = []
-    first_attempt_index: dict[tuple[str, str], datetime] = {}
+    first_attempt_index: dict[tuple[str, str], tuple[datetime, date]] = {}
     first_attempt_stats: dict[str, int] = {"lookups": 0, "matched": 0, "applied": 0, "reducedPenalty": 0}
 
     t0 = time.time()
