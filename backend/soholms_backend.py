@@ -2352,7 +2352,7 @@ def parse_xlsx_raw_rows(content: bytes) -> list[dict[str, Any]]:
         if not name:
             continue
         discipline = normalize_text(row_value(row, columns["discipline"]))
-        if discipline and "основн" not in discipline.casefold():
+        if discipline and "основн" in discipline.casefold():
             continue
         date_key = iso_date(row_value(row, columns["lesson_date"]))
         if len(date_key) < 7:
