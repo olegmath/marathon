@@ -1731,13 +1731,14 @@ def infer_level(value: str) -> str:
 
 
 def discipline_matches_group(discipline: Any, group: GroupInfo, xlsx_group: str = "") -> bool:
+    if xlsx_group and group.subject != "без предмета":
+        xlsx_group_subject = infer_subject(normalize_text(xlsx_group))
+        if xlsx_group_subject != "без предмета" and xlsx_group_subject != group.subject:
+            return False
+
     text = normalize_text(discipline)
     lowered = text.casefold()
     if not text:
-        if xlsx_group and group.subject != "без предмета":
-            xlsx_group_subject = infer_subject(normalize_text(xlsx_group))
-            if xlsx_group_subject != "без предмета" and xlsx_group_subject != group.subject:
-                return False
         return True
     if "основн" in lowered:
         return False
@@ -2076,18 +2077,20 @@ def parse_attendance_xlsx(
                     return entry
         return None
 
-    def record_submission_penalty(day: dict[str, Any], submitted_at: Any) -> None:
+    def record_submission_penalty(day: dict[str, Any], submitted_at: Any, assignment_score: Any = None) -> None:
         first_attempt_entry = first_attempt_for_day(day)
         if first_attempt_entry is not None:
             first_attempt_at, deadline_at = first_attempt_entry
-            lesson_late_days = 0 if first_attempt_at.date() <= deadline_at else 1
-            previous_late_days = late_penalty(day.get("lessonDate"), submitted_at)
+            lesson_late_days = 0 if first_attempt_at.date() <= deadline_at else late_penalty(day.get("lessonDate"), first_attempt_at)
         else:
             first_attempt_at = None
-            if not isinstance(submitted_at, (date, datetime)):
-                return
-            lesson_late_days = late_penalty(day.get("lessonDate"), submitted_at)
-            previous_late_days = lesson_late_days
+            lesson_late_days = 0  # нет данных о первой попытке → не штрафуем
+
+        if assignment_score is not None:
+            parsed = score_value(assignment_score)
+            if parsed is not None:
+                day["dailyScore"]["score"] = parsed
+
         late_by_lesson = day["item"].setdefault("_lateDaysByLesson", {})
         lesson_key = day["dayOrder"]
         previous = late_by_lesson.get(lesson_key)
@@ -2096,8 +2099,6 @@ def parse_attendance_xlsx(
             day["dailyScore"]["lateDays"] = lesson_late_days
             if first_attempt_at and first_attempt_stats is not None:
                 first_attempt_stats["applied"] = first_attempt_stats.get("applied", 0) + 1
-                if lesson_late_days < previous_late_days:
-                    first_attempt_stats["reducedPenalty"] = first_attempt_stats.get("reducedPenalty", 0) + 1
             effective = first_attempt_at or submitted_at
             if isinstance(effective, datetime):
                 day["dailyScore"]["submittedAt"] = effective.isoformat()
@@ -2126,7 +2127,7 @@ def parse_attendance_xlsx(
 
         if not name:
             if current_day and has_assignment_submission(assignment_status, assignment_score, submitted_at):
-                record_submission_penalty(current_day, submitted_at)
+                record_submission_penalty(current_day, submitted_at, assignment_score)
             continue
 
         _new_key = str(int(student_id)) if isinstance(student_id, (int, float)) else normalize_text(name)
@@ -2134,7 +2135,7 @@ def parse_attendance_xlsx(
                 and current_day.get("studentKey") == _new_key
                 and not is_day_lesson(lesson)
                 and has_assignment_submission(assignment_status, assignment_score, submitted_at)):
-            record_submission_penalty(current_day, submitted_at)
+            record_submission_penalty(current_day, submitted_at, assignment_score)
             continue
 
         if not discipline_matches_group(discipline, group, xlsx_group or ""):
@@ -2186,7 +2187,7 @@ def parse_attendance_xlsx(
             "dailyScore": daily_score,
         }
         if has_assignment_submission(assignment_status, assignment_score, submitted_at):
-            record_submission_penalty(current_day, submitted_at)
+            record_submission_penalty(current_day, submitted_at, assignment_score)
 
     for row_student_key, metadata in all_students_metadata.items():
         if row_student_key not in students:
@@ -2228,7 +2229,7 @@ def parse_attendance_xlsx(
             day_key = str(day.get("dayKey") or day.get("dateOrder") or "")
             if not day_key:
                 continue
-            scores_by_day[day_key] = max(scores_by_day.get(day_key, 0.0), float(day["score"]))
+            scores_by_day[day_key] = float(day["score"])
         scores = list(scores_by_day.values())
         days_done = len(scores_by_day)
         days_total = group_days_total or days_done
@@ -2356,7 +2357,7 @@ def parse_xlsx_raw_rows(content: bytes) -> list[dict[str, Any]]:
         if not name:
             continue
         discipline = normalize_text(row_value(row, columns["discipline"]))
-        if discipline and "основн" in discipline.casefold():
+        if discipline and "основн" not in discipline.casefold():
             continue
         date_key = iso_date(row_value(row, columns["lesson_date"]))
         if len(date_key) < 7:
@@ -3908,7 +3909,8 @@ class Handler(BaseHTTPRequestHandler):
                         "rows": [],
                         "snapshot": {"source": "admin-warming", "refreshing": True},
                     }
-                return self.send_json(payload, cache_seconds=60)
+                is_warming = not payload.get("rows")
+                return self.send_json(payload, cache_seconds=5 if is_warming else 60)
 
             if parsed.path == "/api/error-map":
                 return self.send_json(build_error_map_payload(query), cache_seconds=60)
