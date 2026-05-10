@@ -2912,10 +2912,9 @@ def _journal_aggregate_one(
     kr_max: dict[tuple[str, str], float],
 ) -> dict[str, Any]:
     """Считает посещаемость / ДЗ / КР / интеграл / флаги для одного ученика."""
-    # Attendance — события типа "Математика"
-    att_events = [e for e in student_events if e["type"] == "Математика"]
+    # Attendance — любые строки со статусом посещения, независимо от типа урока
     att_sorted = sorted(
-        [e for e in att_events if e["status"] in ("Был", "Не был", "Болел")],
+        [e for e in student_events if e["status"] in ("Был", "Не был", "Болел")],
         key=lambda x: x.get("date") or "",
     )
     counts = {"Был": 0, "Не был": 0, "Болел": 0}
@@ -4810,6 +4809,42 @@ class Handler(BaseHTTPRequestHandler):
                     "period": {"from": period_from, "to": period_to},
                     **result,
                 }, cache_seconds=300)
+
+            if parsed.path == "/api/debug/journal-events":
+                self.require_admin(query)
+                student_name = normalize_text(query.get("name", ""))
+                if not student_name:
+                    raise BackendError("name is required", HTTPStatus.BAD_REQUEST)
+                period_from = query.get("from") or "2025-09-01"
+                period_to = query.get("to") or "2026-05-31"
+                events = fetch_journal_events(period_from, period_to)
+                name_key = normalize_person_key(student_name)
+                by_student = _journal_group_by_student(events)
+                matching_keys = [k for k in by_student if k[0].startswith(name_key)]
+                if not matching_keys:
+                    return self.send_json({"ok": False, "error": "student not found"}, HTTPStatus.NOT_FOUND)
+                key = matching_keys[0]
+                student_evs = by_student[key]["events"]
+                type_counts: dict[str, int] = {}
+                status_counts: dict[str, int] = {}
+                for e in student_evs:
+                    t = e.get("type") or ""
+                    s = e.get("status") or ""
+                    type_counts[t] = type_counts.get(t, 0) + 1
+                    status_counts[s] = status_counts.get(s, 0) + 1
+                return self.send_json({
+                    "ok": True,
+                    "student": student_name,
+                    "matched_key": key[0],
+                    "group": key[1],
+                    "total_events": len(student_evs),
+                    "type_counts": type_counts,
+                    "status_counts": status_counts,
+                    "att_events": [
+                        {"type": e["type"], "status": e["status"], "lesson": e.get("lesson"), "date": e.get("date")}
+                        for e in student_evs if e["status"] in ("Был", "Не был", "Болел")
+                    ],
+                }, cache_seconds=0)
 
             self.send_json({"ok": False, "error": "Not found"}, HTTPStatus.NOT_FOUND)
         except BackendError as error:
