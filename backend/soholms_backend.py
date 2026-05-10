@@ -2552,6 +2552,24 @@ def student_row_identity(row: dict[str, Any]) -> str:
     return "\x1f".join(normalize_text(part).casefold() for part in parts)
 
 
+def dedupe_rating_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Keep one row per (name, subject, level, group); prefer highest finalScore."""
+    seen: dict[tuple[str, str, str, str], int] = {}
+    for i, row in enumerate(rows):
+        key = (
+            normalize_text(row.get("name", "")).casefold(),
+            normalize_text(row.get("subject", "")).casefold(),
+            normalize_text(row.get("level", "")).casefold(),
+            normalize_text(row.get("group", "")).casefold(),
+        )
+        prev = seen.get(key)
+        if prev is None:
+            seen[key] = i
+        elif float(row.get("finalScore") or 0) > float(rows[prev].get("finalScore") or 0):
+            seen[key] = i
+    return [rows[i] for i in sorted(seen.values())]
+
+
 def penalty_override_key(period: dict[str, Any], row: dict[str, Any]) -> str:
     period_from = normalize_text(period.get("from"))
     period_to = normalize_text(period.get("to"))
@@ -3627,6 +3645,7 @@ def load_ratings(
                 errors.append({"groupId": group.id, "group": group.name, "error": str(error)})
     t_xlsx_ms = int((time.time() - t1) * 1000)
 
+    rows = dedupe_rating_rows(rows)
     add_places(rows)
 
     t_total_ms = int((time.time() - t_start) * 1000)
