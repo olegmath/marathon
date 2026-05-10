@@ -1422,9 +1422,8 @@ def build_first_attempt_index(period_from: str, period_to: str) -> dict[tuple[st
         for items in results:
             all_items.extend(items)
 
-        # hw_id → дата дедлайна строго из marathon_plan.csv
-        # Маппинг: dayNumber из dayTitle ("День 20" → 20) → строка в CSV → dateKey
-        hw_plan_date: dict[int, date] = {}
+        # hw_id → (дата дедлайна, subject, level) — без subject/level одна и та же дата у разных предметов схлопывается в один ключ
+        hw_plan_meta: dict[int, tuple[date, str, str]] = {}
         for item in all_items:
             hw_id = item.get("academicHomeworkId")
             if not hw_id:
@@ -1433,11 +1432,14 @@ def build_first_attempt_index(period_from: str, period_to: str) -> dict[tuple[st
             date_str = plan.get("dateKey") if plan else None
             if date_str:
                 try:
-                    hw_plan_date[hw_id] = datetime.fromisoformat(date_str[:10]).date()
+                    plan_date = datetime.fromisoformat(date_str[:10]).date()
                 except (ValueError, TypeError):
-                    pass
+                    continue
+                subject = normalize_text(item.get("subject")).casefold()
+                level = normalize_text(item.get("level")).casefold()
+                hw_plan_meta[hw_id] = (plan_date, subject, level)
 
-        homework_ids = list(hw_plan_date.keys())
+        homework_ids = list(hw_plan_meta.keys())
         t_disciplines = time.time() - t0
 
         t1 = time.time()
@@ -1446,18 +1448,20 @@ def build_first_attempt_index(period_from: str, period_to: str) -> dict[tuple[st
             futures = {executor.submit(fetch_homework_first_attempts, hw_id): hw_id for hw_id in homework_ids}
             for future in as_completed(futures):
                 hw_id = futures[future]
-                plan_date = hw_plan_date.get(hw_id)
-                if not plan_date:
+                meta = hw_plan_meta.get(hw_id)
+                if not meta:
                     continue
+                plan_date, subject, level = meta
                 if period_start and plan_date < period_start:
                     continue
                 if period_end and plan_date > period_end:
                     continue
+                scope = f"{subject}|{level}"
                 for row in future.result():
-                    keys = [(f"id:{row['masterClientId']}", plan_date.isoformat())]
+                    keys = [(f"id:{row['masterClientId']}|{scope}", plan_date.isoformat())]
                     student_name = normalize_person_key(row.get("studentName"))
                     if student_name:
-                        keys.append((f"name:{student_name}", plan_date.isoformat()))
+                        keys.append((f"name:{student_name}|{scope}", plan_date.isoformat()))
                     for key in keys:
                         previous = index.get(key)
                         if previous is None or row["firstAttemptAt"] < previous[0]:
@@ -2083,10 +2087,15 @@ def parse_attendance_xlsx(
         if first_attempt_stats is not None:
             first_attempt_stats["lookups"] = first_attempt_stats.get("lookups", 0) + 1
 
-        date_keys = [iso_date(lesson_date)]
+        item = day["item"]
+        subject = normalize_text(item.get("subject")).casefold()
+        level = normalize_text(item.get("level")).casefold()
+        scope = f"{subject}|{level}"
+
+        date_keys = [iso_date(lesson_date, shift_days=DEADLINE_SHIFT_DAYS)]
         student_keys = [
-            f"id:{student_key(day.get('studentId'))}",
-            f"name:{normalize_person_key(day['item'].get('name'))}",
+            f"id:{student_key(day.get('studentId'))}|{scope}",
+            f"name:{normalize_person_key(item.get('name'))}|{scope}",
         ]
         for date_key in date_keys:
             for key in student_keys:
