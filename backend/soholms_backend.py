@@ -1135,6 +1135,7 @@ def build_error_map_payload(query: dict[str, str]) -> dict[str, Any]:
 
     maps: list[dict[str, Any]] = []
     errors: list[dict[str, Any]] = []
+    seen_hw_ids: set[int] = set()
     with ThreadPoolExecutor(max_workers=ATTEMPT_CONCURRENCY) as executor:
         futures = {executor.submit(fetch_homework_error_maps, hw_id): hw_id for hw_id in homework_ids}
         for future in as_completed(futures):
@@ -1150,10 +1151,37 @@ def build_error_map_payload(query: dict[str, str]) -> dict[str, Any]:
                         if not date_in_period(display_date, period_from, period_to):
                             continue
                         merged_row["dateKey"] = display_date
+                        merged_row["completed"] = True
                         merged_row = enrich_questions_with_marathon_plan(merged_row)
                         maps.append(merged_row)
+                        seen_hw_ids.add(int(row.get("academicHomeworkId") or 0))
             except Exception as error:
                 errors.append({"academicHomeworkId": hw_id, "error": str(error)})
+
+    today_iso = datetime.now().date().isoformat()
+    for hw_id in homework_ids:
+        if int(hw_id) in seen_hw_ids:
+            continue
+        meta = homework_metadata.get(int(hw_id))
+        if not meta:
+            continue
+        lesson_date = normalize_text(meta.get("lessonDate"))[:10]
+        if lesson_date and lesson_date > today_iso:
+            continue
+        synthetic_row: dict[str, Any] = {
+            **meta,
+            "academicHomeworkId": int(hw_id),
+            "studentName": query.get("studentName", ""),
+            "completed": False,
+            "questions": [],
+            "summary": {"wrongTotal": 0, "fixed": 0, "remaining": 0, "attempts": 0},
+        }
+        display_date = error_map_display_date(synthetic_row)
+        if not date_in_period(display_date, period_from, period_to):
+            continue
+        synthetic_row["dateKey"] = display_date
+        synthetic_row = enrich_questions_with_marathon_plan(synthetic_row)
+        maps.append(synthetic_row)
 
     maps.sort(key=lambda row: (
         int(row.get("dayNumber") or 0),
@@ -1179,19 +1207,47 @@ def build_error_map_payload(query: dict[str, str]) -> dict[str, Any]:
                 "orderIndex": row.get("orderIndex"),
                 "dateKey": row.get("dateKey") or "",
                 "marathonPlan": row.get("marathonPlan"),
+                "completed": False,
                 "maps": [],
             })
+        if row.get("completed"):
+            day_groups[day_index[day_key]]["completed"] = True
         day_groups[day_index[day_key]]["maps"].append({
             "questions": row.get("questions") or [],
             "summary": row.get("summary") or {},
             "marathonPlan": row.get("marathonPlan"),
+            "completed": bool(row.get("completed")),
         })
+
+    total_days = len(day_groups)
+    completed_days = sum(1 for d in day_groups if d.get("completed"))
+    unfinished_days = total_days - completed_days
+    total_errors = sum(
+        int((m.get("summary") or {}).get("wrongTotal") or 0)
+        for d in day_groups for m in (d.get("maps") or [])
+    )
+    total_fixed = sum(
+        int((m.get("summary") or {}).get("fixed") or 0)
+        for d in day_groups for m in (d.get("maps") or [])
+    )
+    total_remaining = sum(
+        int((m.get("summary") or {}).get("remaining") or 0)
+        for d in day_groups for m in (d.get("maps") or [])
+    )
 
     return {
         "ok": True,
         "studentName": query.get("studentName", ""),
         "period": {"from": period_from, "to": period_to},
         "homeworkCount": len(homework_ids),
+        "summary": {
+            "totalDays": total_days,
+            "completedDays": completed_days,
+            "unfinishedDays": unfinished_days,
+            "totalErrors": total_errors,
+            "fixed": total_fixed,
+            "remaining": total_remaining,
+        },
         "maps": day_groups,
         "errors": errors,
     }
