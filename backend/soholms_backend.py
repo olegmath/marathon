@@ -91,6 +91,47 @@ JOURNAL_SNAPSHOT_PATH = os.getenv(
     os.path.join(os.path.dirname(__file__), "journal_snapshot.json"),
 )
 JOURNAL_REFRESH_SECONDS = int(os.getenv("JOURNAL_REFRESH_SECONDS", str(60 * 60)))
+JOURNAL_GROUP_NAMES: frozenset[str] = frozenset({
+    # 9 класс — Информатика
+    "инф9ВТ1730БП", "инф9ПН1730Л", "инф9СР1900Л",
+    # 9 класс — Математика
+    "мат9ВТПТ1600ЛДима", "мат9ВТПТ1600ЛКатя", "мат9допоготовкаКатя",
+    "мат9ПНЧТ1600БПКатя", "мат9ПНЧТ1600Л", "мат9ПНЧТ1730БП",
+    "мат9ПНЧТ1730Л0.5", "мат9СР1900мини",
+    # 9 класс — Обществознание
+    "общ9СРСБ1730Л",
+    # 9 класс — Русский язык
+    "рус9ВТПТ1730Л", "рус9ПНЧТ1600БП", "рус9ПНЧТ1600Л0.5", "рус9СРСБ1600Л",
+    # 9 класс — Физика
+    "физ9ВТПТ1730Л", "физ9ПНЧТ1600Л0.5", "физ9СР1900лабы",
+    # 10 класс — Информатика
+    "инф10ЧТ1730Л",
+    # 10 класс — Математика
+    "мат10ВТ1600БП", "мат10СБ1600Л", "мат10СР1600Лег", "мат10СР1600Лима", "мат10СР1730Лима",
+    # 10 класс — Обществознание
+    "общ10ВТ1730БП", "общ10ПН1600Л",
+    # 10 класс — Русский язык
+    "рус10СБ1600Л",
+    # 10 класс — Физика
+    "физ10СБ1730Леша", "физ10СБ1730Лима",
+    # 11 класс — Информатика
+    "инф11ВТПТ1600БП", "инф11ВТПТ1600Л", "инф11ВТПТ1730Л",
+    "инф11ЛМиник", "инф11ПНЧТ1900Л", "инф11СРСБ2030нлайн",
+    # 11 класс — История
+    "ист11ПНЧТ1730Л",
+    # 11 класс — Математика
+    "мат11ВТПТ1600Л", "мат11ВТПТ1730БП", "мат11ВТПТ1730Л", "мат11ВТПТ1900Лег",
+    "мат11ПНЧТ1600БП", "мат11ПНЧТ1730Л", "мат11ПНЧТ1800нлайн0.5", "мат11ПНЧТ1900Лима",
+    "мат11СБ1900БАЗА", "матСБ1730Лицей", "матСР1730Лминипараметр",
+    "матСР1730миничисла", "матСР1730Лминипланик", "матСР1730стерик",
+    # 11 класс — Обществознание
+    "общ11ВТПТ1600БП", "общ11ПНЧТ1900Л",
+    # 11 класс — Русский язык
+    "рус11ВТ2030минисочин", "рус11ВТПТ1600ЛРус", "рус11ВТПТ1730Л",
+    "рус11ПНЧТ1730БП", "рус11ПНЧТ1730Л", "рус11ПНЧТ1900Л", "рус11СРСБ1800нлайн0.5",
+    # 11 класс — Физика
+    "физ11ВТПТ1900Л", "физ11СР1730Лиц", "физ11СРСБ1600Л",
+})
 PENALTY_OVERRIDES_PATH = os.getenv(
     "PENALTY_OVERRIDES_PATH",
     os.path.join(os.path.dirname(__file__), "penalty_overrides.json"),
@@ -2783,7 +2824,7 @@ def parse_journal_full(content: bytes) -> list[dict[str, Any]]:
 
 def _fetch_journal_events_fresh(period_from: str, period_to: str) -> list[dict[str, Any]]:
     """Полная загрузка журнала по всем группам (без кеша) + сохранение на диск."""
-    groups = selected_groups()
+    groups = [g for g in selected_groups() if g.name in JOURNAL_GROUP_NAMES]
     all_events: list[dict[str, Any]] = []
 
     def fetch_group(group: GroupInfo) -> list[dict[str, Any]]:
@@ -3039,7 +3080,7 @@ def _journal_group_by_student(events: list[dict[str, Any]]) -> dict[tuple[str, s
 
 
 def aggregate_student_journal(
-    events: list[dict[str, Any]], student_name: str, subject: str = ""
+    events: list[dict[str, Any]], student_name: str
 ) -> dict[str, Any] | None:
     name_key = normalize_person_key(student_name)
     if not name_key:
@@ -3048,50 +3089,53 @@ def aggregate_student_journal(
     matching_keys = [k for k in by_student if k[0].startswith(name_key)]
     if not matching_keys:
         return None
-    # If subject specified — prefer entries matching that subject
-    if subject:
-        subj_norm = subject.strip().lower()
-        subj_filtered = [k for k in matching_keys if by_student[k].get("subject", "").lower() == subj_norm]
-        if subj_filtered:
-            matching_keys = subj_filtered
-    # Among remaining, pick entry with most events (most complete journal data)
-    target_key = max(matching_keys, key=lambda k: len(by_student[k]["events"]))
 
     hw_max, kr_max = _journal_max_per_lesson(events)
-    target = by_student[target_key]
-    detail = _journal_aggregate_one(target["events"], hw_max, kr_max)
-    detail["name"] = target["name"]
-    detail["group"] = target["group"]
-    detail["subject"] = target["subject"]
-    detail["teacher"] = target["teacher"]
 
-    integrals = []
+    # Compute all integrals for ranking; key = (name_key, group)
+    group_integrals: dict[tuple[str, str], list[dict]] = {}
+    subject_integrals: dict[str, list[dict]] = {}
     for key, data in by_student.items():
         agg = _journal_aggregate_one(data["events"], hw_max, kr_max)
-        if agg["integral"] is not None:
-            integrals.append({
-                "name_key": key[0],
-                "group": data["group"],
-                "integral": agg["integral"],
-            })
+        if agg["integral"] is None:
+            continue
+        entry = {"nk": key[0], "gk": key[1], "integral": agg["integral"]}
+        grp = data.get("group", "")
+        subj = data.get("subject", "")
+        group_integrals.setdefault(grp, []).append(entry)
+        subject_integrals.setdefault(subj, []).append(entry)
 
-    same_group = sorted(
-        [x for x in integrals if x["group"] == target["group"]],
-        key=lambda x: -x["integral"],
-    )
-    school = sorted(integrals, key=lambda x: -x["integral"])
+    def _ranked(lst: list[dict]) -> list[dict]:
+        return sorted(lst, key=lambda x: -x["integral"])
 
-    def _place(lst, key):
+    def _place(lst: list[dict], nk: str, gk: str) -> int | None:
         for i, x in enumerate(lst):
-            if x["name_key"] == key:
+            if x["nk"] == nk and x["gk"] == gk:
                 return i + 1
         return None
 
-    detail["ranks"] = {
-        "in_group": {"place": _place(same_group, target_key[0]), "of": len(same_group)},
-        "in_school": {"place": _place(school, target_key[0]), "of": len(school)},
-    }
-    return detail
+    subjects_out = []
+    actual_name = None
+    for target_key in sorted(matching_keys, key=lambda k: by_student[k].get("subject", "")):
+        target = by_student[target_key]
+        actual_name = actual_name or target["name"]
+        agg = _journal_aggregate_one(target["events"], hw_max, kr_max)
+        nk, gk = target_key
+        grp = target.get("group", "")
+        subj = target.get("subject", "")
+        in_group = _ranked(group_integrals.get(grp, []))
+        in_subj = _ranked(subject_integrals.get(subj, []))
+        agg["subject"] = subj
+        agg["group"] = grp
+        agg["teacher"] = target.get("teacher", "")
+        agg["level"] = target.get("level", "")
+        agg["ranks"] = {
+            "in_group": {"place": _place(in_group, nk, gk), "of": len(in_group)},
+            "in_school": {"place": _place(in_subj, nk, gk), "of": len(in_subj)},
+        }
+        subjects_out.append(agg)
+
+    return {"name": actual_name, "subjects": subjects_out}
 
 
 def aggregate_school_journal(events: list[dict[str, Any]], mode: str) -> dict[str, Any]:
@@ -4724,9 +4768,8 @@ class Handler(BaseHTTPRequestHandler):
                     raise BackendError("name is required", HTTPStatus.BAD_REQUEST)
                 period_from = query.get("from") or "2025-09-01"
                 period_to = query.get("to") or "2026-05-31"
-                subject_filter = normalize_text(query.get("subject", "")).lower()
                 events = fetch_journal_events(period_from, period_to)
-                result = aggregate_student_journal(events, student_name, subject_filter)
+                result = aggregate_student_journal(events, student_name)
                 if result is None:
                     return self.send_json({"ok": False, "error": "student not found"}, HTTPStatus.NOT_FOUND)
                 return self.send_json({
