@@ -2546,6 +2546,447 @@ def aggregate_all_students(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(result, key=lambda x: (x.get("group", ""), x.get("name", "")))
 
 
+# === Электронный журнал: полный парсер + per-student / school агрегаты ===
+
+
+def parse_journal_full(content: bytes) -> list[dict[str, Any]]:
+    """Полный парсер электронного журнала Soholms.
+
+    Возвращает список событий (заголовков с ID ученика). К каждому событию
+    приклеены под-строки заданий (sub_rows). Фильтрация: только дисциплина
+    «Основной курс по ...».
+    """
+    workbook = load_workbook(io.BytesIO(content), data_only=True, read_only=True)
+    worksheet = workbook.active
+    headers = [cell.value for cell in next(worksheet.iter_rows(min_row=3, max_row=3))]
+    cols = {
+        "id":         header_index(headers, "ID ученика", default=0),
+        "name":       header_index(headers, "Ученик", default=1),
+        "group":      header_index(headers, "Учебная группа", default=2),
+        "discipline": header_index(headers, "Дисциплина", default=3),
+        "lesson":     header_index(headers, "Урок", default=4),
+        "date_l":     header_index(headers, "Дата урока", default=5),
+        "date_a":     header_index(headers, "Дата доступности урока", default=6),
+        "status":     header_index(headers, "Статус", default=7),
+        "g_lesson":   header_index(headers, "Оценка за урок", default=8),
+        "g_dz":       header_index(headers, "Оценка за ДЗ", default=9),
+        "g_sr":       header_index(headers, "Оценка за СР", default=10),
+        "g_kr":       header_index(headers, "Оценка за КР", default=11),
+        "task_kind":  header_index(headers, "Вид задания", default=15),
+        "task_class": header_index(headers, "Тип задания", default=16),
+        "sub_status": header_index(headers, "Статус сдачи", default=17),
+    }
+    events: list[dict[str, Any]] = []
+    current: dict[str, Any] | None = None
+    for row in worksheet.iter_rows(min_row=4, values_only=True):
+        sid = row_value(row, cols["id"])
+        if sid:
+            discipline = normalize_text(row_value(row, cols["discipline"]))
+            if discipline and not discipline.casefold().startswith("основной курс"):
+                current = None
+                continue
+            lesson = normalize_text(row_value(row, cols["lesson"]))
+            ev_type = lesson.split()[0] if lesson else ""
+            date_raw = row_value(row, cols["date_l"]) or row_value(row, cols["date_a"])
+            current = {
+                "student": normalize_text(row_value(row, cols["name"])),
+                "group":   normalize_text(row_value(row, cols["group"])),
+                "discipline": discipline,
+                "lesson":  lesson,
+                "type":    ev_type,
+                "date":    iso_date(date_raw) if date_raw else "",
+                "status":  normalize_text(row_value(row, cols["status"])),
+                "g_lesson": score_value(row_value(row, cols["g_lesson"])),
+                "g_dz":    score_value(row_value(row, cols["g_dz"])),
+                "g_sr":    score_value(row_value(row, cols["g_sr"])),
+                "g_kr":    score_value(row_value(row, cols["g_kr"])),
+                "sub_rows": [],
+            }
+            events.append(current)
+        else:
+            if current is None:
+                continue
+            current["sub_rows"].append({
+                "task_kind":  normalize_text(row_value(row, cols["task_kind"])),
+                "task_class": normalize_text(row_value(row, cols["task_class"])),
+                "status":     normalize_text(row_value(row, cols["sub_status"])),
+            })
+    return events
+
+
+def fetch_journal_events(period_from: str, period_to: str) -> list[dict[str, Any]]:
+    """Параллельная загрузка журнала по всем группам. Кеш 1 час."""
+    cache_key = f"journal_events:{period_from}:{period_to}"
+
+    def load() -> list[dict[str, Any]]:
+        groups = selected_groups()
+        all_events: list[dict[str, Any]] = []
+
+        def fetch_group(group: GroupInfo) -> list[dict[str, Any]]:
+            content = fetch_attendance_xlsx(group.id, period_from, period_to)
+            evs = parse_journal_full(content)
+            level = infer_level(group.name) or ""
+            for e in evs:
+                e["_subject"] = group.subject
+                e["_teacher"] = group.teacher
+                e["_level"] = level
+                e["_group_id"] = group.id
+            return evs
+
+        with ThreadPoolExecutor(max_workers=max(1, DEFAULT_CONCURRENCY)) as executor:
+            futures = {executor.submit(fetch_group, group): group for group in groups}
+            for future in as_completed(futures):
+                try:
+                    all_events.extend(future.result())
+                except Exception:
+                    pass
+        return all_events
+
+    return cached(cache_key, 3600, load)
+
+
+def _journal_max_per_lesson(events: list[dict[str, Any]]) -> tuple[dict, dict]:
+    hw_max: dict[tuple[str, str], float] = {}
+    kr_max: dict[tuple[str, str], float] = {}
+    for e in events:
+        key = (e.get("group", ""), e.get("lesson", ""))
+        if e.get("type") == "Домашка" and isinstance(e.get("g_dz"), (int, float)):
+            v = float(e["g_dz"])
+            if v > hw_max.get(key, 0):
+                hw_max[key] = v
+        if e.get("type") == "Занятие" and isinstance(e.get("g_kr"), (int, float)):
+            v = float(e["g_kr"])
+            if v > kr_max.get(key, 0):
+                kr_max[key] = v
+    return hw_max, kr_max
+
+
+def _journal_extract_no(lesson: str, prefix: str) -> int | None:
+    if not lesson:
+        return None
+    match = re.search(rf"{prefix}\s*№?\s*(\d+)", lesson)
+    return int(match.group(1)) if match else None
+
+
+def _journal_aggregate_one(
+    student_events: list[dict[str, Any]],
+    hw_max: dict[tuple[str, str], float],
+    kr_max: dict[tuple[str, str], float],
+) -> dict[str, Any]:
+    """Считает посещаемость / ДЗ / КР / интеграл / флаги для одного ученика."""
+    # Attendance — события типа "Математика"
+    att_events = [e for e in student_events if e["type"] == "Математика"]
+    att_sorted = sorted(
+        [e for e in att_events if e["status"] in ("Был", "Не был", "Болел")],
+        key=lambda x: x.get("date") or "",
+    )
+    counts = {"Был": 0, "Не был": 0, "Болел": 0}
+    for e in att_sorted:
+        counts[e["status"]] += 1
+    total = sum(counts.values())
+    att_pct = round(counts["Был"] / total * 100, 1) if total else None
+    max_streak = 0
+    streak = 0
+    for e in att_sorted:
+        if e["status"] == "Не был":
+            streak += 1
+            if streak > max_streak:
+                max_streak = streak
+        else:
+            streak = 0
+
+    by_month: dict[str, dict[str, int]] = {}
+    for e in att_sorted:
+        mk = (e.get("date") or "")[:7]
+        if not mk:
+            continue
+        m = by_month.setdefault(mk, {"was": 0, "absent": 0, "sick": 0})
+        if e["status"] == "Был":
+            m["was"] += 1
+        elif e["status"] == "Не был":
+            m["absent"] += 1
+        elif e["status"] == "Болел":
+            m["sick"] += 1
+    months_list = []
+    for mk in sorted(by_month):
+        m = by_month[mk]
+        tot = m["was"] + m["absent"] + m["sick"]
+        months_list.append({
+            "month": _month_label(mk),
+            "monthKey": mk,
+            "was": m["was"],
+            "absent": m["absent"],
+            "sick": m["sick"],
+            "total": tot,
+            "pct": round(m["was"] / tot * 100, 1) if tot else 0,
+        })
+
+    # Homework — нормализуем по max в (group, lesson)
+    hw_events = [e for e in student_events if e["type"] == "Домашка"]
+    hw_norm: list[float] = []
+    hw_trend: list[dict[str, Any]] = []
+    sub_status_count: dict[str, int] = {}
+    for e in hw_events:
+        if isinstance(e.get("g_dz"), (int, float)):
+            mx = hw_max.get((e["group"], e["lesson"]))
+            if mx and mx > 0:
+                pct = float(e["g_dz"]) / mx * 100
+                hw_norm.append(pct)
+                hw_trend.append({
+                    "no": _journal_extract_no(e["lesson"], "Домашка"),
+                    "lesson": e["lesson"],
+                    "grade": round(pct, 1),
+                    "raw": float(e["g_dz"]),
+                    "max": mx,
+                    "date": e.get("date") or "",
+                })
+        for sr in e["sub_rows"]:
+            st = sr.get("status") or ""
+            if st:
+                sub_status_count[st] = sub_status_count.get(st, 0) + 1
+    hw_total_subs = sum(sub_status_count.values())
+    hw_done_pct = (
+        round(sub_status_count.get("Принято", 0) / hw_total_subs * 100, 1)
+        if hw_total_subs else None
+    )
+    hw_not_opened_pct = (
+        round(sub_status_count.get("Не открывали", 0) / hw_total_subs * 100, 1)
+        if hw_total_subs else 0
+    )
+    hw_avg = round(sum(hw_norm) / len(hw_norm), 1) if hw_norm else None
+    hw_trend.sort(key=lambda x: (x["no"] is None, x["no"] or 0, x["date"] or ""))
+
+    # КР: g_kr на строках "Занятие"
+    kr_records: list[dict[str, Any]] = []
+    for e in student_events:
+        if e["type"] == "Занятие" and isinstance(e.get("g_kr"), (int, float)):
+            mx = kr_max.get((e["group"], e["lesson"]))
+            if mx and mx > 0:
+                pct = float(e["g_kr"]) / mx * 100
+                kr_records.append({
+                    "lesson": e["lesson"],
+                    "grade": round(pct, 1),
+                    "raw": float(e["g_kr"]),
+                    "max": mx,
+                    "date": e.get("date") or "",
+                })
+    kr_records.sort(key=lambda x: x["date"] or "")
+    kr_avg = (
+        round(sum(k["grade"] for k in kr_records) / len(kr_records), 1)
+        if kr_records else None
+    )
+
+    # Флаги
+    flags: list[str] = []
+    if max_streak >= 3:
+        flags.append(f"Пропусков подряд: {max_streak}")
+    if hw_total_subs and hw_not_opened_pct >= 30:
+        flags.append(f"Не открыто {round(hw_not_opened_pct)}% заданий ДЗ")
+    if hw_avg is not None and hw_avg < 60:
+        flags.append(f"Средний ДЗ {round(hw_avg)}% (низкий)")
+    if kr_avg is not None and kr_avg < 60:
+        flags.append(f"Средний КР {round(kr_avg)}% (низкий)")
+    if att_pct is not None and att_pct < 70:
+        flags.append(f"Посещаемость {round(att_pct)}% (низкая)")
+
+    components = [v for v in (att_pct, hw_avg, kr_avg) if v is not None]
+    integral = round(sum(components) / len(components), 1) if components else None
+
+    return {
+        "attendance": {
+            "pct": att_pct,
+            "was": counts["Был"],
+            "absent": counts["Не был"],
+            "sick": counts["Болел"],
+            "total": total,
+            "max_streak": max_streak,
+            "by_month": months_list,
+        },
+        "homework": {
+            "avg": hw_avg,
+            "count": len(hw_norm),
+            "done_pct": hw_done_pct,
+            "not_opened_pct": hw_not_opened_pct,
+            "sub_status": sub_status_count,
+            "trend": hw_trend,
+        },
+        "kr": {
+            "avg": kr_avg,
+            "count": len(kr_records),
+            "list": kr_records,
+        },
+        "integral": integral,
+        "flags": flags,
+    }
+
+
+def _journal_group_by_student(events: list[dict[str, Any]]) -> dict[tuple[str, str], dict[str, Any]]:
+    """Сгруппировать события по (norm_name, group) — один ученик в группе."""
+    by_student: dict[tuple[str, str], dict[str, Any]] = {}
+    for e in events:
+        sn = e.get("student") or ""
+        if not sn:
+            continue
+        key = (normalize_person_key(sn), e.get("group", ""))
+        if key not in by_student:
+            by_student[key] = {
+                "name": sn,
+                "group": e.get("group", ""),
+                "subject": e.get("_subject", ""),
+                "teacher": e.get("_teacher", ""),
+                "level": e.get("_level", ""),
+                "events": [],
+            }
+        by_student[key]["events"].append(e)
+    return by_student
+
+
+def aggregate_student_journal(
+    events: list[dict[str, Any]], student_name: str
+) -> dict[str, Any] | None:
+    name_key = normalize_person_key(student_name)
+    if not name_key:
+        return None
+    by_student = _journal_group_by_student(events)
+    target_key = next(
+        (k for k in by_student if k[0].startswith(name_key)),
+        None,
+    )
+    if target_key is None:
+        return None
+
+    hw_max, kr_max = _journal_max_per_lesson(events)
+    target = by_student[target_key]
+    detail = _journal_aggregate_one(target["events"], hw_max, kr_max)
+    detail["name"] = target["name"]
+    detail["group"] = target["group"]
+    detail["subject"] = target["subject"]
+    detail["teacher"] = target["teacher"]
+
+    integrals = []
+    for key, data in by_student.items():
+        agg = _journal_aggregate_one(data["events"], hw_max, kr_max)
+        if agg["integral"] is not None:
+            integrals.append({
+                "name_key": key[0],
+                "group": data["group"],
+                "integral": agg["integral"],
+            })
+
+    same_group = sorted(
+        [x for x in integrals if x["group"] == target["group"]],
+        key=lambda x: -x["integral"],
+    )
+    school = sorted(integrals, key=lambda x: -x["integral"])
+
+    def _place(lst, key):
+        for i, x in enumerate(lst):
+            if x["name_key"] == key:
+                return i + 1
+        return None
+
+    detail["ranks"] = {
+        "in_group": {"place": _place(same_group, target_key[0]), "of": len(same_group)},
+        "in_school": {"place": _place(school, target_key[0]), "of": len(school)},
+    }
+    return detail
+
+
+def aggregate_school_journal(events: list[dict[str, Any]], mode: str) -> dict[str, Any]:
+    hw_max, kr_max = _journal_max_per_lesson(events)
+    by_student = _journal_group_by_student(events)
+
+    students_agg: list[dict[str, Any]] = []
+    for data in by_student.values():
+        agg = _journal_aggregate_one(data["events"], hw_max, kr_max)
+        students_agg.append({
+            "name": data["name"],
+            "group": data["group"],
+            "subject": data["subject"],
+            "teacher": data["teacher"],
+            "level": data["level"],
+            "attendancePct": agg["attendance"]["pct"],
+            "hwAvg": agg["homework"]["avg"],
+            "hwCount": agg["homework"]["count"],
+            "krAvg": agg["kr"]["avg"],
+            "krCount": agg["kr"]["count"],
+            "integral": agg["integral"],
+            "flags": agg["flags"],
+            "absent": agg["attendance"]["absent"] + agg["attendance"]["sick"],
+            "maxStreak": agg["attendance"]["max_streak"],
+            "lessonsTotal": agg["attendance"]["total"],
+        })
+
+    if mode == "students":
+        students_agg.sort(key=lambda x: (x["group"] or "", x["name"] or ""))
+        return {"students": students_agg}
+
+    groups_map: dict[str, dict[str, Any]] = {}
+    for s in students_agg:
+        g = s["group"]
+        gm = groups_map.setdefault(g, {
+            "group": g, "subject": s["subject"], "teacher": s["teacher"], "level": s["level"],
+            "students_count": 0, "att": [], "hw": [], "kr": [], "integral": [], "flags_count": 0,
+        })
+        gm["students_count"] += 1
+        if s["attendancePct"] is not None: gm["att"].append(s["attendancePct"])
+        if s["hwAvg"] is not None: gm["hw"].append(s["hwAvg"])
+        if s["krAvg"] is not None: gm["kr"].append(s["krAvg"])
+        if s["integral"] is not None: gm["integral"].append(s["integral"])
+        gm["flags_count"] += len(s["flags"])
+
+    def _avg(lst):
+        return round(sum(lst) / len(lst), 1) if lst else None
+
+    groups_list = [{
+        "group": gm["group"],
+        "subject": gm["subject"],
+        "teacher": gm["teacher"],
+        "level": gm["level"],
+        "studentsCount": gm["students_count"],
+        "attendancePct": _avg(gm["att"]),
+        "hwAvg": _avg(gm["hw"]),
+        "krAvg": _avg(gm["kr"]),
+        "integral": _avg(gm["integral"]),
+        "flagsCount": gm["flags_count"],
+    } for gm in groups_map.values()]
+    groups_list.sort(key=lambda x: -(x["integral"] if x["integral"] is not None else -1))
+
+    if mode == "groups":
+        return {"groups": groups_list}
+
+    # mode == "school"
+    all_att = [s["attendancePct"] for s in students_agg if s["attendancePct"] is not None]
+    all_hw = [s["hwAvg"] for s in students_agg if s["hwAvg"] is not None]
+    all_kr = [s["krAvg"] for s in students_agg if s["krAvg"] is not None]
+    all_int = [s["integral"] for s in students_agg if s["integral"] is not None]
+    students_sorted = sorted(
+        [s for s in students_agg if s["integral"] is not None],
+        key=lambda x: -x["integral"],
+    )
+    return {
+        "studentsCount": len(students_agg),
+        "groupsCount": len(groups_map),
+        "attendancePct": _avg(all_att),
+        "hwAvg": _avg(all_hw),
+        "krAvg": _avg(all_kr),
+        "integral": _avg(all_int),
+        "flagsCount": sum(len(s["flags"]) for s in students_agg),
+        "top3Groups": groups_list[:3],
+        "top3Students": [
+            {"name": s["name"], "group": s["group"], "integral": s["integral"]}
+            for s in students_sorted[:3]
+        ],
+        "bottom3Students": [
+            {"name": s["name"], "group": s["group"], "integral": s["integral"]}
+            for s in students_sorted[-3:][::-1]
+        ] if len(students_sorted) >= 3 else [],
+    }
+
+
+# === конец блока электронного журнала ===
+
+
 def add_places(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     by_group: dict[tuple[str, str, str], list[dict[str, Any]]] = defaultdict(list)
     by_school: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
@@ -3993,6 +4434,39 @@ class Handler(BaseHTTPRequestHandler):
                     "ok": True,
                     "rows": result,
                     "period": {"from": period_from, "to": period_to},
+                }, cache_seconds=300)
+
+            if parsed.path == "/api/student-journal":
+                student_name = normalize_text(query.get("name", ""))
+                if not student_name:
+                    raise BackendError("name is required", HTTPStatus.BAD_REQUEST)
+                period_from = query.get("from") or "2025-09-01"
+                period_to = query.get("to") or "2026-05-31"
+                events = fetch_journal_events(period_from, period_to)
+                result = aggregate_student_journal(events, student_name)
+                if result is None:
+                    return self.send_json({"ok": False, "error": "student not found"}, HTTPStatus.NOT_FOUND)
+                return self.send_json({
+                    "ok": True,
+                    "student": student_name,
+                    "period": {"from": period_from, "to": period_to},
+                    **result,
+                }, cache_seconds=300)
+
+            if parsed.path == "/api/journal-summary":
+                self.require_admin(query)
+                period_from = query.get("periodFrom") or query.get("from") or "2025-09-01"
+                period_to = query.get("periodTo") or query.get("to") or "2026-05-31"
+                mode = (query.get("mode") or "students").strip().lower()
+                if mode not in ("school", "groups", "students"):
+                    raise BackendError("mode must be school|groups|students", HTTPStatus.BAD_REQUEST)
+                events = fetch_journal_events(period_from, period_to)
+                result = aggregate_school_journal(events, mode)
+                return self.send_json({
+                    "ok": True,
+                    "mode": mode,
+                    "period": {"from": period_from, "to": period_to},
+                    **result,
                 }, cache_seconds=300)
 
             self.send_json({"ok": False, "error": "Not found"}, HTTPStatus.NOT_FOUND)
