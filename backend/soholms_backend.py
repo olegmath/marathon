@@ -93,6 +93,10 @@ PENALTY_OVERRIDES_PATH = os.getenv(
 DEFAULT_TELEGRAM_CHAT_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "telegram_chats.json")
 TELEGRAM_API_BASE = os.getenv("TELEGRAM_API_BASE", "https://api.telegram.org").rstrip("/")
 MARATHON_PLAN_CSV_PATH = os.getenv("MARATHON_PLAN_CSV_PATH", "").strip()
+QUESTION_TOPICS_XLSX_PATH = os.getenv(
+    "QUESTION_TOPICS_XLSX_PATH",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "question_topics.xlsx"),
+).strip()
 
 GROUP_TREE_PATH = "/api/v1/learning_group/get_tree"
 ATTENDANCE_PATH = "/master/api/learning/attendance-sheet/excel/data"
@@ -773,20 +777,115 @@ def find_marathon_plan_item(row: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
+QUESTION_TOPICS_CACHE: dict[str, Any] = {"path": None, "mtime": None, "items": {}}
+
+QUESTION_TOPICS_SUBJECT_MAP = (
+    ("матем", "математика"),
+    ("мат база", "математика"),
+    ("мат огэ", "математика"),
+    ("мат егэ", "математика"),
+    ("мат ", "математика"),
+    ("ря ", "русский язык"),
+    ("рус", "русский язык"),
+    ("общ", "обществознание"),
+    ("ист", "история"),
+    ("инф", "информатика"),
+    ("физ", "физика"),
+)
+
+
+def parse_topic_section_header(header: str) -> tuple[str, str]:
+    text = header.strip().lower()
+    if not text:
+        return "", ""
+    subject = ""
+    for prefix, sub in QUESTION_TOPICS_SUBJECT_MAP:
+        if text.startswith(prefix):
+            subject = sub
+            break
+    if not subject:
+        return "", ""
+    if "огэ" in text:
+        level = "ОГЭ"
+    elif "егэ" in text or "база" in text:
+        level = "ЕГЭ"
+    else:
+        return subject, ""
+    return subject, level
+
+
+def load_question_topics() -> dict[tuple[str, str, int], str]:
+    path = QUESTION_TOPICS_XLSX_PATH
+    if not path or not os.path.exists(path):
+        return {}
+    try:
+        mtime = os.path.getmtime(path)
+        if QUESTION_TOPICS_CACHE["path"] == path and QUESTION_TOPICS_CACHE["mtime"] == mtime:
+            return QUESTION_TOPICS_CACHE["items"]
+        wb = load_workbook(path, data_only=True, read_only=True)
+        topics: dict[tuple[str, str, int], str] = {}
+        for sheet in wb.sheetnames:
+            ws = wb[sheet]
+            current_subject = ""
+            current_level = ""
+            for row in ws.iter_rows(values_only=True):
+                if not row:
+                    continue
+                first = row[0]
+                second = row[1] if len(row) > 1 else None
+                if isinstance(first, str) and first.strip():
+                    current_subject, current_level = parse_topic_section_header(first)
+                    continue
+                if first is None:
+                    continue
+                try:
+                    number = int(float(first))
+                except (TypeError, ValueError):
+                    continue
+                topic = normalize_text(second)
+                if not topic or not current_subject or not current_level:
+                    continue
+                key = (current_subject, current_level, number)
+                if key not in topics:
+                    topics[key] = topic
+        QUESTION_TOPICS_CACHE.update({"path": path, "mtime": mtime, "items": topics})
+        return topics
+    except Exception as error:
+        sys.stderr.write(f"Failed to load question topics XLSX {path}: {error}\n")
+    QUESTION_TOPICS_CACHE.update({"path": None, "mtime": None, "items": {}})
+    return {}
+
+
+def lookup_question_topic(subject: str, level: str, exam_number: Any) -> str:
+    if not subject or not level or exam_number in (None, ""):
+        return ""
+    try:
+        number = int(float(str(exam_number).strip()))
+    except (TypeError, ValueError):
+        return ""
+    return load_question_topics().get((subject, level, number), "")
+
+
 def enrich_questions_with_marathon_plan(row: dict[str, Any]) -> dict[str, Any]:
     plan = find_marathon_plan_item(row)
+    subject = normalize_text(row.get("subject"))
+    level = normalize_text(row.get("level"))
     if not plan:
-        return row
+        questions = []
+        for question in row.get("questions") or []:
+            questions.append({**question, "plannedTask": question.get("plannedTask")})
+        return {**row, "questions": questions}
     planned_tasks = plan.get("plannedTasks") or []
     enriched_questions = []
     for question in row.get("questions") or []:
         question_number = int(question.get("number") or 0)
         planned_task = planned_tasks[question_number - 1] if 0 < question_number <= len(planned_tasks) else None
         if planned_task:
+            exam_topic = lookup_question_topic(subject, level, planned_task.get("label"))
             planned_task = {
                 **planned_task,
                 "section": plan.get("section") or "",
-                "topic": plan.get("topic") or "",
+                "topic": exam_topic or plan.get("topic") or "",
             }
         enriched_questions.append({**question, "plannedTask": planned_task})
     return {
