@@ -2904,12 +2904,11 @@ def aggregate_student_journal(
     if not name_key:
         return None
     by_student = _journal_group_by_student(events)
-    target_key = next(
-        (k for k in by_student if k[0].startswith(name_key)),
-        None,
-    )
-    if target_key is None:
+    matching_keys = [k for k in by_student if k[0].startswith(name_key)]
+    if not matching_keys:
         return None
+    # Prefer entry with most events (most complete journal data)
+    target_key = max(matching_keys, key=lambda k: len(by_student[k]["events"]))
 
     hw_max, kr_max = _journal_max_per_lesson(events)
     target = by_student[target_key]
