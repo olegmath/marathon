@@ -1232,6 +1232,8 @@ def build_error_map_payload(query: dict[str, str]) -> dict[str, Any]:
             if item.get("academicHomeworkId")
         }
 
+    unfinished_progress_statuses = {"InProgress", "NotStarted", "Started", "Draft", ""}
+
     maps: list[dict[str, Any]] = []
     errors: list[dict[str, Any]] = []
     seen_hw_ids: set[int] = set()
@@ -1249,8 +1251,10 @@ def build_error_map_payload(query: dict[str, str]) -> dict[str, Any]:
                         display_date = error_map_display_date(merged_row)
                         if not date_in_period(display_date, period_from, period_to):
                             continue
+                        progress_status = normalize_text(merged_row.get("progressStatus"))
+                        is_completed = progress_status not in unfinished_progress_statuses
                         merged_row["dateKey"] = display_date
-                        merged_row["completed"] = True
+                        merged_row["completed"] = is_completed
                         merged_row = enrich_questions_with_marathon_plan(merged_row)
                         maps.append(merged_row)
                         seen_hw_ids.add(int(row.get("academicHomeworkId") or 0))
