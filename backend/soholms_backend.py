@@ -86,6 +86,11 @@ ADMIN_RATINGS_SNAPSHOT_PATH = os.getenv(
     os.path.join(os.path.dirname(__file__), "admin_ratings_snapshot.json"),
 )
 ADMIN_RATINGS_REFRESH_SECONDS = int(os.getenv("ADMIN_RATINGS_REFRESH_SECONDS", str(60 * 60)))
+JOURNAL_SNAPSHOT_PATH = os.getenv(
+    "JOURNAL_SNAPSHOT_PATH",
+    os.path.join(os.path.dirname(__file__), "journal_snapshot.json"),
+)
+JOURNAL_REFRESH_SECONDS = int(os.getenv("JOURNAL_REFRESH_SECONDS", str(60 * 60)))
 PENALTY_OVERRIDES_PATH = os.getenv(
     "PENALTY_OVERRIDES_PATH",
     os.path.join(os.path.dirname(__file__), "penalty_overrides.json"),
@@ -255,6 +260,9 @@ _ADMIN_RATINGS_SNAPSHOT_LOCK = threading.Lock()
 _ADMIN_RATINGS_REFRESH_LOCK = threading.Lock()
 _ADMIN_RATINGS_REFRESHING_LOCK = threading.Lock()
 _ADMIN_RATINGS_REFRESHING_KEYS: set[str] = set()
+_JOURNAL_SNAPSHOT_LOCK = threading.Lock()
+_JOURNAL_REFRESHING_LOCK = threading.Lock()
+_JOURNAL_REFRESHING: bool = False
 
 
 class BackendError(Exception):
@@ -2773,35 +2781,65 @@ def parse_journal_full(content: bytes) -> list[dict[str, Any]]:
     return events
 
 
+def _fetch_journal_events_fresh(period_from: str, period_to: str) -> list[dict[str, Any]]:
+    """Полная загрузка журнала по всем группам (без кеша) + сохранение на диск."""
+    groups = selected_groups()
+    all_events: list[dict[str, Any]] = []
+
+    def fetch_group(group: GroupInfo) -> list[dict[str, Any]]:
+        content = fetch_attendance_xlsx(group.id, period_from, period_to)
+        evs = parse_journal_full(content)
+        level = infer_level(group.name) or ""
+        for e in evs:
+            e["_subject"] = group.subject
+            e["_teacher"] = group.teacher
+            e["_level"] = level
+            e["_group_id"] = group.id
+        return evs
+
+    with ThreadPoolExecutor(max_workers=max(1, DEFAULT_CONCURRENCY)) as executor:
+        futures = {executor.submit(fetch_group, group): group for group in groups}
+        for future in as_completed(futures):
+            try:
+                all_events.extend(future.result())
+            except Exception:
+                pass
+
+    try:
+        write_journal_snapshot_file({
+            "version": 1,
+            "periodFrom": period_from,
+            "periodTo": period_to,
+            "savedAt": utc_timestamp(),
+            "savedAtEpoch": time.time(),
+            "events": all_events,
+        })
+    except Exception as err:
+        sys.stderr.write(f"Failed to write journal snapshot: {err}\n")
+
+    return all_events
+
+
 def fetch_journal_events(period_from: str, period_to: str) -> list[dict[str, Any]]:
-    """Параллельная загрузка журнала по всем группам. Кеш 1 час."""
+    """Загрузка журнала: in-memory → диск → сеть."""
     cache_key = f"journal_events:{period_from}:{period_to}"
 
     def load() -> list[dict[str, Any]]:
-        groups = selected_groups()
-        all_events: list[dict[str, Any]] = []
+        snap = read_journal_snapshot_file()
+        if (
+            snap
+            and snap.get("periodFrom") == period_from
+            and snap.get("periodTo") == period_to
+            and isinstance(snap.get("events"), list)
+        ):
+            saved_at_epoch = float(snap.get("savedAtEpoch") or 0)
+            age = time.time() - saved_at_epoch if saved_at_epoch else float("inf")
+            if age >= JOURNAL_REFRESH_SECONDS:
+                start_journal_snapshot_refresh(period_from, period_to)
+            return snap["events"]
+        return _fetch_journal_events_fresh(period_from, period_to)
 
-        def fetch_group(group: GroupInfo) -> list[dict[str, Any]]:
-            content = fetch_attendance_xlsx(group.id, period_from, period_to)
-            evs = parse_journal_full(content)
-            level = infer_level(group.name) or ""
-            for e in evs:
-                e["_subject"] = group.subject
-                e["_teacher"] = group.teacher
-                e["_level"] = level
-                e["_group_id"] = group.id
-            return evs
-
-        with ThreadPoolExecutor(max_workers=max(1, DEFAULT_CONCURRENCY)) as executor:
-            futures = {executor.submit(fetch_group, group): group for group in groups}
-            for future in as_completed(futures):
-                try:
-                    all_events.extend(future.result())
-                except Exception:
-                    pass
-        return all_events
-
-    return cached(cache_key, 3600, load)
+    return cached(cache_key, JOURNAL_REFRESH_SECONDS, load)
 
 
 def _journal_max_per_lesson(events: list[dict[str, Any]]) -> tuple[dict, dict]:
@@ -3549,6 +3587,29 @@ def write_admin_ratings_snapshot_file(snapshot: dict[str, Any]) -> None:
         os.replace(temp_path, ADMIN_RATINGS_SNAPSHOT_PATH)
 
 
+def read_journal_snapshot_file() -> dict[str, Any] | None:
+    if not os.path.exists(JOURNAL_SNAPSHOT_PATH):
+        return None
+    with _JOURNAL_SNAPSHOT_LOCK:
+        try:
+            with open(JOURNAL_SNAPSHOT_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            return None
+    return data if isinstance(data, dict) else None
+
+
+def write_journal_snapshot_file(data: dict[str, Any]) -> None:
+    directory = os.path.dirname(JOURNAL_SNAPSHOT_PATH)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    temp_path = f"{JOURNAL_SNAPSHOT_PATH}.tmp"
+    with _JOURNAL_SNAPSHOT_LOCK:
+        with open(temp_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
+        os.replace(temp_path, JOURNAL_SNAPSHOT_PATH)
+
+
 def add_admin_snapshot_meta(payload: dict[str, Any], snapshot: dict[str, Any]) -> dict[str, Any]:
     saved_at_epoch = float(snapshot.get("savedAtEpoch") or 0)
     return {
@@ -3697,6 +3758,63 @@ def start_admin_ratings_snapshot_scheduler() -> None:
         return
     thread = threading.Thread(target=admin_ratings_snapshot_scheduler, daemon=True)
     thread.start()
+
+
+def start_journal_snapshot_refresh(
+    period_from: str = "2025-09-01", period_to: str = "2026-05-31"
+) -> bool:
+    global _JOURNAL_REFRESHING
+    with _JOURNAL_REFRESHING_LOCK:
+        if _JOURNAL_REFRESHING:
+            return False
+        _JOURNAL_REFRESHING = True
+
+    def _refresh() -> None:
+        global _JOURNAL_REFRESHING
+        try:
+            events = _fetch_journal_events_fresh(period_from, period_to)
+            cache_key = f"journal_events:{period_from}:{period_to}"
+            _CACHE[cache_key] = (time.time(), events)
+            sys.stderr.write(f"Journal snapshot refreshed: {len(events)} events\n")
+        except Exception as err:
+            sys.stderr.write(f"Journal snapshot refresh failed: {err}\n")
+        finally:
+            with _JOURNAL_REFRESHING_LOCK:
+                _JOURNAL_REFRESHING = False
+
+    threading.Thread(target=_refresh, daemon=True).start()
+    return True
+
+
+def journal_snapshot_scheduler() -> None:
+    while True:
+        try:
+            snap = read_journal_snapshot_file()
+            saved_at_epoch = float(snap.get("savedAtEpoch") or 0) if snap else 0
+            age = time.time() - saved_at_epoch if saved_at_epoch else float("inf")
+            if age >= JOURNAL_REFRESH_SECONDS:
+                start_journal_snapshot_refresh()
+        except Exception as err:
+            sys.stderr.write(f"Journal snapshot scheduler error: {err}\n")
+        time.sleep(max(60, min(JOURNAL_REFRESH_SECONDS, 60 * 60)))
+
+
+def start_journal_snapshot_scheduler() -> None:
+    if JOURNAL_REFRESH_SECONDS <= 0:
+        return
+    snap = read_journal_snapshot_file()
+    if snap and isinstance(snap.get("events"), list):
+        pf = snap.get("periodFrom", "2025-09-01")
+        pt = snap.get("periodTo", "2026-05-31")
+        cache_key = f"journal_events:{pf}:{pt}"
+        _CACHE[cache_key] = (float(snap.get("savedAtEpoch") or time.time()), snap["events"])
+        sys.stderr.write(f"Journal snapshot loaded from disk: {len(snap['events'])} events\n")
+        saved_at_epoch = float(snap.get("savedAtEpoch") or 0)
+        if time.time() - saved_at_epoch >= JOURNAL_REFRESH_SECONDS:
+            start_journal_snapshot_refresh(pf, pt)
+    else:
+        start_journal_snapshot_refresh()
+    threading.Thread(target=journal_snapshot_scheduler, daemon=True).start()
 
 
 def format_report_number(value: Any, digits: int = 2) -> str:
@@ -4618,6 +4736,21 @@ class Handler(BaseHTTPRequestHandler):
                     **result,
                 }, cache_seconds=300)
 
+            if parsed.path == "/api/journal/refresh":
+                self.require_admin(query)
+                period_from = query.get("periodFrom") or query.get("from") or "2025-09-01"
+                period_to = query.get("periodTo") or query.get("to") or "2026-05-31"
+                started = start_journal_snapshot_refresh(period_from, period_to)
+                snap = read_journal_snapshot_file()
+                return self.send_json({
+                    "ok": True,
+                    "refreshStarted": started,
+                    "snapshot": {
+                        "savedAt": snap.get("savedAt") if snap else None,
+                        "events": len(snap.get("events", [])) if snap else 0,
+                    },
+                }, cache_seconds=0)
+
             if parsed.path == "/api/journal-summary":
                 self.require_admin(query)
                 period_from = query.get("periodFrom") or query.get("from") or "2025-09-01"
@@ -4692,6 +4825,7 @@ def main():
     port = int(os.getenv("PORT", "8787"))
     start_public_ratings_snapshot_scheduler()
     start_admin_ratings_snapshot_scheduler()
+    start_journal_snapshot_scheduler()
     server = ThreadingHTTPServer((host, port), Handler)
     print(f"Soholms backend listening on http://{host}:{port}", flush=True)
     server.serve_forever()
