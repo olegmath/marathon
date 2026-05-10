@@ -1414,7 +1414,7 @@ def build_first_attempt_index(period_from: str, period_to: str) -> dict[tuple[st
         period_start = datetime.fromisoformat(period_from).date() if period_from else None
         period_end = datetime.fromisoformat(period_to).date() if period_to else None
 
-        # Получаем метаданные ДЗ (subject, level, lessonDate из finishesAt урока)
+        # Получаем метаданные ДЗ (subject, level, dayNumber из названия "День N")
         t0 = time.time()
         all_items: list[dict[str, Any]] = []
         with ThreadPoolExecutor(max_workers=DEFAULT_CONCURRENCY) as executor:
@@ -1422,27 +1422,18 @@ def build_first_attempt_index(period_from: str, period_to: str) -> dict[tuple[st
         for items in results:
             all_items.extend(items)
 
-        # Строим индекс плана по (subject, level, dateKey) — для поиска по дате урока
-        plan_dates: dict[tuple[str, str, str], str] = {}
-        for p in load_marathon_plan_items():
-            key = (p.get("subject") or "", p.get("level") or "", p.get("dateKey") or "")
-            if all(key):
-                plan_dates[key] = p["dateKey"]
-
-        # hw_id → дата дедлайна строго из marathon_plan.csv (ищем по subject+level+lessonDate)
-        # dayNumber не используем: он = номер занятия группы, не номер дня в плане
+        # hw_id → дата дедлайна строго из marathon_plan.csv
+        # Маппинг: dayNumber из dayTitle ("День 20" → 20) → строка в CSV → dateKey
         hw_plan_date: dict[int, date] = {}
         for item in all_items:
             hw_id = item.get("academicHomeworkId")
             if not hw_id:
                 continue
-            subject = item.get("subject") or ""
-            level = item.get("level") or ""
-            lesson_date = item.get("lessonDate") or ""
-            plan_date_str = plan_dates.get((subject, level, lesson_date))
-            if plan_date_str:
+            plan = find_marathon_plan_item(item)
+            date_str = plan.get("dateKey") if plan else None
+            if date_str:
                 try:
-                    hw_plan_date[hw_id] = datetime.fromisoformat(plan_date_str[:10]).date()
+                    hw_plan_date[hw_id] = datetime.fromisoformat(date_str[:10]).date()
                 except (ValueError, TypeError):
                     pass
 
