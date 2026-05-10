@@ -1414,7 +1414,7 @@ def build_first_attempt_index(period_from: str, period_to: str) -> dict[tuple[st
         period_start = datetime.fromisoformat(period_from).date() if period_from else None
         period_end = datetime.fromisoformat(period_to).date() if period_to else None
 
-        # Получаем метаданные ДЗ (dayNumber, subject, level, lessonDate) для маппинга на план
+        # Получаем метаданные ДЗ чтобы взять lessonDate (= finishesAt урока)
         t0 = time.time()
         all_items: list[dict[str, Any]] = []
         with ThreadPoolExecutor(max_workers=DEFAULT_CONCURRENCY) as executor:
@@ -1422,14 +1422,14 @@ def build_first_attempt_index(period_from: str, period_to: str) -> dict[tuple[st
         for items in results:
             all_items.extend(items)
 
-        # hw_id → дата дедлайна из marathon_plan.csv (fallback: lessonDate из finishesAt)
+        # hw_id → дата урока из finishesAt (lessonDate). dayNumber не используем —
+        # он совпадает с номером занятия группы, а не с номером дня в плане.
         hw_plan_date: dict[int, date] = {}
         for item in all_items:
             hw_id = item.get("academicHomeworkId")
             if not hw_id:
                 continue
-            plan = find_marathon_plan_item(item)
-            date_str = (plan.get("dateKey") if plan else None) or item.get("lessonDate") or ""
+            date_str = item.get("lessonDate") or ""
             if date_str:
                 try:
                     hw_plan_date[hw_id] = datetime.fromisoformat(date_str[:10]).date()
