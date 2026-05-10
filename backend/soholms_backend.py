@@ -2997,7 +2997,7 @@ def _journal_group_by_student(events: list[dict[str, Any]]) -> dict[tuple[str, s
 
 
 def aggregate_student_journal(
-    events: list[dict[str, Any]], student_name: str
+    events: list[dict[str, Any]], student_name: str, subject: str = ""
 ) -> dict[str, Any] | None:
     name_key = normalize_person_key(student_name)
     if not name_key:
@@ -3006,7 +3006,13 @@ def aggregate_student_journal(
     matching_keys = [k for k in by_student if k[0].startswith(name_key)]
     if not matching_keys:
         return None
-    # Prefer entry with most events (most complete journal data)
+    # If subject specified — prefer entries matching that subject
+    if subject:
+        subj_norm = subject.strip().lower()
+        subj_filtered = [k for k in matching_keys if by_student[k].get("subject", "").lower() == subj_norm]
+        if subj_filtered:
+            matching_keys = subj_filtered
+    # Among remaining, pick entry with most events (most complete journal data)
     target_key = max(matching_keys, key=lambda k: len(by_student[k]["events"]))
 
     hw_max, kr_max = _journal_max_per_lesson(events)
@@ -4596,8 +4602,9 @@ class Handler(BaseHTTPRequestHandler):
                     raise BackendError("name is required", HTTPStatus.BAD_REQUEST)
                 period_from = query.get("from") or "2025-09-01"
                 period_to = query.get("to") or "2026-05-31"
+                subject_filter = normalize_text(query.get("subject", "")).lower()
                 events = fetch_journal_events(period_from, period_to)
-                result = aggregate_student_journal(events, student_name)
+                result = aggregate_student_journal(events, student_name, subject_filter)
                 if result is None:
                     return self.send_json({"ok": False, "error": "student not found"}, HTTPStatus.NOT_FOUND)
                 return self.send_json({
