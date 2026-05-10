@@ -966,7 +966,7 @@ def fetch_homework_first_attempts(academic_homework_id: int) -> list[dict[str, A
                 for result in homework.get("results", [])
                 if parse_soholms_datetime(result.get("statusChangedAt"))
             ]
-            if not master_client_id or not deadline_at or not results:
+            if not master_client_id or not results:
                 continue
             first_result = min(results, key=lambda result: parse_soholms_datetime(result.get("statusChangedAt")) or datetime.max)
             first_attempt_at = parse_soholms_datetime(first_result.get("statusChangedAt"))
@@ -1466,15 +1466,6 @@ def build_first_attempt_index(period_from: str, period_to: str) -> dict[tuple[st
                         previous = index.get(key)
                         if previous is None or row["firstAttemptAt"] < previous[0]:
                             index[key] = (row["firstAttemptAt"], plan_date)
-                    if int(row.get("masterClientId") or 0) == 3166739:
-                        index.setdefault("__debug_sample__", []).append({
-                            "subject": subject,
-                            "level": level,
-                            "studentName": row.get("studentName"),
-                            "planDate": plan_date.isoformat(),
-                            "firstAttemptAt": row["firstAttemptAt"].isoformat(),
-                            "keys": keys,
-                        })
         t_homeworks = time.time() - t1
 
         print(f"[timings] build_first_attempt_index: disciplines={t_disciplines:.2f}s homeworks={t_homeworks:.2f}s total={time.time()-t_total:.2f}s n_homeworks={len(homework_ids)}", flush=True, file=sys.stderr)
@@ -2106,16 +2097,6 @@ def parse_attendance_xlsx(
             f"id:{student_key(day.get('studentId'))}|{scope}",
             f"name:{normalize_person_key(item.get('name'))}|{scope}",
         ]
-        if first_attempt_stats is not None and first_attempt_stats.get("sampleLookup") is None:
-            first_attempt_stats["sampleLookup"] = {
-                "name": item.get("name"),
-                "studentId": day.get("studentId"),
-                "subject": item.get("subject"),
-                "level": item.get("level"),
-                "lessonDate": lesson_date.isoformat() if hasattr(lesson_date, "isoformat") else str(lesson_date),
-                "studentKeys": student_keys,
-                "dateKeys": date_keys,
-            }
         for date_key in date_keys:
             for key in student_keys:
                 entry = first_attempt_index.get((key, date_key))
@@ -3713,7 +3694,6 @@ def load_ratings(
             "enabled": FIRST_ATTEMPTS_ENABLED,
             "loaded": len(first_attempt_index),
             **first_attempt_stats,
-            "debugIndexSample": first_attempt_index.get("__debug_sample__"),
         },
         "timings": {
             "firstAttemptsMs": t_first_attempts_ms,
