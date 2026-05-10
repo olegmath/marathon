@@ -2060,10 +2060,7 @@ def parse_attendance_xlsx(
         if first_attempt_stats is not None:
             first_attempt_stats["lookups"] = first_attempt_stats.get("lookups", 0) + 1
 
-        date_keys = [
-            iso_date(lesson_date, shift_days=shift)
-            for shift in range(0, 8)
-        ]
+        date_keys = [iso_date(lesson_date, shift_days=DEADLINE_SHIFT_DAYS)]
         student_keys = [
             f"id:{student_key(day.get('studentId'))}",
             f"name:{normalize_person_key(day['item'].get('name'))}",
