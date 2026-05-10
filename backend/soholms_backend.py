@@ -3210,8 +3210,9 @@ def aggregate_school_journal(events: list[dict[str, Any]], mode: str) -> dict[st
         [s for s in students_agg if s["integral"] is not None],
         key=lambda x: -x["integral"],
     )
+    unique_students = {normalize_person_key(s["name"]) for s in students_agg}
     return {
-        "studentsCount": len(students_agg),
+        "studentsCount": len(unique_students),
         "groupsCount": len(groups_map),
         "attendancePct": _avg(all_att),
         "hwAvg": _avg(all_hw),
