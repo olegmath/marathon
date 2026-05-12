@@ -3400,6 +3400,14 @@ def save_penalty_override(body: dict[str, Any]) -> dict[str, Any]:
             overridden = True
         write_penalty_overrides(overrides)
 
+    # Rebuild the ratings snapshots in the background so the new penalty shows up
+    # without waiting for the next hourly refresh. A failure here must not break
+    # the save itself.
+    try:
+        start_admin_ratings_snapshot_refresh({"periodFrom": period["from"], "periodTo": period["to"]})
+    except Exception as error:  # noqa: BLE001
+        sys.stderr.write(f"Failed to trigger ratings snapshot refresh after penalty override: {error}\n")
+
     return {
         "ok": True,
         "overrideKey": key,
