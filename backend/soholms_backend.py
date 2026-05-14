@@ -2488,7 +2488,7 @@ def parse_attendance_xlsx(
                 "baseScore": base_score,
                 "penalty": penalty,
                 "finalScore": final_score,
-                "score": final_score,
+                "score": base_score,
             }
         )
         rows.append(item)
@@ -3356,7 +3356,6 @@ def apply_penalty_overrides(payload: dict[str, Any]) -> dict[str, Any]:
             row["penaltyOverridden"] = True
             final_score = max(0.0, float(row.get("baseScore") or 0) - penalty)
             row["finalScore"] = final_score
-            row["score"] = final_score
 
     add_places(rows)
     return payload
