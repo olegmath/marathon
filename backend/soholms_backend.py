@@ -2963,6 +2963,7 @@ def _journal_aggregate_one(
     hw_norm: list[float] = []
     hw_trend: list[dict[str, Any]] = []
     sub_status_count: dict[str, int] = {}
+    kind_status_count: dict[str, dict[str, int]] = {}
     for e in hw_events:
         if isinstance(e.get("g_dz"), (int, float)):
             mx = hw_max.get((e["group"], e["lesson"]))
@@ -2976,11 +2977,28 @@ def _journal_aggregate_one(
                     "raw": float(e["g_dz"]),
                     "max": mx,
                     "date": e.get("date") or "",
+                    "not_done": False,
                 })
+        else:
+            hw_trend.append({
+                "no": _journal_extract_no(e["lesson"], "Домашка"),
+                "lesson": e["lesson"],
+                "grade": 0,
+                "raw": 0,
+                "max": hw_max.get((e["group"], e["lesson"])),
+                "date": e.get("date") or "",
+                "not_done": True,
+            })
         for sr in e["sub_rows"]:
             st = sr.get("status") or ""
             if st:
                 sub_status_count[st] = sub_status_count.get(st, 0) + 1
+            kind = (sr.get("task_kind") or "").lower()
+            if kind:
+                kind_status_count.setdefault(kind, {"done": 0, "total": 0})
+                kind_status_count[kind]["total"] += 1
+                if st == "Принято":
+                    kind_status_count[kind]["done"] += 1
     hw_total_subs = sum(sub_status_count.values())
     hw_done_pct = (
         round(sub_status_count.get("Принято", 0) / hw_total_subs * 100, 1)
@@ -3042,9 +3060,15 @@ def _journal_aggregate_one(
         "homework": {
             "avg": hw_avg,
             "count": len(hw_norm),
+            "total": len(hw_events),
+            "done_count": sub_status_count.get("Принято", 0),
             "done_pct": hw_done_pct,
             "not_opened_pct": hw_not_opened_pct,
             "sub_status": sub_status_count,
+            "kind_pct": {
+                k: round(v["done"] / v["total"] * 100, 1) if v["total"] else None
+                for k, v in kind_status_count.items()
+            },
             "trend": hw_trend,
         },
         "kr": {
