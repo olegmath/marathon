@@ -4929,6 +4929,13 @@ class Handler(BaseHTTPRequestHandler):
                         {"type": e["type"], "status": e["status"], "lesson": e.get("lesson"), "date": e.get("date")}
                         for e in student_evs if e["status"] in ("Был", "Не был", "Болел")
                     ],
+                    "scored_events": [
+                        {"type": e.get("type"), "lesson": e.get("lesson"),
+                         "g_dz": e.get("g_dz"), "g_kr": e.get("g_kr"),
+                         "g_sr": e.get("g_sr"), "g_lesson": e.get("g_lesson")}
+                        for e in student_evs
+                        if any(e.get(k) is not None for k in ("g_dz", "g_kr", "g_sr", "g_lesson"))
+                    ],
                 }, cache_seconds=0)
 
             self.send_json({"ok": False, "error": "Not found"}, HTTPStatus.NOT_FOUND)
