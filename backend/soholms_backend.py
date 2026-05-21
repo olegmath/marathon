@@ -3209,9 +3209,19 @@ def aggregate_school_journal(events: list[dict[str, Any]], mode: str) -> dict[st
     hw_max, kr_max = _journal_max_per_lesson(events)
     by_student = _journal_group_by_student(events)
 
+    # Сколько КР-уроков было в каждой группе (знаменатель «сделано/было» по КР).
+    # Прямого знаменателя в журнале нет — берём число КР-уроков, по которым
+    # хоть у кого-то в группе есть оценка (ключи kr_max: (group, lesson)).
+    kr_total_by_group: dict[str, int] = {}
+    for grp, _lesson in kr_max:
+        kr_total_by_group[grp] = kr_total_by_group.get(grp, 0) + 1
+
     students_agg: list[dict[str, Any]] = []
     for data in by_student.values():
         agg = _journal_aggregate_one(data["events"], hw_max, kr_max)
+        kr_total = kr_total_by_group.get(data["group"], 0)
+        kr_count = agg["kr"]["count"]
+        kr_done_pct = round(kr_count / kr_total * 100, 1) if kr_total else None
         students_agg.append({
             "name": data["name"],
             "group": data["group"],
@@ -3222,8 +3232,11 @@ def aggregate_school_journal(events: list[dict[str, Any]], mode: str) -> dict[st
             "attendancePct": agg["attendance"]["pct"],
             "hwAvg": agg["homework"]["avg"],
             "hwCount": agg["homework"]["count"],
+            "hwDonePct": agg["homework"]["done_pct"],
             "krAvg": agg["kr"]["avg"],
             "krCount": agg["kr"]["count"],
+            "krTotal": kr_total,
+            "krDonePct": kr_done_pct,
             "integral": agg["integral"],
             "flags": agg["flags"],
             "absent": agg["attendance"]["absent"] + agg["attendance"]["sick"],
@@ -3240,12 +3253,15 @@ def aggregate_school_journal(events: list[dict[str, Any]], mode: str) -> dict[st
         g = s["group"]
         gm = groups_map.setdefault(g, {
             "group": g, "subject": s["subject"], "teacher": s["teacher"], "level": s["level"],
-            "students_count": 0, "att": [], "hw": [], "kr": [], "integral": [], "flags_count": 0,
+            "students_count": 0, "att": [], "hw": [], "hwDone": [], "kr": [], "krDone": [],
+            "integral": [], "flags_count": 0,
         })
         gm["students_count"] += 1
         if s["attendancePct"] is not None: gm["att"].append(s["attendancePct"])
         if s["hwAvg"] is not None: gm["hw"].append(s["hwAvg"])
+        if s["hwDonePct"] is not None: gm["hwDone"].append(s["hwDonePct"])
         if s["krAvg"] is not None: gm["kr"].append(s["krAvg"])
+        if s["krDonePct"] is not None: gm["krDone"].append(s["krDonePct"])
         if s["integral"] is not None: gm["integral"].append(s["integral"])
         gm["flags_count"] += len(s["flags"])
 
@@ -3260,7 +3276,9 @@ def aggregate_school_journal(events: list[dict[str, Any]], mode: str) -> dict[st
         "studentsCount": gm["students_count"],
         "attendancePct": _avg(gm["att"]),
         "hwAvg": _avg(gm["hw"]),
+        "hwDonePct": _avg(gm["hwDone"]),
         "krAvg": _avg(gm["kr"]),
+        "krDonePct": _avg(gm["krDone"]),
         "integral": _avg(gm["integral"]),
         "flagsCount": gm["flags_count"],
     } for gm in groups_map.values()]
@@ -3272,7 +3290,9 @@ def aggregate_school_journal(events: list[dict[str, Any]], mode: str) -> dict[st
     # mode == "school"
     all_att = [s["attendancePct"] for s in students_agg if s["attendancePct"] is not None]
     all_hw = [s["hwAvg"] for s in students_agg if s["hwAvg"] is not None]
+    all_hw_done = [s["hwDonePct"] for s in students_agg if s["hwDonePct"] is not None]
     all_kr = [s["krAvg"] for s in students_agg if s["krAvg"] is not None]
+    all_kr_done = [s["krDonePct"] for s in students_agg if s["krDonePct"] is not None]
     all_int = [s["integral"] for s in students_agg if s["integral"] is not None]
     students_sorted = sorted(
         [s for s in students_agg if s["integral"] is not None],
@@ -3284,7 +3304,9 @@ def aggregate_school_journal(events: list[dict[str, Any]], mode: str) -> dict[st
         "groupsCount": len(groups_map),
         "attendancePct": _avg(all_att),
         "hwAvg": _avg(all_hw),
+        "hwDonePct": _avg(all_hw_done),
         "krAvg": _avg(all_kr),
+        "krDonePct": _avg(all_kr_done),
         "integral": _avg(all_int),
         "flagsCount": sum(len(s["flags"]) for s in students_agg),
         "top3Groups": groups_list[:3],
