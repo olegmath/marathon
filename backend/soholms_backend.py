@@ -2908,13 +2908,15 @@ def fetch_journal_events(period_from: str, period_to: str) -> list[dict[str, Any
 def _journal_max_per_lesson(events: list[dict[str, Any]]) -> tuple[dict, dict]:
     hw_max: dict[tuple[str, str], float] = {}
     kr_max: dict[tuple[str, str], float] = {}
+    # ДЗ/КР определяем по заполненной колонке оценки, а не по слову в названии урока:
+    # у части групп (напр. мат10) уроки названы «2-4.»/«1-3.», а не «Домашка»/«Занятие».
     for e in events:
         key = (e.get("group", ""), e.get("lesson", ""))
-        if e.get("type") == "Домашка" and isinstance(e.get("g_dz"), (int, float)):
+        if isinstance(e.get("g_dz"), (int, float)):
             v = float(e["g_dz"])
             if v > hw_max.get(key, 0):
                 hw_max[key] = v
-        if e.get("type") == "Занятие" and isinstance(e.get("g_kr"), (int, float)):
+        if isinstance(e.get("g_kr"), (int, float)):
             v = float(e["g_kr"])
             if v > kr_max.get(key, 0):
                 kr_max[key] = v
@@ -2980,8 +2982,9 @@ def _journal_aggregate_one(
             "pct": round(m["was"] / tot * 100, 1) if tot else 0,
         })
 
-    # Homework — нормализуем по max в (group, lesson)
-    hw_events = [e for e in student_events if e["type"] == "Домашка"]
+    # Homework — «Домашка» (стандарт, вкл. несданные с пустым g_dz → 0) ИЛИ любая строка
+    # с заполненной оценкой за ДЗ (формат мат10: уроки «2-4.» вместо «Домашка»).
+    hw_events = [e for e in student_events if e["type"] == "Домашка" or isinstance(e.get("g_dz"), (int, float))]
     hw_norm: list[float] = []
     hw_trend: list[dict[str, Any]] = []
     sub_status_count: dict[str, int] = {}
@@ -3033,10 +3036,11 @@ def _journal_aggregate_one(
     hw_avg = round(sum(hw_norm) / len(hw_norm), 1) if hw_norm else None
     hw_trend.sort(key=lambda x: (x["no"] is None, x["no"] or 0, x["date"] or ""))
 
-    # КР: g_kr на строках "Занятие"
+    # КР: любая строка с заполненной оценкой за КР (не только type=="Занятие" —
+    # у мат10 контрольные на уроках «1-3.»/«1-8.» с заполненным g_kr).
     kr_records: list[dict[str, Any]] = []
     for e in student_events:
-        if e["type"] == "Занятие" and isinstance(e.get("g_kr"), (int, float)):
+        if isinstance(e.get("g_kr"), (int, float)):
             mx = kr_max.get((e["group"], e["lesson"]))
             if mx and mx > 0:
                 pct = float(e["g_kr"]) / mx * 100
