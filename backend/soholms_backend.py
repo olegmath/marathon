@@ -3125,6 +3125,23 @@ def _journal_group_by_student(events: list[dict[str, Any]]) -> dict[tuple[str, s
     return by_student
 
 
+def build_student_directory(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Публичный справочник учеников из журнала: имя/предмет/уровень/класс, без баллов.
+    Нужен, чтобы 10 класс (его нет в marathon-рейтингах) был виден в Поиске/Учебном годе."""
+    by_student = _journal_group_by_student(events)
+    out: list[dict[str, Any]] = []
+    for data in by_student.values():
+        out.append({
+            "name": data["name"],
+            "subject": data.get("subject", ""),
+            "level": data.get("level", ""),
+            "grade": data.get("grade", ""),
+            "group": data.get("group", ""),
+            "teacher": data.get("teacher", ""),
+        })
+    return out
+
+
 def aggregate_student_journal(
     events: list[dict[str, Any]], student_name: str
 ) -> dict[str, Any] | None:
@@ -4815,6 +4832,18 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json({
                     "ok": True,
                     "rows": result,
+                    "period": {"from": period_from, "to": period_to},
+                }, cache_seconds=300)
+
+            if parsed.path == "/api/students":
+                # Публичный справочник учеников из журнала (для Поиска/Учебного года).
+                # Включает 10 класс, которого нет в marathon-рейтингах.
+                period_from = query.get("from") or "2025-09-01"
+                period_to = query.get("to") or "2026-05-31"
+                events = fetch_journal_events(period_from, period_to)
+                return self.send_json({
+                    "ok": True,
+                    "students": build_student_directory(events),
                     "period": {"from": period_from, "to": period_to},
                 }, cache_seconds=300)
 
