@@ -1958,10 +1958,25 @@ def infer_level(value: str) -> str:
         return "ОГЭ"
     if "ЕГЭ" in text:
         return "ЕГЭ"
+    # 10 класс пишет ЕГЭ-формат (те же шаблоны/критерии), отличается только классом (см. infer_grade).
+    if re.search(r"(^|[^0-9])10([^0-9]|$)", text):
+        return "ЕГЭ"
     if re.search(r"(^|[^0-9])9([^0-9]|$)", text):
         return "ОГЭ"
     if re.search(r"(^|[^0-9])11([^0-9]|$)", text):
         return "ЕГЭ"
+    return ""
+
+
+def infer_grade(value: str) -> str:
+    """Номер класса (9/10/11) из имени группы. Время (1600/1730) не ловится — нет standalone 9/10/11."""
+    text = value.upper()
+    if re.search(r"(^|[^0-9])10([^0-9]|$)", text):
+        return "10"
+    if re.search(r"(^|[^0-9])11([^0-9]|$)", text):
+        return "11"
+    if re.search(r"(^|[^0-9])9([^0-9]|$)", text):
+        return "9"
     return ""
 
 
@@ -2383,6 +2398,7 @@ def parse_attendance_xlsx(
         all_students_metadata[row_student_key] = {
             "subject": group.subject if group.subject != "без предмета" else infer_subject(discipline or xlsx_group or group.name),
             "level": infer_level(discipline) or infer_level(group.name),
+            "grade": infer_grade(xlsx_group) or infer_grade(group.name),
             "group": normalize_text(xlsx_group) or group.name,
             "name": normalize_text(name),
             "teacher": group.teacher,
@@ -2622,9 +2638,11 @@ def fetch_year_raw_rows(period_from: str, period_to: str) -> list[dict[str, Any]
             content = fetch_attendance_xlsx(group.id, period_from, period_to)
             rows = parse_xlsx_raw_rows(content)
             level = infer_level(group.name) or ""
+            grade = infer_grade(group.name) or ""
             for r in rows:
                 r["_subject"] = group.subject
                 r["_level"] = level
+                r["_grade"] = grade
                 r["_teacher"] = group.teacher
             return rows
 
@@ -2710,6 +2728,7 @@ def aggregate_all_students(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "group": group,
                 "subject": r.get("_subject", ""),
                 "level": r.get("_level", ""),
+                "grade": r.get("_grade", ""),
                 "teacher": r.get("_teacher", ""),
                 "hw_scores": [],
                 "kr_scores": [],
@@ -2742,6 +2761,7 @@ def aggregate_all_students(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "group": s["group"],
             "subject": s["subject"],
             "level": s["level"],
+            "grade": s["grade"],
             "teacher": s["teacher"],
             "hwAvg": hw_avg,
             "hwCount": len(hw_scores),
@@ -2831,10 +2851,12 @@ def _fetch_journal_events_fresh(period_from: str, period_to: str) -> list[dict[s
         content = fetch_attendance_xlsx(group.id, period_from, period_to)
         evs = parse_journal_full(content)
         level = infer_level(group.name) or ""
+        grade = infer_grade(group.name) or ""
         for e in evs:
             e["_subject"] = group.subject
             e["_teacher"] = group.teacher
             e["_level"] = level
+            e["_grade"] = grade
             e["_group_id"] = group.id
         return evs
 
@@ -3096,6 +3118,7 @@ def _journal_group_by_student(events: list[dict[str, Any]]) -> dict[tuple[str, s
                 "subject": e.get("_subject", ""),
                 "teacher": e.get("_teacher", ""),
                 "level": e.get("_level", ""),
+                "grade": e.get("_grade", ""),
                 "events": [],
             }
         by_student[key]["events"].append(e)
@@ -3174,6 +3197,7 @@ def aggregate_school_journal(events: list[dict[str, Any]], mode: str) -> dict[st
             "subject": data["subject"],
             "teacher": data["teacher"],
             "level": data["level"],
+            "grade": data.get("grade", ""),
             "attendancePct": agg["attendance"]["pct"],
             "hwAvg": agg["homework"]["avg"],
             "hwCount": agg["homework"]["count"],
