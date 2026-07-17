@@ -2590,190 +2590,6 @@ def _month_label(mk: str) -> str:
     return mk
 
 
-def parse_xlsx_raw_rows(content: bytes) -> list[dict[str, Any]]:
-    workbook = load_workbook(io.BytesIO(content), data_only=True, read_only=True)
-    worksheet = workbook.active
-    headers = [cell.value for cell in next(worksheet.iter_rows(min_row=3, max_row=3))]
-    columns = {
-        "name": header_index(headers, "Ученик", default=1),
-        "group": header_index(headers, "Учебная группа", default=2),
-        "discipline": header_index(headers, "Дисциплина", default=3),
-        "lesson_date": header_index(headers, "Дата урока", default=5),
-        "lesson_score": header_index(headers, "Оценка за урок", default=8),
-        "homework_score": header_index(headers, "Оценка за ДЗ", default=9),
-        "checkpoint_score": header_index(headers, "Оценка за СР", default=10),
-        "control_score": header_index(headers, "Оценка за КР", default=11),
-    }
-    rows: list[dict[str, Any]] = []
-    for row in worksheet.iter_rows(min_row=4, values_only=True):
-        name = row_value(row, columns["name"])
-        if not name:
-            continue
-        discipline = normalize_text(row_value(row, columns["discipline"]))
-        if discipline and "основн" not in discipline.casefold():
-            continue
-        date_key = iso_date(row_value(row, columns["lesson_date"]))
-        if len(date_key) < 7:
-            continue
-        rows.append({
-            "name": normalize_text(name),
-            "group": normalize_text(row_value(row, columns["group"])),
-            "month_key": date_key[:7],
-            "hw": score_value(row_value(row, columns["homework_score"])),
-            "sr": score_value(row_value(row, columns["checkpoint_score"])),
-            "kr": score_value(row_value(row, columns["control_score"])),
-            "lesson": score_value(row_value(row, columns["lesson_score"])),
-        })
-    return rows
-
-
-def fetch_year_raw_rows(period_from: str, period_to: str) -> list[dict[str, Any]]:
-    cache_key = f"year_raw_rows:{period_from}:{period_to}"
-
-    def load():
-        groups = selected_groups()
-        all_rows: list[dict[str, Any]] = []
-
-        def fetch_group(group: GroupInfo):
-            content = fetch_attendance_xlsx(group.id, period_from, period_to)
-            rows = parse_xlsx_raw_rows(content)
-            level = infer_level(group.name) or ""
-            grade = infer_grade(group.name) or ""
-            for r in rows:
-                r["_subject"] = group.subject
-                r["_level"] = level
-                r["_grade"] = grade
-                r["_teacher"] = group.teacher
-            return rows
-
-        with ThreadPoolExecutor(max_workers=max(1, DEFAULT_CONCURRENCY)) as executor:
-            futures = {executor.submit(fetch_group, group): group for group in groups}
-            for future in as_completed(futures):
-                try:
-                    all_rows.extend(future.result())
-                except Exception:
-                    pass
-        return all_rows
-
-    return cached(cache_key, 3600, load)
-
-
-def aggregate_student_year(rows: list[dict[str, Any]], student_name: str) -> dict[str, Any] | None:
-    name_key = normalize_person_key(student_name)
-    student_rows = [r for r in rows if normalize_person_key(r["name"]).startswith(name_key)]
-    if not student_rows:
-        return None
-
-    months_data: dict[str, dict[str, Any]] = {}
-    for r in student_rows:
-        mk = r["month_key"]
-        if mk not in months_data:
-            months_data[mk] = {"hw_done": 0, "hw_total": 0, "test_scores": [], "lessons": 0, "present": 0}
-        m = months_data[mk]
-        m["lessons"] += 1
-        if r["lesson"] is not None or r["sr"] is not None or r["kr"] is not None or r["hw"] is not None:
-            m["present"] += 1
-        if r["hw"] is not None:
-            m["hw_total"] += 1
-            if r["hw"] > 0:
-                m["hw_done"] += 1
-        if r["kr"] is not None:
-            m["test_scores"].append(r["kr"])
-        if r["sr"] is not None:
-            m["test_scores"].append(r["sr"])
-
-    months = []
-    for mk in sorted(months_data):
-        m = months_data[mk]
-        test_avg = round(sum(m["test_scores"]) / len(m["test_scores"]), 1) if m["test_scores"] else None
-        attendance = round(m["present"] / m["lessons"] * 100) if m["lessons"] else 0
-        months.append({
-            "month": _month_label(mk),
-            "hwDone": m["hw_done"],
-            "hwTotal": m["hw_total"],
-            "testAvg": test_avg,
-            "attendance": attendance,
-        })
-
-    total_hw_done = sum(m["hwDone"] for m in months)
-    total_hw_total = sum(m["hwTotal"] for m in months)
-    test_avgs = [m["testAvg"] for m in months if m["testAvg"] is not None]
-    overall_test_avg = round(sum(test_avgs) / len(test_avgs), 1) if test_avgs else None
-    attendance_vals = [m["attendance"] for m in months]
-    avg_attendance = round(sum(attendance_vals) / len(attendance_vals)) if attendance_vals else 0
-
-    return {
-        "months": months,
-        "summary": {
-            "hwDone": total_hw_done,
-            "hwTotal": total_hw_total,
-            "testAvg": overall_test_avg,
-            "attendancePct": avg_attendance,
-        },
-    }
-
-
-def aggregate_all_students(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    students: dict[tuple[str, str], dict[str, Any]] = {}
-
-    for r in rows:
-        name = r.get("name", "")
-        group = r.get("group", "")
-        if not name:
-            continue
-        key = (normalize_person_key(name), group)
-        if key not in students:
-            students[key] = {
-                "name": name,
-                "group": group,
-                "subject": r.get("_subject", ""),
-                "level": r.get("_level", ""),
-                "grade": r.get("_grade", ""),
-                "teacher": r.get("_teacher", ""),
-                "hw_scores": [],
-                "kr_scores": [],
-                "lessons": 0,
-                "present": 0,
-            }
-        s = students[key]
-        s["lessons"] += 1
-        hw = r.get("hw")
-        kr = r.get("kr")
-        sr = r.get("sr")
-        lesson = r.get("lesson")
-        if hw is not None or kr is not None or sr is not None or lesson is not None:
-            s["present"] += 1
-        if hw is not None:
-            s["hw_scores"].append(hw)
-        kr_val = kr if kr is not None else sr
-        if kr_val is not None:
-            s["kr_scores"].append(kr_val)
-
-    result = []
-    for s in students.values():
-        hw_scores = s["hw_scores"]
-        kr_scores = s["kr_scores"]
-        hw_avg = round(sum(hw_scores) / len(hw_scores), 1) if hw_scores else None
-        kr_avg = round(sum(kr_scores) / len(kr_scores), 1) if kr_scores else None
-        attendance = round(s["present"] / s["lessons"] * 100) if s["lessons"] else 0
-        result.append({
-            "name": s["name"],
-            "group": s["group"],
-            "subject": s["subject"],
-            "level": s["level"],
-            "grade": s["grade"],
-            "teacher": s["teacher"],
-            "hwAvg": hw_avg,
-            "hwCount": len(hw_scores),
-            "krAvg": kr_avg,
-            "krCount": len(kr_scores),
-            "attendancePct": attendance,
-            "lessonsTotal": s["lessons"],
-        })
-
-    return sorted(result, key=lambda x: (x.get("group", ""), x.get("name", "")))
-
-
 # === Электронный журнал: полный парсер + per-student / school агрегаты ===
 
 
@@ -2946,6 +2762,12 @@ def _journal_aggregate_one(
         counts[e["status"]] += 1
     total = sum(counts.values())
     att_pct = round(counts["Был"] / total * 100, 1) if total else None
+    # Основной процент — без учёта болезней (болезнь не приравнивается к прогулу).
+    # pct с болезнями остаётся в ответе как справочный.
+    att_excl_total = counts["Был"] + counts["Не был"]
+    att_pct_excl_sick = (
+        round(counts["Был"] / att_excl_total * 100, 1) if att_excl_total else None
+    )
     max_streak = 0
     streak = 0
     for e in att_sorted:
@@ -2972,6 +2794,7 @@ def _journal_aggregate_one(
     for mk in sorted(by_month):
         m = by_month[mk]
         tot = m["was"] + m["absent"] + m["sick"]
+        tot_excl = m["was"] + m["absent"]
         months_list.append({
             "month": _month_label(mk),
             "monthKey": mk,
@@ -2980,11 +2803,20 @@ def _journal_aggregate_one(
             "sick": m["sick"],
             "total": tot,
             "pct": round(m["was"] / tot * 100, 1) if tot else 0,
+            "pct_excl_sick": round(m["was"] / tot_excl * 100, 1) if tot_excl else 0,
         })
 
-    # Homework — «Домашка» (стандарт, вкл. несданные с пустым g_dz → 0) ИЛИ любая строка
-    # с заполненной оценкой за ДЗ (формат мат10: уроки «2-4.» вместо «Домашка»).
-    hw_events = [e for e in student_events if e["type"] == "Домашка" or isinstance(e.get("g_dz"), (int, float))]
+    # Homework — «Домашка» (стандарт, вкл. несданные с пустым g_dz → 0), любая строка
+    # с заполненной оценкой за ДЗ, ЛИБО урок, за который хоть кому-то в группе ставили
+    # оценку за ДЗ. Последнее критично для формата мат10 (уроки «2-4.» вместо
+    # «Домашка»): без этого несданное ДЗ не существует в статистике ученика и
+    # у сдавшего 3 из 30 выходило «сдано 3/3 = 100%».
+    hw_events = [
+        e for e in student_events
+        if e["type"] == "Домашка"
+        or isinstance(e.get("g_dz"), (int, float))
+        or (e["group"], e["lesson"]) in hw_max
+    ]
     hw_norm: list[float] = []
     hw_trend: list[dict[str, Any]] = []
     sub_status_count: dict[str, int] = {}
@@ -3031,7 +2863,7 @@ def _journal_aggregate_one(
     )
     hw_not_opened_pct = (
         round(sub_status_count.get("Не открывали", 0) / hw_total_subs * 100, 1)
-        if hw_total_subs else 0
+        if hw_total_subs else None
     )
     hw_avg = round(sum(hw_norm) / len(hw_norm), 1) if hw_norm else None
     hw_trend.sort(key=lambda x: (x["no"] is None, x["no"] or 0, x["date"] or ""))
@@ -3056,6 +2888,9 @@ def _journal_aggregate_one(
         round(sum(k["grade"] for k in kr_records) / len(kr_records), 1)
         if kr_records else None
     )
+    # Сколько КР-уроков было в группах ученика (знаменатель «написал N из M»)
+    student_groups = {e.get("group", "") for e in student_events}
+    kr_total = sum(1 for (g, _lesson) in kr_max if g in student_groups)
 
     # Флаги
     flags: list[str] = []
@@ -3067,15 +2902,17 @@ def _journal_aggregate_one(
         flags.append(f"Средний ДЗ {round(hw_avg)}% (низкий)")
     if kr_avg is not None and kr_avg < 60:
         flags.append(f"Средний КР {round(kr_avg)}% (низкий)")
-    if att_pct is not None and att_pct < 70:
-        flags.append(f"Посещаемость {round(att_pct)}% (низкая)")
+    if att_pct_excl_sick is not None and att_pct_excl_sick < 70:
+        flags.append(f"Посещаемость {round(att_pct_excl_sick)}% (низкая)")
 
-    components = [v for v in (att_pct, hw_avg, kr_avg) if v is not None]
+    # Интеграл — на проценте без болезней: болезнь не должна опускать место в рейтинге
+    components = [v for v in (att_pct_excl_sick, hw_avg, kr_avg) if v is not None]
     integral = round(sum(components) / len(components), 1) if components else None
 
     return {
         "attendance": {
             "pct": att_pct,
+            "pct_excl_sick": att_pct_excl_sick,
             "was": counts["Был"],
             "absent": counts["Не был"],
             "sick": counts["Болел"],
@@ -3100,6 +2937,7 @@ def _journal_aggregate_one(
         "kr": {
             "avg": kr_avg,
             "count": len(kr_records),
+            "total": kr_total,
             "list": kr_records,
         },
         "integral": integral,
@@ -3176,9 +3014,16 @@ def aggregate_student_journal(
         return sorted(lst, key=lambda x: -x["integral"])
 
     def _place(lst: list[dict], nk: str, gk: str) -> int | None:
-        for i, x in enumerate(lst):
+        # Dense ranking, как в add_places марафона: равные интегралы делят место,
+        # следующий за серией равных получает место +1 (1, 1, 2, а не 1, 2, 3).
+        place = 0
+        prev_integral: float | None = None
+        for x in lst:
+            if x["integral"] != prev_integral:
+                place += 1
+                prev_integral = x["integral"]
             if x["nk"] == nk and x["gk"] == gk:
-                return i + 1
+                return place
         return None
 
     subjects_out = []
@@ -4831,35 +4676,6 @@ class Handler(BaseHTTPRequestHandler):
 
             if parsed.path == "/api/error-analytics":
                 return self.send_json(build_error_analytics_payload(query), cache_seconds=60)
-
-            if parsed.path == "/api/student-year":
-                student_name = normalize_text(query.get("name", ""))
-                if not student_name:
-                    raise BackendError("name is required", HTTPStatus.BAD_REQUEST)
-                period_from = query.get("from") or "2025-09-01"
-                period_to = query.get("to") or "2026-05-31"
-                rows = fetch_year_raw_rows(period_from, period_to)
-                result = aggregate_student_year(rows, student_name)
-                if result is None:
-                    return self.send_json({"ok": False, "error": "student not found"}, HTTPStatus.NOT_FOUND)
-                return self.send_json({
-                    "ok": True,
-                    "student": student_name,
-                    "period": {"from": period_from, "to": period_to},
-                    **result,
-                }, cache_seconds=300)
-
-            if parsed.path == "/api/grades-summary":
-                self.require_admin(query)
-                period_from = query.get("periodFrom") or "2025-09-01"
-                period_to = query.get("periodTo") or "2026-05-31"
-                rows = fetch_year_raw_rows(period_from, period_to)
-                result = aggregate_all_students(rows)
-                return self.send_json({
-                    "ok": True,
-                    "rows": result,
-                    "period": {"from": period_from, "to": period_to},
-                }, cache_seconds=300)
 
             if parsed.path == "/api/students":
                 # Публичный справочник учеников из журнала (для Поиска/Учебного года).
